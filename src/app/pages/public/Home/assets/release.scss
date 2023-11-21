@@ -1,0 +1,36 @@
+.public-release {
+    padding-bottom: 40px;
+    background: var(--black);
+    display: flex;
+    justify-content: space-between;
+    color: white;
+    .description {
+        padding: 0 135px;
+        width: 70%;
+        display: flex;
+        flex-direction: column;
+        text-align: justify;
+        h1 {
+            font-weight: 900;
+            color: white;
+            margin: 10px 0;
+        }
+        p {
+            margin-top: 10px;
+            color: white;
+            font-size: 20px;
+        }
+    }
+
+    .call {
+        width: 30%;
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        button {
+            background: var(--orange)!important;
+            width: 250px;
+            padding: 25px 0;
+        }
+    }
+}

@@ -1,0 +1,157 @@
+.public-partners {
+  background: var(--black);
+  display: flex;
+  width: 100%;
+  padding: 60px 0;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  .app-title {
+    display: flex;
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+
+    h1 {
+      text-align: center;
+      color: white;
+    }
+
+    p {
+      margin-top: 10px;
+      color: white;
+    }
+  }
+
+  .app-find {
+    border-radius: 2px;
+    height: 72px;
+    transition: unset !important;
+    outline: unset !important;
+    border: unset !important;
+    color: white;
+    background: #FFFFFF26;
+    width: 1290px;
+    font-family: "Inter", sans-serif !important;
+    box-shadow: unset !important;
+  }
+
+  .app-search-wrapper {
+    margin-top: 60px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+
+    button {
+      height: 72px;
+      width: 70px;
+      background: var(--orange) !important;
+    }
+
+
+  }
+
+  .item {
+    width: 440px;
+    margin: 20px auto;
+    height: 350px !important;
+    flex-basis: 28%;
+    background-size: cover;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+
+    .wave {
+      width: 100%;
+      height: 180px;
+      background-size: cover;
+      padding: 30px 20px;
+
+      h2 {
+        font-size: 28px;
+        font-weight: 900;
+        font-family: 'Barlow', sans-serif;
+      }
+    }
+
+    .wave-wrapper {
+      margin-top: 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+
+      section {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+
+      label {
+        font-size: 20px;
+        font-family: 'Barlow', sans-serif;
+      }
+
+      div {
+        display: flex;
+        flex-direction: column;
+      }
+    }
+  }
+
+  .items-wrapper {
+    flex-direction: row;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 100px;
+    display: flex;
+  }
+
+
+  .item-pre-wrapper {
+    flex-basis: 30%;
+  }
+
+  @media (max-width: 1400px) {
+    .app-find {
+      width: 70%
+    }
+
+    .item-pre-wrapper {
+      flex-basis: 35%;
+    }
+  }
+
+  @media (max-width: 992px) {
+    .item-pre-wrapper {
+      width: 350px;
+      flex-basis: 45%;
+    }
+    .item {
+      width: 350px;
+    }
+    .app-title {
+      p {
+        font-size: 26px;
+        margin: 10px 15px;
+        text-align: center;
+      }
+    }
+  }
+
+  @media (max-width: 500px) {
+    .app-title {
+      h1 {
+        font-size: 26px !important;
+      }
+
+      p {
+        font-size: 18px;
+      }
+    }
+  }
+}
+
+

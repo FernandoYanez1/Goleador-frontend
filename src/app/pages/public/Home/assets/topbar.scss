@@ -1,0 +1,147 @@
+.public-topbar-wrapper {
+  position: fixed;
+  width: 100%;
+  background: linear-gradient(180deg, rgba(18, 18, 18, 0.80) 9.78%, rgba(18, 18, 18, 0.72) 26.63%, rgba(18, 18, 18, 0.60) 47.28%, rgba(18, 18, 18, 0.43) 68%, rgba(18, 18, 18, 0.00) 100%);
+  z-index: 1001;
+}
+
+.public-topbar-group {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 135px;
+}
+
+.public-topbar-logo {
+  width: 210px;
+  cursor: pointer;
+}
+
+.public-topbar-items {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  div h5 {
+    color: white;
+    cursor: pointer;
+    padding: 5px 0;
+  }
+
+  div h5:hover {
+    border-bottom: 3px solid var(--orange);
+  }
+
+  div {
+    margin-left: 60px;
+  }
+
+  .teste-gratis {
+    cursor: pointer;
+    text-align: center;
+    width: 281px;
+    display: flex;
+    margin-left: 70px;
+    justify-content: center;
+    align-items: center;
+    padding: 24px 0;
+    border: 2px solid white;
+  }
+}
+
+
+@media (max-width: 1400px) {
+  .public-topbar-group {
+    padding: 50px 50px;
+  }
+
+  .public-topbar-items {
+    div {
+      margin-left: 30px;
+    }
+
+    .teste-gratis {
+      cursor: pointer;
+      text-align: center;
+      width: 180px;
+      display: flex;
+      margin-left: 70px;
+      justify-content: center;
+      align-items: center;
+      padding: 24px 0;
+      border: 2px solid white;
+    }
+  }
+}
+
+
+.public-topbar-wrapper-mobile {
+  position: fixed;
+  width: 100%;
+  border-bottom: 2px solid var(--orange);
+  background: var(--black);
+  z-index: 1000;
+
+  .p-button {
+    background: var(--black) !important;
+  }
+
+  .wrapper {
+    display: flex;
+    padding: 40px;
+    align-items: center;
+  }
+
+  .flex {
+    width: 100%;
+
+    img {
+      width: 350px
+    }
+  }
+
+  @media (max-width: 500px) {
+    .public-topbar-logo {
+      width: 70%!important;
+    }
+    .p-button {
+      svg {
+        font-size: 30px!important;
+      }
+    }
+    .wrapper {
+      padding: 10px;
+    }
+  }
+}
+
+.public-mobile-menu {
+  margin-top: 154px;
+  z-index: 1000;
+  width: 100vw;
+  position: fixed;
+  background: var(--black);
+  height: calc(100vh - 154px);
+  padding: 50px;
+
+  div {
+    margin-top: 40px;
+
+    h5 {
+      font-size: 36px !important;
+      color: white;
+    }
+  }
+
+  @media (max-width: 500px) {
+    height: calc(100vh - 70px);
+    margin-top: 76px;
+
+    div {
+      h5 {
+        font-size: 18px!important;
+      }
+    }
+  }
+
+}

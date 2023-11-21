@@ -1,0 +1,96 @@
+.public-footer {
+  background: var(--black) !important;
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+
+  .content-wrapper {
+    width: 60%;
+    margin-top: 140px;
+    margin-bottom: 100px;
+    display: flex;
+    flex-direction: row;
+
+  }
+
+  .copyright {
+    width: 60%;
+    border-top: 1px solid #656464;
+    padding-top: 57px;
+    margin-bottom: 40px;
+    text-align: center;
+
+    label {
+      color: white;
+    }
+  }
+
+  .moicanos-logo {
+    width: 200px;
+    margin-bottom: 30px;
+  }
+
+  .branding {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    width: 350px;
+
+    p {
+      color: white;
+      line-height: 30px!important;
+      text-align: justify;
+    }
+  }
+
+  .menu {
+    margin-left: 150px;
+    h4 {
+      color: #C8BCB5;
+    }
+  }
+
+  .menu-list {
+    margin-top: 30px;
+    display: flex;
+    div {
+      margin-right: 100px;
+    }
+    h3 {
+      color: white;
+      font-family: 'Barlow', sans-serif;
+      font-weight: 900;
+      cursor: pointer;
+      font-size: 24px!important;
+      margin-bottom: 18px!important;
+    }
+  }
+
+  @media (max-width: 1400px) {
+    .menu {
+      margin-top: 50px;
+      margin-left: 0;
+    }
+    .content-wrapper {
+      flex-direction: column;
+    }
+  }
+  
+  @media (max-width: 992px) {
+
+    .content-wrapper {
+      width: 90%;
+    }
+
+    .branding {
+      width: 90%;
+    }
+    .copyright {
+      width: 90%;
+    }
+    .menu-list {
+      flex-direction: column;
+    }
+  }
+}

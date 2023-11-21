@@ -1,0 +1,141 @@
+.white-button {
+  background-color: white;
+  border: none !important;
+  box-shadow: none !important;
+  cursor: pointer;
+}
+
+.p-button {
+  box-shadow: none !important;
+  border-color: unset !important;
+  font-family: 'Barlow', sans-serif;
+  border: none !important;
+  border-radius: unset!important;
+  font-size: 16px;
+  i {
+    margin-right: 20px;
+  }
+}
+
+
+
+.p-button-rounded {
+  span {
+    color: #686D71 !important;
+  }
+
+  background: #E8ECEE !important;
+  padding: 10px !important;
+}
+
+.p-button-rounded-success {
+  background: #E8ECEE;
+}
+
+.p-button-rounded-success:hover {
+  background: #a7fabd !important;
+}
+
+.p-button-rounded-danger {
+  background: #E8ECEE;
+}
+
+.p-button-rounded-danger:hover {
+  background: #F86B6B !important;
+
+  span {
+    color: white !important;
+  }
+  
+  i {
+    color: white !important;
+  }
+}
+
+
+.p-button-rounded-warning {
+  background: #E8ECEE;
+}
+
+.p-button-rounded-warning:hover {
+  background: #FFF6A0 !important;
+}
+
+.p-button-rounded-info {
+  background: #E8ECEE;
+}
+
+.p-button-rounded-info:hover {
+  background: #BBDEFB !important;
+}
+
+.p-button-rounded-orange {
+  background: #E8ECEE;
+}
+
+.p-button-rounded-orange:hover {
+  background: #fbdbbb !important;
+}
+
+
+.p-button.p-button-success {
+  background: var(--sucess) !important;
+}
+
+.p-button.p-button-danger {
+  background: var(--danger) !important;
+}
+
+.p-button.p-button-warning {
+  background: var(--warning) !important;
+}
+
+.p-button.p-button-info {
+  background-color: var(--info) !important;
+}
+
+
+.p-button-secondary {
+  background: var(--branco) !important;
+  border: 1px solid #2196F3 !important;
+  box-sizing: border-box !important;
+  color: #1976D2 !important;
+  border-radius: 3px !important;
+}
+
+.p-button {
+  background: blue;
+}
+
+
+.p-button-orange {
+  background: var(--orange)!important;
+  .p-button-label {
+    color: white!important;
+  }
+}
+
+.p-button-orange:hover {
+  .p-button-label {
+    color: #ecebeb !important;
+  }
+}
+
+.rounded-button {
+  padding: 0!important;
+  background: white!important;
+  width: 30px!important;
+  height: 30px!important;
+  border-radius: 100px!important;
+  display: flex;
+  justify-content: center;
+  border: 2px solid var(--orange)!important;
+}
+
+
+.p-button-black {
+  background: var(--black)!important;
+  .p-button-label {
+    color: white !important;
+  }
+}

@@ -1,0 +1,147 @@
+.public-brand-wrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  img {
+    width: 216px;
+    margin-right: 15px;
+  }
+
+  h1 {
+    color: #FFF;
+    text-align: center;
+    leading-trim: both;
+    text-edge: cap;
+    font-family: 'Oswald', sans-serif !important;
+    font-size: 59.115px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 45.25px; /* 76.547% */
+    letter-spacing: 17.734px;
+  }
+
+  div {
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+    margin-top: 35px;
+  }
+
+  label {
+    text-align: center;
+    color: #FFF;
+    text-align: center;
+    font-family: 'Barlow', sans-serif;
+    font-size: 16px;
+    font-style: normal;
+    font-weight: 500;
+    line-height: 19.898px; /* 124.365% */
+    letter-spacing: -0.16px;
+    text-transform: uppercase;
+  }
+
+  @media (max-width: 992px) {
+    margin: 50px 0;
+    h1 {
+      font-size: 60px!important;
+    }
+
+    label {
+      font-size: 20px!important;
+    }
+  }
+
+  @media (max-width: 500px) {
+    h1 {
+      font-size: 32px!important;
+    }
+
+    justify-content: flex-end;
+  }
+
+}
+
+.public-brand-text-wrapper {
+  display: flex;
+  margin-top: 72px;
+  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+
+  h1 {
+    width: 1151px;
+    color: #FFF;
+    text-align: center;
+    font-family: 'Barlow', sans-serif !important;
+    font-size: 92px !important;
+    font-style: normal;
+    font-weight: 900;
+    line-height: 97.98px; /* 106.5% */
+    text-transform: uppercase;
+  }
+
+  h3 {
+    margin-top: 52px;
+    width: 762px;
+    color: #FFF;
+    text-align: center;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 24px !important;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 33.6px;
+  }
+
+  .p-button {
+    margin-top: 40px!important;
+    width: 281px!important;
+    padding: 24px 20px!important;
+  }
+
+  @media (max-width: 1400px) {
+    h1 {
+      width: unset;
+
+    }
+  }
+
+  @media (max-width: 992px) {
+    h1 {
+      font-size: 72px!important;
+      margin-bottom: 70px;
+    }
+    h3 {
+      margin: 50px 20px;
+      width: unset;
+    }
+
+
+    .p-button {
+      width: 70%!important;
+      font-size: 24px;
+      min-width: 300px!important;
+    }
+  }
+
+  @media (max-width: 500px) {
+    margin-top: 30px;
+    h1 {
+      font-size: 30px!important;
+      margin-bottom: 70px;
+    }
+    h3 {
+      margin: 10px 10px;
+      width: unset;
+      font-size: 18px!important;
+    }
+
+
+    .p-button {
+      width: 70%!important;
+      font-size: 18px!important;
+      padding: 15px!important;
+    }
+  }
+}
