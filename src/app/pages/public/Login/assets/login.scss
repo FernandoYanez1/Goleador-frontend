@@ -1,0 +1,113 @@
+.login {
+  padding-top: 100px;
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+  width: 30%;
+  //height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  .p-card {
+    opacity: 97%;
+    width: 100%;
+    height: 100%;
+  }
+
+  .p-card-title {
+    color: var(--orange);
+  }
+
+  @media (max-width: 1900px) {
+    width: 100% !important;
+    background-image: url("~/public/media/landing-page/ronaldinho.jpg");
+    .p-card {
+      opacity: 97%;
+      width: 90%;
+      height: 65%;
+    }
+  }
+}
+
+.login-container {
+  display: flex;
+  height: 100vh;
+  position: relative;
+}
+
+.bolao-login {
+  margin-top: 150px;
+  //display: flex;
+  //height: 100vh;
+  position: relative;
+
+  @media (max-width: 1900px) {
+    margin-top: 60px;
+  }
+}
+
+.background-image-login {
+  width: 70%;
+  background-image: url("~/public/media/landing-page/bola.jpg");
+  background-size: cover;
+  background-position: center;
+  position: relative;
+
+  @media (max-width: 1900px) {
+    display: none;
+  }
+}
+
+.logo-contato-login {
+  width: 330px;
+  position: absolute;
+  top: 150px;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+
+.login-button {
+  background: var(--orange)!important;
+  border-radius: 10px !important;
+  .p-button-label {
+    color: white!important;
+  }
+}
+
+.login-button:hover {
+  .p-button-label {
+    color: #ecebeb !important;
+  }
+}
+
+.cadastro-text {
+  color: #000000;
+}
+
+.login-text {
+  color: #5e5e5e;
+}
+
+.login-contato {
+  background: var(--orange)!important;
+  width: 300px!important;
+  border-radius: 5px!important;
+  .p-button-label {
+    font-size: 18px;
+    color: white!important;
+  }
+}
+
+.login-contato:hover {
+  justify-content: center!important;
+  .p-button-label {
+    color: #ecebeb !important;
+  }
+}
+
+.input-login {
+  width: 300px;
+  justify-content: center;
+}

@@ -1,0 +1,49 @@
+.regras-container {
+  background: darkgrey;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-container {
+  text-align: center;
+  font-size: 30px !important;
+}
+
+.table-header {
+  margin-bottom: 10px;
+}
+
+.custom-table-container {
+  max-width: 800px;
+  flex: 1;
+  margin: auto;
+}
+
+.custom-table {
+  font-size: 18px !important;
+}
+
+.custom-table th,
+.custom-table td {
+  font-size: 18px;
+}
+
+.custom-table th {
+  font-size: 18px;
+}
+
+@media only screen and (max-width: 1900px) {
+  .custom-table-container {
+    width: 95% !important;
+    margin: auto;
+  }
+  .custom-table th,
+  .custom-table td {
+    font-size: 16px;
+  }
+
+  .custom-table th {
+    font-size: 16px;
+  }
+}

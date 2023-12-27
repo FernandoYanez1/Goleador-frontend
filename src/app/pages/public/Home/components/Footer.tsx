@@ -9,7 +9,7 @@ export default function Footer() {
             <footer className="public-footer">
                 <div className="content-wrapper">
                     <div className="branding">
-                        <img className="moicanos-logo" src="/media/moicanos-logo.png" />
+                        {/*<img className="moicanos-logo" src="/media/moicanos-logo.png" />*/}
                         <p>
                             Experimente nossa plataforma por 7 dias sem custo.
                             Desbloqueie todo o potencial de gerenciamento para
@@ -29,20 +29,21 @@ export default function Footer() {
                             <div>
                                 <h3>HOME</h3>
                                 <h3>RECURSOS</h3>
-                                <h3>BARBEARIAS</h3>
-                                <h3>PLANOS</h3>
+                                <h3>FAQ</h3>
+                                {/*<h3>BARBEARIAS</h3>*/}
+                                {/*<h3>PLANOS</h3>*/}
                             </div>
                             <div>
-                                <h3>PLANOS</h3>
+                                {/*<h3>PLANOS</h3>*/}
                                 <h3>DEPOIMENTOS</h3>
-                                <h3>FAQ</h3>
+                                {/*<h3>FAQ</h3>*/}
                                 <h3>TERMOS</h3>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div className="copyright">
-                    <label>Copyright© Moicanos {year} | Designed by Arthur Meireles</label>
+                    <label>Copyright© Moicanos {year} | Designed by Fernando Yañez</label>
                 </div>
             </footer>
         </>

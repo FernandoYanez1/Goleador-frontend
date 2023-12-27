@@ -18,14 +18,17 @@ export default function Home() {
             <Hero>
                 <Brand />
             </Hero>
-            <Transform />
-            <Partners />
-            <WithoutCommitment />
-            <AboutUs />
-            <Plans />
-            <Advertising />
-            <CommonQuestion />
-            <Footer />
+            {/*<Transform />*/}
+            {/*<Partners />*/}
+            {/*<WithoutCommitment />*/}
+            {/*<AboutUs />*/}
+            {/*<Plans />*/}
+            {/*<Advertising />*/}
+
+            {/*perguntas frequentes*/}
+            {/*<CommonQuestion />*/}
+
+            {/*<Footer />*/}
         </>
     );
 }

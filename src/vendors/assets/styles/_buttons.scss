@@ -110,6 +110,7 @@
 
 .p-button-orange {
   background: var(--orange)!important;
+  border-radius: 5px!important;
   .p-button-label {
     color: white!important;
   }
@@ -118,6 +119,16 @@
 .p-button-orange:hover {
   .p-button-label {
     color: #ecebeb !important;
+  }
+}
+
+.p-button-trasparente {
+  margin-top: 30px;
+  background-color: transparent!important;
+  .p-button-label {
+    justify-content: center;
+    color: var(--orange) !important;
+    font-size: 20px;
   }
 }
 

@@ -1,16 +1,142 @@
 .contato {
-  background-color: var(--black)!important;
-  width: 100vw;
-  height: 100vh;
+  //background-image: url("~/public/media/landing-page/futebol.jpg");
+  padding-top: 30px;
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+  width: 30%;
+  //height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
 
   .p-card {
-    width: 80%;
+    opacity: 97%;
+    width: 100%;
+    height: 100%;
   }
 
   .p-card-title {
     color: var(--orange);
   }
+
+  @media (max-width: 1900px) {
+    width: 100% !important;
+    background-image: url("~/public/media/landing-page/payet-mobile.jpg");
+    .p-card {
+      opacity: 97%;
+      width: 90%;
+      height: 95%;
+    }
+  }
+}
+
+.contato-container {
+  display: flex;
+  height: 100vh;
+  position: relative;
+}
+
+.contato-login {
+  margin-top: 150px;
+  //display: flex;
+  //height: 100vh;
+  position: relative;
+
+  @media (max-width: 1900px) {
+    margin-top: 60px;
+  }
+}
+
+.background-image {
+  width: 70%;
+  background-image: url("~/public/media/landing-page/futebol.jpg");
+  background-size: cover;
+  background-position: center;
+  position: relative;
+
+  @media (max-width: 1900px) {
+    display: none;
+    //width: 90%!important;
+  }
+}
+
+.logo-contato {
+  width: 330px;
+  position: absolute;
+  top: 150px;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+
+.login-button {
+  background: var(--orange)!important;
+  border-radius: 10px !important;
+  .p-button-label {
+    color: white!important;
+  }
+}
+
+.login-button:hover {
+  .p-button-label {
+    color: #ecebeb !important;
+  }
+}
+
+.cadastro-text {
+  color: #000000;
+}
+
+.cadastro-text {
+  color: #5e5e5e;
+}
+
+.cadastrar-contato {
+  background: var(--orange)!important;
+  width: 300px!important;
+  border-radius: 5px!important;
+  .p-button-label {
+    font-size: 18px;
+    color: white!important;
+  }
+}
+
+.cadastrar-contato:hover {
+  justify-content: center!important;
+  .p-button-label {
+    color: #ecebeb !important;
+  }
+}
+
+.input-container {
+  position: relative;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.input-container label {
+  position: absolute;
+  font-size: 18px;
+  top: 25%;
+  transform: translateY(-50%);
+  left: 50%;
+  transform: translateX(-50%);
+  transition: all 0.2s ease-out;
+  pointer-events: none;
+  color: #757575;
+}
+
+.input-container.focused label,
+.input-container .p-inputtext:placeholder-shown + label {
+  font-size: 14px;
+  top: 1px;
+  color: #757575;
+}
+
+.input-container .custom-input {
+  padding-top: 22px;
+  width: 300px;
+  margin: 0 auto;
+  text-align: center;
 }
