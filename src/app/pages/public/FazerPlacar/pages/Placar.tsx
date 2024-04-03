@@ -1,6 +1,7 @@
 import React, { useState, ChangeEvent, useEffect } from "react";
 import { useHistory } from "react-router-dom";
 import AppButton from "../../../../../vendors/components/Button";
+import axios from 'axios';
 
 interface Jogo {
     estadio: string;

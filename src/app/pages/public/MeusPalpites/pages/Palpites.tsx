@@ -25,6 +25,10 @@ export default function Placar() {
         history.push("/");
     };
 
+    const handleRankingClick = () => {
+        history.push("/public/ranking");
+    };
+
     const [placares, setPlacares] = useState<Placar[]>(
         Array(10).fill({ timeA: null, timeB: null })
     );
@@ -198,6 +202,17 @@ export default function Placar() {
                         {/*    label="Enviar"*/}
                         {/*    onClick={handleEnviarApostas}*/}
                         {/*/>*/}
+                        <AppButton
+                            className="button-placar"
+                            style={{
+                                marginTop: "40px",
+                                width: "281px",
+                                padding: "10px 15px",
+                                fontSize: "20px",
+                            }}
+                            label="Ranking"
+                            onClick={handleRankingClick}
+                        />
                         <AppButton
                             className="button-placar"
                             style={{

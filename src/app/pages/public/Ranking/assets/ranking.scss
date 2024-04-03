@@ -1,32 +1,39 @@
-/* Ranking.css */
+.ranking-list {
+  padding: 8px 0;
+}
+
+//.ranking-paper {
+//  padding: 12px;
+//}
 
 .ranking-container {
-  margin-top: 50px; /* Aumentei o espaçamento */
+  margin-top: 30px;
   text-align: center;
 }
 
 .header-text {
-  color: #ff9800; /* Laranja */
-  margin-bottom: 30px; /* Aumentei o espaçamento */
+  color: #ff9800;
+  margin-bottom: 30px;
+  font-weight: bold!important;
 }
 
 .ranking-paper {
-  padding: 30px;
+  padding: 20px;
   margin-bottom: 30px;
-  background: linear-gradient(to bottom, #ffe0b2, #ff9800); /* Laranja */
+  background: linear-gradient(to bottom, #ffe0b2, #ff9800);
   border-radius: 15px;
   box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.2);
 }
 
 .paper-heading {
-  color: #e65100; /* Laranja mais escuro */
+  color: #e65100;
   margin-bottom: 20px;
 }
 
 .list-item {
   background: #fff;
   border-radius: 10px;
-  margin-bottom: 15px; /* Aumentei o espaçamento */
+  margin-bottom: 15px;
   transition: transform 0.3s;
 }
 
@@ -47,14 +54,17 @@
   width: 100%;
   padding: 15px;
   font-size: 18px;
-  background: linear-gradient(to bottom, #ff5722, #e64a19); /* Laranja mais escuro */
-  color: white;
+  background: linear-gradient(to bottom, #ff5722, #e64a19) !important;
   border: none;
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.3s;
+  .p-button-label {
+    color: white!important;
+  }
 }
 
 .voltar-ranking:hover {
-  background: linear-gradient(to bottom, #e64a19, #ff5722); /* Laranja mais escuro */
+  background: linear-gradient(to bottom, #e64a19, #ff5722) !important;
 }
+
