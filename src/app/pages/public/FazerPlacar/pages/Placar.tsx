@@ -1,193 +1,161 @@
-import React, { useState, ChangeEvent, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useHistory } from "react-router-dom";
 import AppButton from "../../../../../vendors/components/Button";
-import axios from 'axios';
-
-interface Jogo {
-    estadio: string;
-    horario: string;
-    timeA: string;
-    escudoA: string;
-    siglaA: string;
-    timeB: string;
-    escudoB: string;
-    siglaB: string;
-}
-
-interface Placar {
-    timeA: number | null;
-    timeB: number | null;
-}
 
 export default function Placar() {
     const history = useHistory();
+    const [confrontos, setConfrontos] = useState<any[]>([]);
+    const [placares, setPlacares] = useState<any>({});
+    const [bloqueado, setBloqueado] = useState(false);
+    const [prazoLimite, setPrazoLimite] = useState<Date | null>(null);
+    const [jaApostou, setJaApostou] = useState(false); 
 
-    const handleVoltarHomeClick = () => {
-        history.push("/");
+    useEffect(() => {
+        const usuarioSalvo = localStorage.getItem('usuarioLogado');
+        if (!usuarioSalvo) {
+            history.push('/public/login');
+            return;
+        }
+        const user = JSON.parse(usuarioSalvo);
+
+        // 1. Verifica se já apostou
+        fetch(`http://localhost:3001/meus-palpites/${user.id}`)
+            .then(res => res.json())
+            .then(dados => {
+                if (dados.length > 0) setJaApostou(true);
+            });
+
+        // 2. Verifica prazo
+        fetch('http://localhost:3001/config/prazo')
+            .then(res => res.json())
+            .then(data => {
+                if (data.prazo) {
+                    const dataLimite = new Date(data.prazo);
+                    setPrazoLimite(dataLimite);
+                    if (new Date() > dataLimite) setBloqueado(true);
+                }
+            });
+
+        // 3. Busca os jogos E ORDENA POR DATA/HORA
+        fetch('http://localhost:3001/jogos')
+            .then(res => res.json())
+            .then(dados => {
+                // Ordenação mágica acontecendo aqui:
+                const jogosOrdenados = dados.sort((a: any, b: any) => new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime());
+                
+                setConfrontos(jogosOrdenados);
+                const initial: any = {};
+                jogosOrdenados.forEach((jogo: any) => { initial[jogo.id] = { casa: "", visitante: "" }; });
+                setPlacares(initial);
+            });
+    }, [history]);
+
+    const handlePlacarChange = (jogoId: number, campo: "casa" | "visitante", value: string) => {
+        if (bloqueado || jaApostou) return;
+        const apenasNumeros = value.replace(/\D/g, "");
+        setPlacares({ ...placares, [jogoId]: { ...placares[jogoId], [campo]: apenasNumeros } });
     };
 
-    const [placares, setPlacares] = useState<Placar[]>(
-        Array(10).fill({ timeA: null, timeB: null })
-    );
+    const handleEnviarApostas = async () => {
+        if (bloqueado) return alert("O prazo para apostas já encerrou!");
+        if (jaApostou) return alert("Você já registrou seus palpites!");
 
-    const [confrontos, setConfrontos] = useState<Jogo[]>([
-        {
-            estadio: "Maracanã",
-            horario: "20/03 às 16:30",
+        const user = JSON.parse(localStorage.getItem('usuarioLogado') || '{}');
+        const apostasParaEnviar = confrontos.map(jogo => ({
+            usuario_id: user.id, match_id: jogo.id,
+            palpite_casa: placares[jogo.id]?.casa,
+            palpite_visitante: placares[jogo.id]?.visitante
+        })).filter(a => a.palpite_casa !== "" && a.palpite_visitante !== "");
 
-            timeA: "Vasco",
-            escudoA: "/media/escudos-times/Vasco.png",
-            siglaA: "VAS",
-            timeB: "Flamengo",
-            escudoB: "/media/escudos-times/Flamengo.png",
-            siglaB: "FLA",
-        },
-        {
-            estadio: "Neo Química Arena",
-            horario: "21/03 às 12:00",
+        if (apostasParaEnviar.length === 0) return alert("Preencha pelo menos um palpite!");
 
-            timeA: "Corinthians",
-            escudoA: "/media/escudos-times/Corinthians.png",
-            siglaA: "COR",
-            timeB: "Gremio",
-            escudoB: "/media/escudos-times/Gremio.png",
-            siglaB: "GRE",
-        },
-        {
-            estadio: "Estádio 3",
-            horario: "Horário 3",
+        try {
+            const resposta = await fetch('http://localhost:3001/apostar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ apostas: apostasParaEnviar })
+            });
 
-            timeA: "Cruzeiro",
-            escudoA: "/media/escudos-times/Cruzeiro.png",
-            siglaA: "Cru",
-            timeB: "Botafogo",
-            escudoB: "/media/escudos-times/Botafogo.png",
-            siglaB: "BOT",
-        },
-
-
-    ]);
-
-    const handlePlacarChange = (
-        jogoIndex: number,
-        time: "timeA" | "timeB",
-        value: string
-    ) => {
-        const placarValue = parseInt(value, 10);
-        const novosPlacares = [...placares];
-        novosPlacares[jogoIndex] = {
-            ...novosPlacares[jogoIndex],
-            [time]: isNaN(placarValue) ? null : placarValue,
-        };
-        setPlacares(novosPlacares);
-    };
-
-    const renderOpcoesJogo = (jogoIndex: number, jogo: Jogo) => {
-        return (
-            <div key={jogoIndex} className="placar-container"  style={{marginTop: "-25px"}}>
-                <div className="dados-jogo" style={{ marginBottom: "20px", display: "inline" }}>
-                    <span style={{ fontWeight: 'bold' }}>{`${jogo.estadio},`}</span>
-                    {` ${jogo.horario}`}
-                </div>
-
-                <table>
-                    <tbody>
-                    <tr className="placar">
-                        <td className="time">
-                            <img
-                                src={jogo.escudoA}
-                                alt={`${jogo.timeA} Escudo`}
-                                className="escudo"
-                                style={{ filter: 'brightness(1.0) saturate(1.1)' }}
-                            />
-                            <span className="sigla">{jogo.siglaA}</span>
-                            <input
-                                type="text"
-                                value={(placares[jogoIndex]?.timeA ?? "").toString()}
-                                onChange={(e) =>
-                                    handlePlacarChange(jogoIndex, "timeA", e.target.value)
-                                }
-                                maxLength={1}
-                                className="input placar-input"
-                            />
-                        </td>
-                        <td className="versus">X</td>
-                        <td className="time">
-                            <input
-                                type="text"
-                                value={(placares[jogoIndex]?.timeB ?? "").toString()}
-                                onChange={(e) =>
-                                    handlePlacarChange(jogoIndex, "timeB", e.target.value)
-                                }
-                                maxLength={1}
-                                className="input placar-input"
-                            />
-                            <span className="sigla">{jogo.siglaB}</span>
-                            <img
-                                src={jogo.escudoB}
-                                alt={`${jogo.timeB} Escudo`}
-                                className="escudo"
-                                style={{ filter: 'brightness(1.1) saturate(1.1)' }}
-                            />
-                        </td>
-                    </tr>
-                    <div style={{ borderTop: "2px solid black", width: "100%" }}></div>
-                    </tbody>
-                </table>
-            </div>
-        );
-    };
-
-    const handleEnviarApostas = () => {
-        console.log(placares);
+            if (resposta.ok) {
+                alert("Palpites salvos! Realize o pagamento para validar.");
+                history.push("/public/meus-palpites"); 
+            }
+        } catch (error) {
+            alert("Erro de conexão.");
+        }
     };
 
     return (
-        <>
-            <div
-                className="public-brand-wrapper no-cursor"
-                style={{ background: "lightslategrey", paddingBottom: "50px" }}
-            >
-                <div
-                    className="placar-container"
-                    style={{
-                        background: "lightslategrey",
-                        boxShadow: "0 0 100px rgba(255, 165, 0, 0.5)",
-                        border: "2px solid black",
-                        borderRadius: "10px",
-                        padding: "20px",
-                        textAlign: "center",
-                    }}
-                >
-                    <div style={{ display: "flex", flexDirection: "column" }}>
-                        {confrontos.map((jogo, index) => renderOpcoesJogo(index, jogo))}
-                    </div>
-                    <div className="botoes-placar-container">
-                        <AppButton
-                            className="button-placar"
-                            style={{
-                                marginTop: "40px",
-                                width: "281px",
-                                padding: "10px 15px",
-                                fontSize: "20px",
-                            }}
-                            label="Enviar"
-                            onClick={handleEnviarApostas}
-                        />
-                        <AppButton
-                            className="button-placar"
-                            style={{
-                                marginTop: "40px",
-                                width: "281px",
-                                padding: "10px 15px",
-                                fontSize: "20px",
-                            }}
-                            label="Voltar"
-                            onClick={handleVoltarHomeClick}
+        <div style={{ background: "#e2e8f0", paddingBottom: "50px", minHeight: "100vh", paddingTop: "40px" }}>
+            <div style={{ background: "white", borderRadius: "12px", padding: "30px 20px", maxWidth: "800px", margin: "0 auto", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)" }}>
+                
+                {jaApostou ? (
+                    <div style={{ textAlign: "center", padding: "40px 10px" }}>
+                        <h2 style={{ color: "#10b981", fontSize: "32px", marginBottom: "15px" }}>✅ Palpites Registrados!</h2>
+                        <p style={{ color: "#475569", fontSize: "18px", marginBottom: "30px" }}>
+                            Você já preencheu seus palpites para esta rodada. Vá para a página de acompanhamento para ver os resultados e o status do seu pagamento.
+                        </p>
+                        <AppButton 
+                            style={{ padding: "15px 40px", fontSize: "18px", backgroundColor: "#f59e0b", border: "none" }} 
+                            label="Ir para Meus Palpites" 
+                            onClick={() => history.push("/public/meus-palpites")} 
                         />
                     </div>
-                </div>
+                ) : (
+                    <>
+                        <h2 style={{ color: "#1e293b", textAlign: "center", marginBottom: "20px", fontSize: "28px" }}>Faça seus Palpites</h2>
+                        
+                        {prazoLimite && (
+                            <div style={{ textAlign: "center", marginBottom: "30px", padding: "10px", borderRadius: "8px", backgroundColor: bloqueado ? "#fee2e2" : "#f0fdf4", color: bloqueado ? "#ef4444" : "#10b981", fontWeight: "bold" }}>
+                                {bloqueado ? "⚠️ APOSTAS ENCERRADAS PARA A RODADA" : `⏳ Prazo final para apostas: ${prazoLimite.toLocaleString('pt-BR')}`}
+                            </div>
+                        )}
+
+                        {confrontos.map(jogo => (
+                            <div key={jogo.id} style={{ marginBottom: "20px", padding: "20px", backgroundColor: "#f8fafc", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
+                                <div style={{ textAlign: "center", marginBottom: "15px", color: "#64748b", fontWeight: "bold" }}>
+                                    {new Date(jogo.data_hora).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+                                </div>
+                                
+                                <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "20px", flexWrap: "wrap" }}>
+                                    <div style={{ textAlign: 'center', width: '80px' }}>
+                                        <img src={jogo.logo_casa || "/media/escudos-times/default.png"} alt="Casa" style={{ width: '45px', height: '45px', objectFit: 'contain', marginBottom: "5px" }} onError={(e: any) => { e.target.src = "/media/escudos-times/default.png"; }} />
+                                        <div style={{ fontSize: "14px", fontWeight: "bold", color: "#1e293b" }}>{jogo.sigla_casa || jogo.time_casa.substring(0,3).toUpperCase()}</div>
+                                    </div>
+
+                                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                        <input
+                                            type="number" min="0" disabled={bloqueado}
+                                            value={placares[jogo.id]?.casa || ""}
+                                            onChange={(e) => handlePlacarChange(jogo.id, "casa", e.target.value)}
+                                            style={{ width: "55px", height: "45px", textAlign: "center", fontSize: "20px", fontWeight: "bold", border: "2px solid #cbd5e1", borderRadius: "8px", backgroundColor: bloqueado ? "#f1f5f9" : "white" }}
+                                        />
+                                        <span style={{ fontSize: "20px", fontWeight: "bold", color: "#94a3b8" }}>X</span>
+                                        <input
+                                            type="number" min="0" disabled={bloqueado}
+                                            value={placares[jogo.id]?.visitante || ""}
+                                            onChange={(e) => handlePlacarChange(jogo.id, "visitante", e.target.value)}
+                                            style={{ width: "55px", height: "45px", textAlign: "center", fontSize: "20px", fontWeight: "bold", border: "2px solid #cbd5e1", borderRadius: "8px", backgroundColor: bloqueado ? "#f1f5f9" : "white" }}
+                                        />
+                                    </div>
+
+                                    <div style={{ textAlign: 'center', width: '80px' }}>
+                                        <img src={jogo.logo_visitante || "/media/escudos-times/default.png"} alt="Visitante" style={{ width: '45px', height: '45px', objectFit: 'contain', marginBottom: "5px" }} onError={(e: any) => { e.target.src = "/media/escudos-times/default.png"; }} />
+                                        <div style={{ fontSize: "14px", fontWeight: "bold", color: "#1e293b" }}>{jogo.sigla_visitante || jogo.time_visitante.substring(0,3).toUpperCase()}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+
+                        <div style={{ display: "flex", justifyContent: "center", gap: "20px", marginTop: "30px" }}>
+                            {!bloqueado && (
+                                <AppButton style={{ width: "220px", padding: "12px", fontSize: "18px", backgroundColor: "#10b981", border: "none" }} label="Salvar Palpites" onClick={handleEnviarApostas} />
+                            )}
+                            <AppButton style={{ width: "220px", padding: "12px", fontSize: "18px", backgroundColor: "#64748b", border: "none" }} label="Voltar" onClick={() => history.push("/public")} />
+                        </div>
+                    </>
+                )}
             </div>
-        </>
+        </div>
     );
 }

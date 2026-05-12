@@ -9,9 +9,9 @@ import "primereact/resources/themes/lara-light-indigo/theme.css";
 import "primereact/resources/primereact.min.css";
 
 function App() {
-    addLocale('pt_BR', localeConfig);
+    addLocale('pt-BR', localeConfig);
 
-    locale('pt_BR');
+    locale('pt-BR');
     return (
         <>
             <Routes/>
