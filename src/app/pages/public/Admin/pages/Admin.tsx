@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
-import { Calendar } from 'primereact/calendar';
 import { Dialog } from 'primereact/dialog';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
@@ -23,14 +22,15 @@ export default function Admin() {
     const [exibirDialogCartelas, setExibirDialogCartelas] = useState(false);
     const [cartelas, setCartelas] = useState<any[]>([]);
     
+    // Transformei data_hora em string para aceitar o input nativo HTML
     const [novoJogo, setNovoJogo] = useState<{
         time_casa: string; time_visitante: string;
         sigla_casa: string; sigla_visitante: string;
         logo_casa: string; logo_visitante: string;
-        data_hora: any;
+        data_hora: string; 
     }>({
         time_casa: '', time_visitante: '', sigla_casa: '', sigla_visitante: '',
-        logo_casa: '', logo_visitante: '', data_hora: null
+        logo_casa: '', logo_visitante: '', data_hora: ''
     });
 
     const carregarRodadas = () => {
@@ -78,7 +78,6 @@ export default function Admin() {
         }
     }, [rodadaSelecionada]);
 
-    // --- AÇÕES DE RODADA ---
     const handleCriarRodada = () => {
         if (!novaRodadaNome) return alert("Digite um nome para a rodada!");
         fetch(`${apiUrl}/rodadas`, {
@@ -98,7 +97,6 @@ export default function Admin() {
             fetch(`${apiUrl}/rodadas/${rodadaSelecionada.id}/finalizar`, { method: 'PUT' })
                 .then(() => {
                     alert("Rodada Bloqueada! Apostas encerradas.");
-                    // Atualiza a lista de rodadas e recarrega a rodada selecionada com o novo status
                     fetch(`${apiUrl}/rodadas`).then(res => res.json()).then(data => {
                         setRodadas(data);
                         setRodadaSelecionada(data.find((r:any) => r.id === rodadaSelecionada.id));
@@ -107,14 +105,12 @@ export default function Admin() {
         }
     };
 
-    // NOVA FUNÇÃO: REABRIR RODADA
     const handleReabrirRodada = () => {
         if (!rodadaSelecionada) return;
         if (window.confirm(`Atenção: Deseja REABRIR as apostas para a ${rodadaSelecionada.nome}? Os usuários poderão voltar a comprar cartelas.`)) {
             fetch(`${apiUrl}/rodadas/${rodadaSelecionada.id}/reabrir`, { method: 'PUT' })
                 .then(() => {
                     alert("Rodada Reaberta com sucesso!");
-                    // Atualiza a lista de rodadas e recarrega a rodada selecionada com o novo status
                     fetch(`${apiUrl}/rodadas`).then(res => res.json()).then(data => {
                         setRodadas(data);
                         setRodadaSelecionada(data.find((r:any) => r.id === rodadaSelecionada.id));
@@ -123,7 +119,6 @@ export default function Admin() {
         }
     };
 
-    // --- AÇÕES DE JOGO ---
     const handleCadastrarJogo = () => {
         if (!rodadaSelecionada) return alert("Selecione uma rodada primeiro!");
         if (!novoJogo.time_casa || !novoJogo.time_visitante) return alert("Preencha os times!");
@@ -131,7 +126,8 @@ export default function Admin() {
         const dados = { 
             ...novoJogo, 
             rodada_id: rodadaSelecionada.id,
-            data_hora: novoJogo.data_hora ? novoJogo.data_hora.toISOString() : null 
+            // Formata o input html para o formato ISO aceito pelo banco
+            data_hora: novoJogo.data_hora ? new Date(novoJogo.data_hora).toISOString() : null 
         };
 
         fetch(`${apiUrl}/cadastrar-jogo`, {
@@ -141,7 +137,7 @@ export default function Admin() {
         }).then(() => {
             alert("Jogo cadastrado!");
             carregarJogos(rodadaSelecionada.id);
-            setNovoJogo({ time_casa: '', time_visitante: '', sigla_casa: '', sigla_visitante: '', logo_casa: '', logo_visitante: '', data_hora: null });
+            setNovoJogo({ time_casa: '', time_visitante: '', sigla_casa: '', sigla_visitante: '', logo_casa: '', logo_visitante: '', data_hora: '' });
         });
     };
 
@@ -174,7 +170,6 @@ export default function Admin() {
 
     const habilitarEdicao = (jogoId: number) => setEditandoJogos([...editandoJogos, jogoId]);
 
-    // --- AÇÕES DE CARTELAS ---
     const handleTogglePagamento = (cartelaId: number, statusAtual: string) => {
         const novoStatus = statusAtual === 'aprovado' ? 'pendente' : 'aprovado';
         fetch(`${apiUrl}/aprovar-pagamento/${cartelaId}`, {
@@ -189,14 +184,18 @@ export default function Admin() {
             fetch(`${apiUrl}/deletar-cartela/${cartelaId}`, { method: 'DELETE' })
                 .then(() => {
                     alert("Cartela excluída com sucesso!");
-                    carregarCartelas(); // Atualiza a tabela
+                    carregarCartelas();
                 });
         }
     };
 
-    const formatarData = (d: string) => isNaN(new Date(d).getTime()) ? d : new Date(d).toLocaleString('pt-BR');
+    // Formata exibição da data para ficar bonita na lista de jogos
+    const formatarData = (d: string) => {
+        if (!d) return '';
+        const data = new Date(d);
+        return isNaN(data.getTime()) ? d : data.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    };
 
-    // --- CÁLCULOS DO DASHBOARD ADMIN ---
     const VALOR_INSCRICAO = 25;
     const cartelasAprovadas = cartelas.filter(c => c.status_pagamento === 'aprovado');
     const cartelasPendentes = cartelas.filter(c => c.status_pagamento === 'pendente');
@@ -208,14 +207,12 @@ export default function Admin() {
         <div style={{ padding: '30px', minHeight: '100vh', backgroundColor: '#f4f6f9', color: '#333' }}>
             <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
                 
-                {/* CABEÇALHO */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', backgroundColor: 'white', padding: '15px 20px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
                     <Button label="Voltar" icon="pi pi-arrow-left" onClick={() => history.push('/public')} className="p-button-text p-button-secondary" />
                     <h1 style={{ margin: 0, fontSize: '24px' }}>🛡️ Painel de Administração</h1>
                     <Button label="Aprovar Bilhete" icon="pi pi-check-square" onClick={() => { carregarCartelas(); setExibirDialogCartelas(true); }} className="p-button-outlined p-button-secondary" />
                 </div>
 
-                {/* DASHBOARD FINANCEIRO */}
                 <div style={{ display: 'flex', gap: '20px', marginBottom: '30px', flexWrap: 'wrap' }}>
                     <div style={{ flex: 1, minWidth: '200px', backgroundColor: '#ecfdf5', border: '1px solid #10b981', padding: '20px', borderRadius: '12px', textAlign: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
                         <div style={{ color: '#047857', fontWeight: 'bold', fontSize: '14px', marginBottom: '5px' }}>💰 VALOR ARRECADADO</div>
@@ -234,12 +231,10 @@ export default function Admin() {
                     </div>
                 </div>
 
-                {/* GESTÃO DE RODADAS */}
                 <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', marginBottom: '30px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
                     <h3 style={{ margin: '0 0 15px 0', color: '#1e293b' }}>Gestão de Rodadas</h3>
                     
                     <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
-                        {/* Seletor de Rodada */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <Dropdown 
                                 value={rodadaSelecionada} 
@@ -258,13 +253,11 @@ export default function Admin() {
 
                         <span style={{ color: '#cbd5e1' }}>|</span>
 
-                        {/* Criar Nova Rodada */}
                         <div style={{ display: 'flex', gap: '10px' }}>
                             <InputText placeholder="Nome (Ex: Oitavas)" value={novaRodadaNome} onChange={(e) => setNovaRodadaNome(e.target.value)} />
                             <Button label="Nova Rodada" icon="pi pi-plus" onClick={handleCriarRodada} severity="success" outlined />
                         </div>
 
-                        {/* BOTÃO MÁGICO: ALTERNA ENTRE BLOQUEAR E DESBLOQUEAR */}
                         {rodadaSelecionada?.status === 'aberta' ? (
                             <Button label="Encerrar Rodada e Bloquear Apostas" icon="pi pi-lock" severity="danger" onClick={handleFinalizarRodada} style={{ marginLeft: 'auto' }} />
                         ) : (
@@ -273,11 +266,9 @@ export default function Admin() {
                     </div>
                 </div>
 
-                {/* CADASTRO DE JOGOS E RESULTADOS (Só exibe se houver rodada selecionada) */}
                 {rodadaSelecionada && (
                     <div style={{ display: 'flex', gap: '30px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
                         
-                        {/* FORMULÁRIO DE JOGOS */}
                         <div style={{ flex: '1 1 400px', backgroundColor: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', opacity: rodadaSelecionada.status === 'finalizada' ? 0.5 : 1, pointerEvents: rodadaSelecionada.status === 'finalizada' ? 'none' : 'auto' }}>
                             <h2>➕ Adicionar à {rodadaSelecionada.nome}</h2>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
@@ -295,12 +286,18 @@ export default function Admin() {
                                 </div>
                                 <InputText placeholder="URL Logo Visitante" value={novoJogo.logo_visitante} onChange={(e) => setNovoJogo({...novoJogo, logo_visitante: e.target.value})} />
                                 
-                                <Calendar placeholder="Data e Horário" value={novoJogo.data_hora} onChange={(e) => setNovoJogo({...novoJogo, data_hora: e.value})} showTime hourFormat="24" />
+                                {/* AQUI FOI TROCADO PARA O INPUT NATIVO */}
+                                <input 
+                                    type="datetime-local" 
+                                    value={novoJogo.data_hora} 
+                                    onChange={(e) => setNovoJogo({...novoJogo, data_hora: e.target.value})} 
+                                    style={{ padding: '0.75rem', borderRadius: '6px', border: '1px solid #ced4da', width: '100%', fontFamily: 'inherit', fontSize: '1rem', color: '#495057' }}
+                                />
+
                                 <Button label="Cadastrar Jogo" onClick={handleCadastrarJogo} />
                             </div>
                         </div>
 
-                        {/* LISTA DE JOGOS */}
                         <div style={{ flex: '1 1 500px' }}>
                             <h2 style={{ marginTop: 0 }}>📋 Jogos da {rodadaSelecionada.nome}</h2>
                             {jogos.length === 0 ? <p>Nenhum jogo cadastrado nesta rodada.</p> : null}
@@ -368,7 +365,6 @@ export default function Admin() {
                 )}
             </div>
 
-          {/* MODAL DE APROVAÇÃO DE CARTELAS */}
             <Dialog header="Gerenciar Pagamentos (Cartelas)" visible={exibirDialogCartelas} style={{ width: '70vw' }} onHide={() => setExibirDialogCartelas(false)}>
                 <DataTable value={cartelas} paginator rows={10} emptyMessage="Nenhuma cartela gerada." sortField="id" sortOrder={-1}>
                     <Column field="id" header="Nº" sortable body={(r) => <b>#{r.id}</b>} style={{ width: '80px' }} />

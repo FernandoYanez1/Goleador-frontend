@@ -25,7 +25,6 @@ export default function MeusPalpites() {
       .then((dados) => {
         setCartelas(dados);
         
-        // Soma os pontos de todas as cartelas aprovadas para mostrar no topo
         const total = dados
           .filter((c: any) => c.status_pagamento === 'aprovado')
           .reduce((acc: number, c: any) => acc + c.total_pontos, 0);
@@ -34,7 +33,6 @@ export default function MeusPalpites() {
       .catch((err) => console.error("Erro ao buscar palpites:", err));
   }, [history, apiUrl]);
 
-  // Nova lógica de cores muito mais inteligente lendo direto do Backend!
   const getRegraInfo = (p: any) => {
     if (p.gols_casa === null || p.gols_visitante === null) return { texto: "Aguardando jogo acabar", cor: "#94a3b8" }; 
     
@@ -46,9 +44,14 @@ export default function MeusPalpites() {
     return { texto: "❌ Errou (0 pts)", cor: "#64748b" }; 
   };
 
-  const formatarData = (dataStr: string) => {
+  // Formata a data para ficar só Dia/Mês/Ano e Hora:Minuto
+  const formatarDataJogo = (dataStr: string) => {
+      if (!dataStr) return "Data indefinida";
       const d = new Date(dataStr);
-      return isNaN(d.getTime()) ? dataStr : d.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+      return isNaN(d.getTime()) ? dataStr : d.toLocaleString("pt-BR", { 
+          day: '2-digit', month: '2-digit', year: 'numeric', 
+          hour: '2-digit', minute: '2-digit' 
+      });
   };
 
   const renderCartela = (cartela: any) => {
@@ -59,7 +62,6 @@ export default function MeusPalpites() {
     return (
       <div key={cartela.cartela_id} style={{ backgroundColor: "white", borderRadius: "12px", padding: "20px", marginBottom: "40px", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)", borderTop: isAprovado ? "8px solid #10b981" : "8px solid #f59e0b" }}>
         
-        {/* Cabeçalho da Cartela */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #e2e8f0", paddingBottom: "15px", marginBottom: "20px" }}>
           <div>
             <h3 style={{ margin: 0, color: "#1e293b", fontSize: "20px" }}>Cartela #{cartela.cartela_id}</h3>
@@ -71,7 +73,6 @@ export default function MeusPalpites() {
           </div>
         </div>
 
-        {/* Bloco de Pagamento (Só aparece se estiver pendente) */}
         {!isAprovado && (
           <div style={{ backgroundColor: "#fffbeb", border: "2px dashed #f59e0b", borderRadius: "12px", padding: "20px", marginBottom: "25px", textAlign: "center" }}>
             <h4 style={{ color: "#b45309", margin: "0 0 10px 0", fontSize: "18px" }}>⚠️ Cartela Aguardando Pagamento</h4>
@@ -94,7 +95,6 @@ export default function MeusPalpites() {
           </div>
         )}
 
-        {/* Lista de Jogos (Palpites) da Cartela */}
         <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
           {cartela.palpites.map((p: any, index: number) => {
             const jogoFinalizado = p.gols_casa !== null && p.gols_visitante !== null;
@@ -102,7 +102,10 @@ export default function MeusPalpites() {
 
             return (
               <div key={index} style={{ backgroundColor: "#f8fafc", borderRadius: "8px", padding: "15px", border: "1px solid #e2e8f0" }}>
-                <div style={{ textAlign: "center", color: "#64748b", fontSize: "12px", fontWeight: "bold", marginBottom: "10px" }}>📅 {formatarData(cartela.data_criacao)}</div>
+                {/* AQUI MOSTRAMOS A HORA DO JOGO! */}
+                <div style={{ textAlign: "center", color: "#64748b", fontSize: "12px", fontWeight: "bold", marginBottom: "10px" }}>
+                  📅 {formatarDataJogo(p.data_hora)}
+                </div>
                 
                 <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "15px" }}>
                   <div style={{ textAlign: 'center', width: '60px' }}>
@@ -148,7 +151,6 @@ export default function MeusPalpites() {
     <div style={{ background: "#e2e8f0", paddingBottom: "50px", minHeight: "100vh", paddingTop: "40px" }}>
       <div style={{ maxWidth: "800px", margin: "0 auto", padding: "0 20px" }}>
         
-        {/* CABEÇALHO GERAL */}
         <div style={{ backgroundColor: "#1e293b", color: "white", borderRadius: "12px", padding: "25px", marginBottom: "30px", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)" }}>
           <div>
             <h2 style={{ margin: 0, color: "white", fontSize: "24px" }}>Minhas Cartelas</h2>
@@ -160,7 +162,6 @@ export default function MeusPalpites() {
           </div>
         </div>
 
-        {/* LISTAGEM DE CARTELAS */}
         {cartelas.length === 0 ? (
           <div style={{ textAlign: "center", padding: "50px 20px", backgroundColor: "white", borderRadius: "12px" }}>
             <h3 style={{ color: "#64748b", marginBottom: "20px" }}>Você ainda não comprou nenhuma cartela.</h3>
