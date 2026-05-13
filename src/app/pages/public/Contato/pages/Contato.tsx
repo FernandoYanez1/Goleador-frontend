@@ -6,6 +6,7 @@ import { useHistory } from 'react-router-dom';
 import AppButton from '../../../../../vendors/components/Button';
 
 export default function Contato() {
+    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
     const [email, setEmail] = useState('');
     const [nome, setNome] = useState('');
     const [cpf, setCpf] = useState('');
@@ -29,7 +30,7 @@ export default function Contato() {
         setLoading(true);
 
         try {
-            const resposta = await fetch('http://localhost:3001/cadastro', {
+            const resposta = await fetch(`${apiUrl}/cadastro`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ nome, email, cpf, telefone, senha })

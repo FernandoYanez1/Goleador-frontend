@@ -6,25 +6,24 @@ import {
 } from "@mui/material";
 import AppButton from "../../../../../vendors/components/Button";
 import { useHistory } from "react-router-dom";
-// Adicionamos o ícone Close (X)
 import { EmojiEvents, PictureAsPdf, MilitaryTech, Visibility, Lock, WhatsApp, Close } from "@mui/icons-material";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 const Ranking = () => {
+    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+    
     const [aprovados, setAprovados] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [gerandoPdf, setGerandoPdf] = useState(false);
     const [usuarioLogado, setUsuarioLogado] = useState<any>(null);
     const history = useHistory();
 
-    const [bloqueado, setBloqueado] = useState(false);
+    const [apostasBloqueadas, setApostasBloqueadas] = useState(false); // Substituiu a antiga lógica de prazo
     const [modalAberto, setModalAberto] = useState(false);
     const [usuarioSelecionado, setUsuarioSelecionado] = useState<any>(null);
     const [palpitesUsuarioSecado, setPalpitesUsuarioSecado] = useState<any[]>([]);
 
-    // --- ESTADO DO BANNER DO WHATSAPP ---
-    // Verifica na memória se o usuário já fechou o banner antes
     const [mostrarBannerWpp, setMostrarBannerWpp] = useState(() => {
         return localStorage.getItem("bannerWppOculto") !== "true";
     });
@@ -35,14 +34,17 @@ const Ranking = () => {
         const salvo = localStorage.getItem("usuarioLogado");
         if (salvo) setUsuarioLogado(JSON.parse(salvo));
 
-        fetch("http://localhost:3001/ranking")
+        // 1. Busca o ranking
+        fetch(`${apiUrl}/ranking`)
             .then((res) => res.json())
             .then((dados) => {
                 if (Array.isArray(dados)) {
-                    const somentePagos = dados
-                        .filter(u => u.pago === 1)
+                    // Como a nova rota já traz os pontos somados corretamente das cartelas, 
+                    // precisamos apenas garantir que ele ignore quem tem pontuação 0
+                    const comPontos = dados
+                        .filter(u => u.pontuacao_total > 0) 
                         .sort((a, b) => b.pontuacao_total - a.pontuacao_total);
-                    setAprovados(somentePagos);
+                    setAprovados(comPontos);
                 }
                 setLoading(false);
             })
@@ -51,15 +53,15 @@ const Ranking = () => {
                 setLoading(false);
             });
 
-        fetch('http://localhost:3001/config/prazo')
+        // 2. Nova lógica de Bloqueio baseada em Rodadas
+        fetch(`${apiUrl}/rodadas`)
             .then(res => res.json())
             .then(data => {
-                if (data.prazo) {
-                    const dataLimite = new Date(data.prazo);
-                    if (new Date() > dataLimite) setBloqueado(true);
-                }
+                // Se NÃO tiver nenhuma rodada aberta, significa que as apostas estão encerradas (Secador Liberado)
+                const temRodadaAberta = data.some((r: any) => r.status === 'aberta');
+                setApostasBloqueadas(!temRodadaAberta);
             });
-    }, []);
+    }, [apiUrl]);
 
     const valorPremioTotal = aprovados.length * VALOR_INSCRICAO;
     const pontuacoesUnicas = aprovados
@@ -79,17 +81,26 @@ const Ranking = () => {
     const premio3PorPessoa = (valorPremioTotal * 0.10) / (ganhadores3.length || 1);
 
     const abrirSecador = async (usuario: any) => {
-        if (!bloqueado) {
-            alert("🔒 O Modo Secador só é liberado após o encerramento do prazo de apostas da rodada!");
+        if (!apostasBloqueadas) {
+            alert("🔒 O Modo Secador só é liberado quando não há rodadas de apostas abertas!");
             return;
         }
 
         setUsuarioSelecionado(usuario);
         try {
-            const res = await fetch(`http://localhost:3001/meus-palpites/${usuario.id}`);
+            const res = await fetch(`${apiUrl}/meus-palpites/${usuario.id}`);
             const dados = await res.json();
-            const palpitesOrdenados = dados.sort((a: any, b: any) => new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime());
-            setPalpitesUsuarioSecado(palpitesOrdenados);
+            
+            // Como agora usamos cartelas, 'dados' é um array de cartelas. 
+            // Precisamos extrair todos os palpites de todas as cartelas desse usuário
+            let todosPalpites: any[] = [];
+            dados.forEach((cartela: any) => {
+                if (cartela.status_pagamento === 'aprovado') {
+                    todosPalpites = [...todosPalpites, ...cartela.palpites];
+                }
+            });
+
+            setPalpitesUsuarioSecado(todosPalpites);
             setModalAberto(true);
         } catch (error) {
             alert("Erro ao buscar os palpites deste usuário.");
@@ -99,7 +110,7 @@ const Ranking = () => {
     const handleBaixarAuditoria = async () => {
         setGerandoPdf(true);
         try {
-            const res = await fetch("http://localhost:3001/auditoria");
+            const res = await fetch(`${apiUrl}/auditoria`);
             if (!res.ok) throw new Error("Rota não encontrada.");
 
             const dadosAuditoria = await res.json();
@@ -108,12 +119,16 @@ const Ranking = () => {
             doc.text("Auditoria do Bolão - Palpites Registrados", 14, 20);
             doc.setFontSize(10);
             doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 28);
-            doc.text(`Total de Participantes: ${dadosAuditoria.length}`, 14, 34);
+
+            // Filtra para auditar apenas cartelas aprovadas
+            const palpitesValidos = dadosAuditoria.filter((item: any) => item.status_pagamento === 'aprovado');
+            doc.text(`Total de Palpites Validados: ${palpitesValidos.length}`, 14, 34);
 
             const palpitesPorUsuario: any = {};
-            dadosAuditoria.forEach((item: any) => {
+            palpitesValidos.forEach((item: any) => {
                 if (!palpitesPorUsuario[item.usuario_nome]) palpitesPorUsuario[item.usuario_nome] = [];
                 palpitesPorUsuario[item.usuario_nome].push([
+                    `Cartela #${item.cartela_id}`,
                     `${item.time_casa} x ${item.time_visitante}`,
                     `${item.palpite_casa} x ${item.palpite_visitante}`
                 ]);
@@ -125,7 +140,7 @@ const Ranking = () => {
                 doc.text(`Participante: ${nome}`, 14, startY);
                 autoTable(doc, {
                     startY: startY + 5,
-                    head: [['Partida', 'Palpite do Usuário']],
+                    head: [['Nº Cartela', 'Partida', 'Palpite do Usuário']],
                     body: palpitesPorUsuario[nome],
                     theme: 'grid',
                     headStyles: { fillColor: [30, 41, 59] },
@@ -143,7 +158,6 @@ const Ranking = () => {
         }
     };
 
-    // Função que oculta o banner e salva a escolha no navegador
     const fecharBannerWpp = () => {
         setMostrarBannerWpp(false);
         localStorage.setItem("bannerWppOculto", "true");
@@ -175,40 +189,39 @@ const Ranking = () => {
                         {valorPremioTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                     </Typography>
                     <Typography variant="subtitle1" style={{ color: "#cbd5e1", marginTop: "10px" }}>
-                        Disputado por {aprovados.length} pagamentos confirmados.
+                        Disputado por {aprovados.length} membros pontuando.
                     </Typography>
                     
                     <Box mt={3} display="flex" justifyContent="center" gap={2} flexWrap="wrap" alignItems="center">
-                        <Tooltip title={bloqueado ? "Baixar todos os palpites registrados" : "A auditoria só será liberada quando encerrar o prazo de realizar palpites."} arrow>
+                        <Tooltip title={apostasBloqueadas ? "Baixar todos os palpites registrados" : "A auditoria só será liberada quando encerrar a rodada de apostas."} arrow>
                             <span>
                                 <AppButton 
                                     label={gerandoPdf ? "Gerando..." : "Baixar Auditoria"} 
-                                    icon={bloqueado ? <PictureAsPdf style={{ marginRight: '8px' }} /> : <Lock style={{ marginRight: '8px' }} />}
+                                    icon={apostasBloqueadas ? <PictureAsPdf style={{ marginRight: '8px' }} /> : <Lock style={{ marginRight: '8px' }} />}
                                     onClick={handleBaixarAuditoria}
-                                    disabled={!bloqueado || gerandoPdf} 
+                                    disabled={!apostasBloqueadas || gerandoPdf} 
                                     style={{ 
-                                        backgroundColor: bloqueado ? "#3b82f6" : "#475569", 
+                                        backgroundColor: apostasBloqueadas ? "#3b82f6" : "#475569", 
                                         border: "none", 
                                         color: "white", 
                                         padding: "10px 20px",
-                                        opacity: bloqueado ? 1 : 0.6,
-                                        cursor: bloqueado ? "pointer" : "not-allowed"
+                                        opacity: apostasBloqueadas ? 1 : 0.6,
+                                        cursor: apostasBloqueadas ? "pointer" : "not-allowed"
                                     }}
                                 />
                             </span>
                         </Tooltip>
 
-                        <div style={{ backgroundColor: bloqueado ? "#10b981" : "#ef4444", color: "white", padding: "10px 20px", borderRadius: "8px", display: "flex", alignItems: "center", gap: "8px", fontWeight: "bold" }}>
-                            {bloqueado ? <Visibility /> : <Lock />}
-                            {bloqueado ? "Modo Secador Liberado" : "Secador Bloqueado"}
+                        <div style={{ backgroundColor: apostasBloqueadas ? "#10b981" : "#ef4444", color: "white", padding: "10px 20px", borderRadius: "8px", display: "flex", alignItems: "center", gap: "8px", fontWeight: "bold" }}>
+                            {apostasBloqueadas ? <Visibility /> : <Lock />}
+                            {apostasBloqueadas ? "Modo Secador Liberado" : "Secador Bloqueado"}
                         </div>
                     </Box>
                 </Paper>
 
-                {/* RENDERIZA O BANNER GRANDE SE O USUÁRIO AINDA NÃO FECHOU */}
                 {mostrarBannerWpp && (
                     <Box mb={4} style={{
-                        position: 'relative', // Importante para o botão de fechar ficar posicionado certo
+                        position: 'relative',
                         background: 'linear-gradient(135deg, #1e293b 0%, #064e3b 100%)',
                         borderRadius: '16px',
                         padding: '25px 20px',
@@ -220,56 +233,27 @@ const Ranking = () => {
                         border: '1px solid #10b981',
                         boxShadow: '0 10px 15px -3px rgba(16, 185, 129, 0.15)'
                     }}>
-                        {/* Botão de Fechar (X) */}
                         <IconButton 
                             onClick={fecharBannerWpp} 
                             style={{ position: 'absolute', top: '5px', right: '5px', color: '#94a3b8' }}
                             size="small"
-                            title="Ocultar aviso"
                         >
                             <Close fontSize="small" />
                         </IconButton>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
-                            <div style={{ 
-                                backgroundColor: '#25D366', 
-                                borderRadius: '50%', 
-                                width: '50px', 
-                                height: '50px', 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                justifyContent: 'center',
-                                boxShadow: '0 4px 6px rgba(0,0,0,0.3)'
-                            }}>
+                            <div style={{ backgroundColor: '#25D366', borderRadius: '50%', width: '50px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.3)' }}>
                                 <WhatsApp style={{ fontSize: '30px', color: '#ffffff' }} />
                             </div>
-                            
                             <div>
-                                <Typography variant="h6" style={{ color: '#ffffff', margin: 0, fontWeight: 'bold' }}>
-                                    Seja um Goleador e entre no nosso grupo
-                                </Typography>
-                                <Typography variant="body2" style={{ color: '#94a3b8', margin: '4px 0 0 0' }}>
-                                    Avisos, ranking atualizado e mais informações no nosso grupo VIP.
-                                </Typography>
+                                <Typography variant="h6" style={{ color: '#ffffff', margin: 0, fontWeight: 'bold' }}>Seja um Goleador e entre no nosso grupo</Typography>
+                                <Typography variant="body2" style={{ color: '#94a3b8', margin: '4px 0 0 0' }}>Avisos, ranking atualizado e mais informações no nosso grupo VIP.</Typography>
                             </div>
                         </div>
 
                         <button 
                             onClick={() => window.open(linkGrupoWpp, '_blank')} 
-                            style={{
-                                backgroundColor: '#25D366', 
-                                color: '#ffffff', 
-                                border: 'none', 
-                                padding: '12px 24px', 
-                                borderRadius: '8px', 
-                                fontWeight: 'bold', 
-                                fontSize: '15px',
-                                cursor: 'pointer',
-                                boxShadow: '0 4px 6px rgba(37, 211, 102, 0.3)',
-                                transition: 'transform 0.2s'
-                            }}
-                            onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                            onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                            style={{ backgroundColor: '#25D366', color: '#ffffff', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: 'bold', fontSize: '15px', cursor: 'pointer', boxShadow: '0 4px 6px rgba(37, 211, 102, 0.3)' }}
                         >
                             Entrar no Grupo
                         </button>
@@ -278,12 +262,12 @@ const Ranking = () => {
 
                 <Box mb={5}>
                     {ganhadores1.length > 0 && (
-                        <Paper style={{ padding: "20px", borderRadius: "12px", backgroundColor: "#fffbeb", borderLeft: "6px solid #fbbf24", marginBottom: "15px", boxShadow: "0 4px 6px rgba(0,0,0,0.05)" }}>
+                        <Paper style={{ padding: "20px", borderRadius: "12px", backgroundColor: "#fffbeb", borderLeft: "6px solid #fbbf24", marginBottom: "15px" }}>
                             <Typography variant="subtitle2" style={{ color: "#b45309", fontWeight: "bold", marginBottom: "10px", display: "flex", alignItems: "center", gap: "5px" }}>
                                 <EmojiEvents style={{ color: "#fbbf24" }} /> 1º Lugar (60%) 
                             </Typography>
                             {ganhadores1.map(g => (
-                                <div key={g.id} onClick={() => abrirSecador(g)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", borderBottom: "1px dashed #fcd34d", paddingBottom: "10px", cursor: "pointer", transition: "0.2s" }} onMouseOver={(e) => e.currentTarget.style.opacity = '0.7'} onMouseOut={(e) => e.currentTarget.style.opacity = '1'}>
+                                <div key={g.id} onClick={() => abrirSecador(g)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", borderBottom: "1px dashed #fcd34d", paddingBottom: "10px", cursor: "pointer" }}>
                                     <Typography variant="h6" style={{ fontWeight: "900", color: "#1e293b", display: "flex", alignItems: "center", gap: "8px" }}>
                                         {g.nome} <Visibility style={{ fontSize: "16px", color: "#94a3b8" }} />
                                     </Typography>
@@ -297,12 +281,12 @@ const Ranking = () => {
                     )}
 
                     {ganhadores2.length > 0 && (
-                        <Paper style={{ padding: "20px", borderRadius: "12px", backgroundColor: "#f1f5f9", borderLeft: "6px solid #94a3b8", marginBottom: "15px", boxShadow: "0 4px 6px rgba(0,0,0,0.05)" }}>
+                        <Paper style={{ padding: "20px", borderRadius: "12px", backgroundColor: "#f1f5f9", borderLeft: "6px solid #94a3b8", marginBottom: "15px" }}>
                             <Typography variant="subtitle2" style={{ color: "#475569", fontWeight: "bold", marginBottom: "10px", display: "flex", alignItems: "center", gap: "5px" }}>
                                 <MilitaryTech style={{ color: "#94a3b8" }} /> 2º Lugar (30%)
                             </Typography>
                             {ganhadores2.map(g => (
-                                <div key={g.id} onClick={() => abrirSecador(g)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", borderBottom: "1px dashed #cbd5e1", paddingBottom: "10px", cursor: "pointer", transition: "0.2s" }} onMouseOver={(e) => e.currentTarget.style.opacity = '0.7'} onMouseOut={(e) => e.currentTarget.style.opacity = '1'}>
+                                <div key={g.id} onClick={() => abrirSecador(g)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", borderBottom: "1px dashed #cbd5e1", paddingBottom: "10px", cursor: "pointer" }}>
                                     <Typography variant="h6" style={{ fontWeight: "bold", color: "#1e293b", display: "flex", alignItems: "center", gap: "8px" }}>
                                         {g.nome} <Visibility style={{ fontSize: "16px", color: "#94a3b8" }} />
                                     </Typography>
@@ -316,12 +300,12 @@ const Ranking = () => {
                     )}
 
                     {ganhadores3.length > 0 && (
-                        <Paper style={{ padding: "20px", borderRadius: "12px", backgroundColor: "#fef2f2", borderLeft: "6px solid #b45309", marginBottom: "15px", boxShadow: "0 4px 6px rgba(0,0,0,0.05)" }}>
+                        <Paper style={{ padding: "20px", borderRadius: "12px", backgroundColor: "#fef2f2", borderLeft: "6px solid #b45309", marginBottom: "15px" }}>
                             <Typography variant="subtitle2" style={{ color: "#9a3412", fontWeight: "bold", marginBottom: "10px", display: "flex", alignItems: "center", gap: "5px" }}>
                                 <MilitaryTech style={{ color: "#b45309" }} /> 3º Lugar (10%)
                             </Typography>
                             {ganhadores3.map(g => (
-                                <div key={g.id} onClick={() => abrirSecador(g)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", borderBottom: "1px dashed #fed7aa", paddingBottom: "10px", cursor: "pointer", transition: "0.2s" }} onMouseOver={(e) => e.currentTarget.style.opacity = '0.7'} onMouseOut={(e) => e.currentTarget.style.opacity = '1'}>
+                                <div key={g.id} onClick={() => abrirSecador(g)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", borderBottom: "1px dashed #fed7aa", paddingBottom: "10px", cursor: "pointer" }}>
                                     <Typography variant="h6" style={{ fontWeight: "bold", color: "#1e293b", display: "flex", alignItems: "center", gap: "8px" }}>
                                         {g.nome} <Visibility style={{ fontSize: "16px", color: "#94a3b8" }} />
                                     </Typography>
@@ -340,16 +324,10 @@ const Ranking = () => {
                         <List>
                             {restoRanking.map((participant, index) => (
                                 <React.Fragment key={index}>
-                                    <ListItem onClick={() => abrirSecador(participant)} style={{ padding: "15px", cursor: "pointer", transition: "background 0.2s" }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                                    <ListItem onClick={() => abrirSecador(participant)} style={{ padding: "15px", cursor: "pointer" }}>
                                         <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
                                             <Typography style={{ fontWeight: "900", color: "#94a3b8", width: "40px" }}>#</Typography>
-                                            <ListItemText
-                                                primary={
-                                                    <span style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: "bold", color: "#334155" }}>
-                                                        {participant.nome} <Visibility style={{ fontSize: "16px", color: "#cbd5e1" }} />
-                                                    </span>
-                                                }
-                                            />
+                                            <ListItemText primary={<span style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: "bold", color: "#334155" }}>{participant.nome} <Visibility style={{ fontSize: "16px", color: "#cbd5e1" }} /></span>} />
                                             <Typography style={{ fontWeight: "900", color: "#1e293b" }}>{participant.pontuacao_total} pts</Typography>
                                         </div>
                                     </ListItem>
@@ -372,14 +350,14 @@ const Ranking = () => {
                     </DialogTitle>
                     <DialogContent style={{ padding: "20px", backgroundColor: "#f8fafc" }}>
                         {palpitesUsuarioSecado.length === 0 ? (
-                            <Typography style={{ textAlign: "center", color: "#64748b", padding: "30px 0" }}>Nenhum palpite encontrado.</Typography>
+                            <Typography style={{ textAlign: "center", color: "#64748b", padding: "30px 0" }}>Nenhum palpite validado encontrado.</Typography>
                         ) : (
-                            palpitesUsuarioSecado.map(p => {
-                                const jogoFinalizado = p.resultado_real_casa !== null;
+                            palpitesUsuarioSecado.map((p, i) => {
+                                const jogoFinalizado = p.gols_casa !== null && p.gols_visitante !== null;
                                 return (
-                                    <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'white', padding: '15px', borderRadius: '12px', marginBottom: '15px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'white', padding: '15px', borderRadius: '12px', marginBottom: '15px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
                                         <div style={{ textAlign: 'center', width: '60px' }}>
-                                            <img src={p.logo_casa || "/media/escudos-times/default.png"} alt="casa" style={{ width: '35px', height: '35px', objectFit: 'contain' }} onError={(e: any) => e.target.src = "/media/escudos-times/default.png"} />
+                                            <img src={p.logo_casa || "/media/escudos-times/default.png"} alt="casa" style={{ width: '35px', height: '35px', objectFit: 'contain' }} />
                                             <div style={{ fontSize: '12px', fontWeight: 'bold', color: "#1e293b", marginTop: "5px" }}>{p.sigla_casa}</div>
                                         </div>
                                         
@@ -395,7 +373,7 @@ const Ranking = () => {
                                         </div>
 
                                         <div style={{ textAlign: 'center', width: '60px' }}>
-                                            <img src={p.logo_visitante || "/media/escudos-times/default.png"} alt="visitante" style={{ width: '35px', height: '35px', objectFit: 'contain' }} onError={(e: any) => e.target.src = "/media/escudos-times/default.png"} />
+                                            <img src={p.logo_visitante || "/media/escudos-times/default.png"} alt="visitante" style={{ width: '35px', height: '35px', objectFit: 'contain' }} />
                                             <div style={{ fontSize: '12px', fontWeight: 'bold', color: "#1e293b", marginTop: "5px" }}>{p.sigla_visitante}</div>
                                         </div>
                                     </div>
@@ -406,20 +384,12 @@ const Ranking = () => {
                 </Dialog>
             </Container>
 
-            {/* ÍCONE FLUTUANTE (Renderiza apenas se o banner grande foi fechado) */}
             {!mostrarBannerWpp && (
                 <Fab 
                     color="success" 
                     aria-label="whatsapp"
                     onClick={() => window.open(linkGrupoWpp, '_blank')}
-                    style={{
-                        position: 'fixed',
-                        bottom: '30px',
-                        right: '30px',
-                        backgroundColor: '#25D366',
-                        color: 'white',
-                        boxShadow: '0 4px 10px rgba(37, 211, 102, 0.4)'
-                    }}
+                    style={{ position: 'fixed', bottom: '30px', right: '30px', backgroundColor: '#25D366', color: 'white', boxShadow: '0 4px 10px rgba(37, 211, 102, 0.4)' }}
                 >
                     <WhatsApp style={{ fontSize: '30px' }} />
                 </Fab>

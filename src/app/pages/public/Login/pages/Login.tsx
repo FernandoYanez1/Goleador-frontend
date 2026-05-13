@@ -6,6 +6,7 @@ import { useHistory } from 'react-router-dom';
 import AppButton from '../../../../../vendors/components/Button';
 
 export default function Login() {
+    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
     const [email, setEmail] = useState('');
     const [senha, setSenha] = useState('');
     const [loading, setLoading] = useState(false);
@@ -32,7 +33,7 @@ export default function Login() {
         setLoading(true);
 
         try {
-            const resposta = await fetch('http://localhost:3001/login', {
+            const resposta = await fetch(`${apiUrl}/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: email, senha: senha })
