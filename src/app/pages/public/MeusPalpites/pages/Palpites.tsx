@@ -64,19 +64,19 @@ export default function MeusPalpites() {
         
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #e2e8f0", paddingBottom: "15px", marginBottom: "20px" }}>
           <div>
-            <h3 style={{ margin: 0, color: "#1e293b", fontSize: "20px" }}>Cartela #{cartela.cartela_id}</h3>
+            <h3 style={{ margin: 0, color: "#1e293b", fontSize: "20px" }}>Bilhete #{cartela.cartela_id}</h3>
             <span style={{ color: "#64748b", fontSize: "14px", fontWeight: "bold" }}>{cartela.rodada_nome}</span>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: "12px", color: "#94a3b8", fontWeight: "bold" }}>PONTOS DESTA CARTELA</div>
+            <div style={{ fontSize: "12px", color: "#94a3b8", fontWeight: "bold" }}>PONTOS DESTE BILHETE</div>
             <div style={{ fontSize: "24px", fontWeight: "900", color: isAprovado ? "#10b981" : "#94a3b8" }}>{isAprovado ? cartela.total_pontos : "---"}</div>
           </div>
         </div>
 
         {!isAprovado && (
           <div style={{ backgroundColor: "#fffbeb", border: "2px dashed #f59e0b", borderRadius: "12px", padding: "20px", marginBottom: "25px", textAlign: "center" }}>
-            <h4 style={{ color: "#b45309", margin: "0 0 10px 0", fontSize: "18px" }}>⚠️ Cartela Aguardando Pagamento</h4>
-            <p style={{ color: "#475569", marginBottom: "20px", fontSize: "14px" }}>Pix de <b>R$ 25,00</b> para validar esta cartela específica.</p>
+            <h4 style={{ color: "#b45309", margin: "0 0 10px 0", fontSize: "18px" }}>⚠️ Bilhete Aguardando Pagamento</h4>
+            <p style={{ color: "#475569", marginBottom: "20px", fontSize: "14px" }}>Pix de <b>R$ 25,00</b> para validar este bilhete específico.</p>
 
             <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "15px", alignItems: "center" }}>
               <div style={{ backgroundColor: "white", padding: "10px", borderRadius: "10px", boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}>
@@ -136,7 +136,7 @@ export default function MeusPalpites() {
                     </Tooltip>
                   )}
                   {jogoFinalizado && !isAprovado && (
-                    <div style={{ color: "#ef4444", fontSize: "11px", fontWeight: "bold" }}>Sem pontos (Cartela não paga)</div>
+                    <div style={{ color: "#ef4444", fontSize: "11px", fontWeight: "bold" }}>Sem pontos (Bilhete não pago)</div>
                   )}
                 </div>
               </div>
@@ -153,7 +153,7 @@ export default function MeusPalpites() {
         
         <div style={{ backgroundColor: "#1e293b", color: "white", borderRadius: "12px", padding: "25px", marginBottom: "30px", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)" }}>
           <div>
-            <h2 style={{ margin: 0, color: "white", fontSize: "24px" }}>Minhas Cartelas</h2>
+            <h2 style={{ margin: 0, color: "white", fontSize: "24px" }}>Meus Bilhetes</h2>
             <span style={{ color: "#94a3b8", fontSize: "16px" }}>{nomeUsuario}</span>
           </div>
           <div style={{ textAlign: "right" }}>
@@ -164,7 +164,7 @@ export default function MeusPalpites() {
 
         {cartelas.length === 0 ? (
           <div style={{ textAlign: "center", padding: "50px 20px", backgroundColor: "white", borderRadius: "12px" }}>
-            <h3 style={{ color: "#64748b", marginBottom: "20px" }}>Você ainda não comprou nenhuma cartela.</h3>
+            <h3 style={{ color: "#64748b", marginBottom: "20px" }}>Você ainda não comprou nenhum bilhete.</h3>
             <AppButton label="Ver Rodadas Abertas" onClick={() => history.push("/public/placar")} style={{ backgroundColor: "#10b981", border: "none", padding: "12px 25px" }} />
           </div>
         ) : (

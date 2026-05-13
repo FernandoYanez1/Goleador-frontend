@@ -84,10 +84,10 @@ export default function Placar() {
             });
 
             if (resposta.ok) {
-                alert("Cartela gerada com sucesso! Realize o pagamento para validar.");
+                alert("Bilhete gerado com sucesso! Realize o pagamento para validar.");
                 history.push("/public/meus-palpites"); 
             } else {
-                alert("Erro ao processar a cartela. Tente novamente.");
+                alert("Erro ao processar o bilhete. Tente novamente.");
                 setGerando(false); // Libera o botão se der erro no banco
             }
         } catch (error) {
@@ -128,7 +128,7 @@ export default function Placar() {
                         ) : (
                             <>
                                 <div style={{ textAlign: "center", marginBottom: "30px", padding: "10px", borderRadius: "8px", backgroundColor: "#f0fdf4", color: "#16a34a", fontWeight: "bold", fontSize: "14px" }}>
-                                    💡 Dica: Você pode comprar múltiplas cartelas preenchendo novos palpites após enviar!
+                                    💡 Dica: Você pode comprar múltiplos bilhetes preenchendo novos palpites após enviar!
                                 </div>
 
                                 {confrontos.map(jogo => (
@@ -179,7 +179,7 @@ export default function Placar() {
                                             border: "none",
                                             cursor: gerando ? "not-allowed" : "pointer"
                                         }} 
-                                        label={gerando ? "Gerando... Aguarde" : "Gerar Cartela (R$25)"} 
+                                        label={gerando ? "Gerando... Aguarde" : "Gerar Bilhete (R$25)"} 
                                         onClick={handleEnviarApostas} 
                                         disabled={gerando} // Bloqueia evento de clique se o componente aceitar
                                     />
