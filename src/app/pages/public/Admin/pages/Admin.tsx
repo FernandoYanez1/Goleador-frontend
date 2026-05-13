@@ -39,7 +39,6 @@ export default function Admin() {
             .then(data => {
                 setRodadas(data);
                 if (data.length > 0 && !rodadaSelecionada) {
-                    // Auto-seleciona a primeira rodada aberta que encontrar
                     const aberta = data.find((r: any) => r.status === 'aberta') || data[0];
                     setRodadaSelecionada(aberta);
                 }
@@ -95,11 +94,31 @@ export default function Admin() {
 
     const handleFinalizarRodada = () => {
         if (!rodadaSelecionada) return;
-        if (window.confirm(`Encerrar apostas e enviar a ${rodadaSelecionada.nome} para o histórico?`)) {
+        if (window.confirm(`Encerrar apostas e bloquear a ${rodadaSelecionada.nome}? Ninguém mais poderá enviar palpites.`)) {
             fetch(`${apiUrl}/rodadas/${rodadaSelecionada.id}/finalizar`, { method: 'PUT' })
                 .then(() => {
-                    alert("Rodada Finalizada!");
-                    carregarRodadas();
+                    alert("Rodada Bloqueada! Apostas encerradas.");
+                    // Atualiza a lista de rodadas e recarrega a rodada selecionada com o novo status
+                    fetch(`${apiUrl}/rodadas`).then(res => res.json()).then(data => {
+                        setRodadas(data);
+                        setRodadaSelecionada(data.find((r:any) => r.id === rodadaSelecionada.id));
+                    });
+                });
+        }
+    };
+
+    // NOVA FUNÇÃO: REABRIR RODADA
+    const handleReabrirRodada = () => {
+        if (!rodadaSelecionada) return;
+        if (window.confirm(`Atenção: Deseja REABRIR as apostas para a ${rodadaSelecionada.nome}? Os usuários poderão voltar a comprar cartelas.`)) {
+            fetch(`${apiUrl}/rodadas/${rodadaSelecionada.id}/reabrir`, { method: 'PUT' })
+                .then(() => {
+                    alert("Rodada Reaberta com sucesso!");
+                    // Atualiza a lista de rodadas e recarrega a rodada selecionada com o novo status
+                    fetch(`${apiUrl}/rodadas`).then(res => res.json()).then(data => {
+                        setRodadas(data);
+                        setRodadaSelecionada(data.find((r:any) => r.id === rodadaSelecionada.id));
+                    });
                 });
         }
     };
@@ -245,8 +264,11 @@ export default function Admin() {
                             <Button label="Nova Rodada" icon="pi pi-plus" onClick={handleCriarRodada} severity="success" outlined />
                         </div>
 
-                        {rodadaSelecionada?.status === 'aberta' && (
+                        {/* BOTÃO MÁGICO: ALTERNA ENTRE BLOQUEAR E DESBLOQUEAR */}
+                        {rodadaSelecionada?.status === 'aberta' ? (
                             <Button label="Encerrar Rodada e Bloquear Apostas" icon="pi pi-lock" severity="danger" onClick={handleFinalizarRodada} style={{ marginLeft: 'auto' }} />
+                        ) : (
+                            rodadaSelecionada && <Button label="Reabrir Apostas" icon="pi pi-unlock" severity="success" outlined onClick={handleReabrirRodada} style={{ marginLeft: 'auto' }} />
                         )}
                     </div>
                 </div>
@@ -362,7 +384,6 @@ export default function Admin() {
                             style={{ padding: '5px 10px', fontSize: '12px' }}
                         />
                     )} />
-                    {/* NOVA COLUNA DE AÇÕES */}
                     <Column header="Ações" body={(r) => (
                         <Button 
                             icon="pi pi-trash" 
