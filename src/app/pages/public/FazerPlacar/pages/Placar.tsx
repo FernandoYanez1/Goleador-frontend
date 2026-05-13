@@ -10,6 +10,9 @@ export default function Placar() {
     const [confrontos, setConfrontos] = useState<any[]>([]);
     const [placares, setPlacares] = useState<any>({});
     const [carregando, setCarregando] = useState(true);
+    
+    // NOVO: Estado para travar o botão e impedir cliques duplos
+    const [gerando, setGerando] = useState(false);
 
     useEffect(() => {
         const usuarioSalvo = localStorage.getItem('usuarioLogado');
@@ -49,6 +52,9 @@ export default function Placar() {
     };
 
     const handleEnviarApostas = async () => {
+        // TRAVA DE SEGURANÇA: Se já estiver gerando, ignora novos cliques
+        if (gerando) return;
+
         if (!rodadaAberta) return alert("Nenhuma rodada aberta para apostas.");
 
         const user = JSON.parse(localStorage.getItem('usuarioLogado') || '{}');
@@ -62,6 +68,9 @@ export default function Placar() {
         if (apostasParaEnviar.length !== confrontos.length) {
             return alert("Preencha o placar de todos os jogos antes de enviar!");
         }
+
+        // Ativa a trava e muda o visual do botão
+        setGerando(true);
 
         try {
             const resposta = await fetch(`${apiUrl}/apostar`, {
@@ -77,9 +86,13 @@ export default function Placar() {
             if (resposta.ok) {
                 alert("Cartela gerada com sucesso! Realize o pagamento para validar.");
                 history.push("/public/meus-palpites"); 
+            } else {
+                alert("Erro ao processar a cartela. Tente novamente.");
+                setGerando(false); // Libera o botão se der erro no banco
             }
         } catch (error) {
-            alert("Erro de conexão com o servidor.");
+            alert("Erro de conexão com o servidor. Tente novamente.");
+            setGerando(false); // Libera o botão se a internet cair
         }
     };
 
@@ -135,14 +148,16 @@ export default function Placar() {
                                                     type="number" min="0"
                                                     value={placares[jogo.id]?.casa || ""}
                                                     onChange={(e) => handlePlacarChange(jogo.id, "casa", e.target.value)}
-                                                    style={{ width: "55px", height: "45px", textAlign: "center", fontSize: "20px", fontWeight: "bold", border: "2px solid #cbd5e1", borderRadius: "8px" }}
+                                                    disabled={gerando}
+                                                    style={{ width: "55px", height: "45px", textAlign: "center", fontSize: "20px", fontWeight: "bold", border: "2px solid #cbd5e1", borderRadius: "8px", opacity: gerando ? 0.6 : 1 }}
                                                 />
                                                 <span style={{ fontSize: "20px", fontWeight: "bold", color: "#94a3b8" }}>X</span>
                                                 <input
                                                     type="number" min="0"
                                                     value={placares[jogo.id]?.visitante || ""}
                                                     onChange={(e) => handlePlacarChange(jogo.id, "visitante", e.target.value)}
-                                                    style={{ width: "55px", height: "45px", textAlign: "center", fontSize: "20px", fontWeight: "bold", border: "2px solid #cbd5e1", borderRadius: "8px" }}
+                                                    disabled={gerando}
+                                                    style={{ width: "55px", height: "45px", textAlign: "center", fontSize: "20px", fontWeight: "bold", border: "2px solid #cbd5e1", borderRadius: "8px", opacity: gerando ? 0.6 : 1 }}
                                                 />
                                             </div>
 
@@ -155,8 +170,25 @@ export default function Placar() {
                                 ))}
 
                                 <div style={{ display: "flex", justifyContent: "center", gap: "20px", marginTop: "30px" }}>
-                                    <AppButton style={{ width: "220px", padding: "12px", fontSize: "18px", backgroundColor: "#10b981", border: "none" }} label="Gerar Cartela (R$25)" onClick={handleEnviarApostas} />
-                                    <AppButton style={{ width: "220px", padding: "12px", fontSize: "18px", backgroundColor: "#64748b", border: "none" }} label="Voltar" onClick={() => history.push("/public")} />
+                                    <AppButton 
+                                        style={{ 
+                                            width: "220px", 
+                                            padding: "12px", 
+                                            fontSize: "18px", 
+                                            backgroundColor: gerando ? "#94a3b8" : "#10b981", // Fica cinza enquanto processa
+                                            border: "none",
+                                            cursor: gerando ? "not-allowed" : "pointer"
+                                        }} 
+                                        label={gerando ? "Gerando... Aguarde" : "Gerar Cartela (R$25)"} 
+                                        onClick={handleEnviarApostas} 
+                                        disabled={gerando} // Bloqueia evento de clique se o componente aceitar
+                                    />
+                                    <AppButton 
+                                        style={{ width: "220px", padding: "12px", fontSize: "18px", backgroundColor: "#64748b", border: "none" }} 
+                                        label="Voltar" 
+                                        onClick={() => history.push("/public")} 
+                                        disabled={gerando}
+                                    />
                                 </div>
                             </>
                         )}
