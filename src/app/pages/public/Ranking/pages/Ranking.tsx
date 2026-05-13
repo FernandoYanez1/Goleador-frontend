@@ -13,7 +13,7 @@ import autoTable from "jspdf-autotable";
 const Ranking = () => {
     const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
     
-    const [aprovados, setAprovados] = useState<any[]>([]);
+    const [aprovados, setAprovados] = useState<any[]>([]); // Agora armazena cartelas, não usuários
     const [loading, setLoading] = useState(true);
     const [gerandoPdf, setGerandoPdf] = useState(false);
     const [usuarioLogado, setUsuarioLogado] = useState<any>(null);
@@ -21,8 +21,8 @@ const Ranking = () => {
 
     const [apostasBloqueadas, setApostasBloqueadas] = useState(false);
     const [modalAberto, setModalAberto] = useState(false);
-    const [usuarioSelecionado, setUsuarioSelecionado] = useState<any>(null);
-    const [cartelasUsuarioSecado, setCartelasUsuarioSecado] = useState<any[]>([]);
+    const [cartelaSelecionada, setCartelaSelecionada] = useState<any>(null);
+    const [palpitesSecador, setPalpitesSecador] = useState<any[]>([]);
 
     const [mostrarBannerWpp, setMostrarBannerWpp] = useState(() => {
         return localStorage.getItem("bannerWppOculto") !== "true";
@@ -38,8 +38,7 @@ const Ranking = () => {
             .then((res) => res.json())
             .then((dados) => {
                 if (Array.isArray(dados)) {
-                    // Sem filtro de pontos! Aparecem todos que têm bilhete aprovado.
-                    setAprovados(dados);
+                    setAprovados(dados); // Recebe a lista de cada bilhete aprovado independentemente
                 }
                 setLoading(false);
             })
@@ -56,9 +55,8 @@ const Ranking = () => {
             });
     }, [apiUrl]);
 
-    // O Prêmio agora é calculado pelo total de BILHETES, não apenas por pessoa!
-    const totalCartelasCompradas = aprovados.reduce((acc, user) => acc + Number(user.total_cartelas || 1), 0);
-    const valorPremioTotal = totalCartelasCompradas * VALOR_INSCRICAO;
+    // O Prêmio é baseado no total de bilhetes validados
+    const valorPremioTotal = aprovados.length * VALOR_INSCRICAO;
 
     const pontuacoesUnicas = aprovados
         .map(p => p.pontuacao_total)
@@ -76,23 +74,23 @@ const Ranking = () => {
     const premio2PorPessoa = (valorPremioTotal * 0.30) / (ganhadores2.length || 1);
     const premio3PorPessoa = (valorPremioTotal * 0.10) / (ganhadores3.length || 1);
 
-    const abrirSecador = async (usuario: any) => {
+    const abrirSecador = async (itemRanking: any) => {
         if (!apostasBloqueadas) {
             alert("🔒 O Modo Secador só é liberado quando o Admin encerrar as apostas da rodada!");
             return;
         }
 
-        setUsuarioSelecionado(usuario);
+        setCartelaSelecionada(itemRanking);
         try {
-            const res = await fetch(`${apiUrl}/meus-palpites/${usuario.id}`);
+            // Busca as cartelas do usuário e filtra apenas o bilhete específico que foi clicado no ranking
+            const res = await fetch(`${apiUrl}/meus-palpites/${itemRanking.usuario_id}`);
             const dados = await res.json();
+            const bilheteEspecifico = dados.find((c: any) => c.cartela_id === itemRanking.cartela_id);
             
-            // Pega apenas as cartelas aprovadas inteiras para renderizar separado
-            const cartelasAprovadas = dados.filter((c: any) => c.status_pagamento === 'aprovado');
-            setCartelasUsuarioSecado(cartelasAprovadas);
+            setPalpitesSecador(bilheteEspecifico ? bilheteEspecifico.palpites : []);
             setModalAberto(true);
         } catch (error) {
-            alert("Erro ao buscar os palpites deste usuário.");
+            alert("Erro ao buscar os palpites deste bilhete.");
         }
     };
 
@@ -162,8 +160,8 @@ const Ranking = () => {
         );
     }
 
-    const todosDoPodioIds = [...ganhadores1, ...ganhadores2, ...ganhadores3].map(u => u.id);
-    const restoRanking = aprovados.filter(u => !todosDoPodioIds.includes(u.id));
+    const todosDoPodioIds = [...ganhadores1, ...ganhadores2, ...ganhadores3].map(u => u.cartela_id);
+    const restoRanking = aprovados.filter(u => !todosDoPodioIds.includes(u.cartela_id));
 
     return (
         <div style={{ backgroundColor: "#e2e8f0", minHeight: "100vh", padding: "40px 0", position: "relative" }}>
@@ -177,7 +175,7 @@ const Ranking = () => {
                         {valorPremioTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                     </Typography>
                     <Typography variant="subtitle1" style={{ color: "#cbd5e1", marginTop: "10px" }}>
-                        Disputado por {totalCartelasCompradas} bilhetes validados.
+                        Disputado por {aprovados.length} bilhetes validados.
                     </Typography>
                     
                     <Box mt={3} display="flex" justifyContent="center" gap={2} flexWrap="wrap" alignItems="center">
@@ -248,14 +246,12 @@ const Ranking = () => {
                                 <EmojiEvents style={{ color: "#fbbf24" }} /> 1º Lugar (60%) 
                             </Typography>
                             {ganhadores1.map(g => (
-                                <div key={g.id} onClick={() => abrirSecador(g)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", borderBottom: "1px dashed #fcd34d", paddingBottom: "10px", cursor: "pointer" }}>
+                                <div key={g.cartela_id} onClick={() => abrirSecador(g)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", borderBottom: "1px dashed #fcd34d", paddingBottom: "10px", cursor: "pointer" }}>
                                     <Typography variant="h6" style={{ fontWeight: "900", color: "#1e293b", display: "flex", alignItems: "center", gap: "8px" }}>
                                         {g.nome} 
-                                        {g.total_cartelas > 1 && (
-                                            <span style={{ fontSize: '11px', backgroundColor: '#fcd34d', color: '#92400e', padding: '2px 8px', borderRadius: '10px' }}>
-                                                x{g.total_cartelas} Bilhetes
-                                            </span>
-                                        )}
+                                        <span style={{ fontSize: '12px', backgroundColor: '#fde68a', color: '#92400e', padding: '2px 8px', borderRadius: '8px' }}>
+                                            Bilhete #{g.cartela_id}
+                                        </span>
                                         <Visibility style={{ fontSize: "16px", color: "#94a3b8" }} />
                                     </Typography>
                                     <div style={{ textAlign: "right" }}>
@@ -273,14 +269,12 @@ const Ranking = () => {
                                 <MilitaryTech style={{ color: "#94a3b8" }} /> 2º Lugar (30%)
                             </Typography>
                             {ganhadores2.map(g => (
-                                <div key={g.id} onClick={() => abrirSecador(g)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", borderBottom: "1px dashed #cbd5e1", paddingBottom: "10px", cursor: "pointer" }}>
+                                <div key={g.cartela_id} onClick={() => abrirSecador(g)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", borderBottom: "1px dashed #cbd5e1", paddingBottom: "10px", cursor: "pointer" }}>
                                     <Typography variant="h6" style={{ fontWeight: "bold", color: "#1e293b", display: "flex", alignItems: "center", gap: "8px" }}>
                                         {g.nome} 
-                                        {g.total_cartelas > 1 && (
-                                            <span style={{ fontSize: '11px', backgroundColor: '#cbd5e1', color: '#334155', padding: '2px 8px', borderRadius: '10px' }}>
-                                                x{g.total_cartelas} Bilhetes
-                                            </span>
-                                        )}
+                                        <span style={{ fontSize: '12px', backgroundColor: '#e2e8f0', color: '#475569', padding: '2px 8px', borderRadius: '8px' }}>
+                                            Bilhete #{g.cartela_id}
+                                        </span>
                                         <Visibility style={{ fontSize: "16px", color: "#94a3b8" }} />
                                     </Typography>
                                     <div style={{ textAlign: "right" }}>
@@ -298,14 +292,12 @@ const Ranking = () => {
                                 <MilitaryTech style={{ color: "#b45309" }} /> 3º Lugar (10%)
                             </Typography>
                             {ganhadores3.map(g => (
-                                <div key={g.id} onClick={() => abrirSecador(g)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", borderBottom: "1px dashed #fed7aa", paddingBottom: "10px", cursor: "pointer" }}>
+                                <div key={g.cartela_id} onClick={() => abrirSecador(g)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", borderBottom: "1px dashed #fed7aa", paddingBottom: "10px", cursor: "pointer" }}>
                                     <Typography variant="h6" style={{ fontWeight: "bold", color: "#1e293b", display: "flex", alignItems: "center", gap: "8px" }}>
                                         {g.nome} 
-                                        {g.total_cartelas > 1 && (
-                                            <span style={{ fontSize: '11px', backgroundColor: '#fed7aa', color: '#9a3412', padding: '2px 8px', borderRadius: '10px' }}>
-                                                x{g.total_cartelas} Bilhetes
-                                            </span>
-                                        )}
+                                        <span style={{ fontSize: '12px', backgroundColor: '#ffedd5', color: '#9a3412', padding: '2px 8px', borderRadius: '8px' }}>
+                                            Bilhete #{g.cartela_id}
+                                        </span>
                                         <Visibility style={{ fontSize: "16px", color: "#94a3b8" }} />
                                     </Typography>
                                     <div style={{ textAlign: "right" }}>
@@ -329,11 +321,9 @@ const Ranking = () => {
                                             <ListItemText primary={
                                                 <span style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: "bold", color: "#334155" }}>
                                                     {participant.nome} 
-                                                    {participant.total_cartelas > 1 && (
-                                                        <span style={{ fontSize: '10px', backgroundColor: '#f1f5f9', color: '#64748b', padding: '2px 6px', borderRadius: '10px' }}>
-                                                            x{participant.total_cartelas} Bilhetes
-                                                        </span>
-                                                    )}
+                                                    <span style={{ fontSize: '11px', backgroundColor: '#f1f5f9', color: '#64748b', padding: '2px 8px', borderRadius: '8px' }}>
+                                                        Bilhete #{participant.cartela_id}
+                                                    </span>
                                                     <Visibility style={{ fontSize: "16px", color: "#cbd5e1" }} />
                                                 </span>
                                             } />
@@ -352,55 +342,45 @@ const Ranking = () => {
                     <AppButton style={{ width: "200px", padding: "12px", backgroundColor: "#64748b", border: "none" }} label="Voltar à Home" onClick={() => history.push("/public")} />
                 </Box>
 
-                <Dialog open={modalAberto} onClose={() => setModalAberto(false)} fullWidth maxWidth="md" PaperProps={{ style: { borderRadius: "16px", backgroundColor: "#f8fafc" } }}>
+                <Dialog open={modalAberto} onClose={() => setModalAberto(false)} fullWidth maxWidth="sm" PaperProps={{ style: { borderRadius: "16px", backgroundColor: "#f8fafc" } }}>
                     <DialogTitle style={{ backgroundColor: "#1e293b", color: "white", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px" }}>
-                        <span style={{ fontWeight: "bold", color: "white" }}>🔍 Secador: Palpites de {usuarioSelecionado?.nome}</span>
+                        <span style={{ fontWeight: "bold", color: "white" }}>🔍 Secador: Bilhete #{cartelaSelecionada?.cartela_id}</span>
                         <AppButton label="X" onClick={() => setModalAberto(false)} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "white", padding: "5px 15px", minWidth: "auto" }} />
                     </DialogTitle>
                     <DialogContent style={{ padding: "20px" }}>
-                        {cartelasUsuarioSecado.length === 0 ? (
-                            <Typography style={{ textAlign: "center", color: "#64748b", padding: "30px 0" }}>Nenhum bilhete validado encontrado.</Typography>
+                        <div style={{ textAlign: "center", marginBottom: "20px", color: "#64748b" }}>
+                            Palpites de <strong>{cartelaSelecionada?.nome}</strong> para este bilhete
+                        </div>
+                        {palpitesSecador.length === 0 ? (
+                            <Typography style={{ textAlign: "center", color: "#64748b", padding: "30px 0" }}>Nenhum palpite encontrado.</Typography>
                         ) : (
-                            cartelasUsuarioSecado.map((cartela, index) => (
-                                <Box key={cartela.cartela_id} mb={4} p={3} style={{ backgroundColor: '#e2e8f0', borderRadius: '16px', border: '2px solid #cbd5e1' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '2px dashed #94a3b8', paddingBottom: '10px' }}>
-                                        <Typography variant="h6" style={{ fontWeight: "900", color: "#1e293b" }}>
-                                            🎟️ Bilhete #{cartela.cartela_id}
-                                        </Typography>
-                                        <Typography style={{ fontWeight: "bold", color: "#059669", backgroundColor: "#d1fae5", padding: "4px 12px", borderRadius: "8px" }}>
-                                            Total: {cartela.total_pontos} pts
-                                        </Typography>
-                                    </div>
-                                    
-                                    {cartela.palpites.map((p: any, i: number) => {
-                                        const jogoFinalizado = p.gols_casa !== null && p.gols_visitante !== null;
-                                        return (
-                                            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'white', padding: '15px', borderRadius: '12px', marginBottom: '10px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-                                                <div style={{ textAlign: 'center', width: '60px' }}>
-                                                    <img src={p.logo_casa || "/media/escudos-times/default.png"} alt="casa" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
-                                                    <div style={{ fontSize: '13px', fontWeight: 'bold', color: "#1e293b", marginTop: "5px" }}>{p.sigla_casa}</div>
-                                                </div>
-                                                
-                                                <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                                    <div style={{ fontSize: '22px', fontWeight: '900', backgroundColor: '#f1f5f9', padding: '8px 24px', borderRadius: '8px', border: "1px solid #e2e8f0", color: "#1e293b", display: "flex", alignItems: "center", gap: "10px" }}>
-                                                        {p.palpite_casa} <span style={{ color: "#94a3b8", fontSize: "16px" }}>X</span> {p.palpite_visitante}
-                                                    </div>
-                                                    {jogoFinalizado && (
-                                                        <div style={{ fontSize: "13px", color: "#059669", fontWeight: "bold", marginTop: "8px", backgroundColor: "#a7f3d0", padding: "4px 12px", borderRadius: "10px" }}>
-                                                            +{p.pontos_ganhos} pts
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                <div style={{ textAlign: 'center', width: '60px' }}>
-                                                    <img src={p.logo_visitante || "/media/escudos-times/default.png"} alt="visitante" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
-                                                    <div style={{ fontSize: '13px', fontWeight: 'bold', color: "#1e293b", marginTop: "5px" }}>{p.sigla_visitante}</div>
-                                                </div>
+                            palpitesSecador.map((p: any, i: number) => {
+                                const jogoFinalizado = p.gols_casa !== null && p.gols_visitante !== null;
+                                return (
+                                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'white', padding: '15px', borderRadius: '12px', marginBottom: '10px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+                                        <div style={{ textAlign: 'center', width: '60px' }}>
+                                            <img src={p.logo_casa || "/media/escudos-times/default.png"} alt="casa" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
+                                            <div style={{ fontSize: '13px', fontWeight: 'bold', color: "#1e293b", marginTop: "5px" }}>{p.sigla_casa}</div>
+                                        </div>
+                                        
+                                        <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                            <div style={{ fontSize: '22px', fontWeight: '900', backgroundColor: '#f1f5f9', padding: '8px 24px', borderRadius: '8px', border: "1px solid #e2e8f0", color: "#1e293b", display: "flex", alignItems: "center", gap: "10px" }}>
+                                                {p.palpite_casa} <span style={{ color: "#94a3b8", fontSize: "16px" }}>X</span> {p.palpite_visitante}
                                             </div>
-                                        );
-                                    })}
-                                </Box>
-                            ))
+                                            {jogoFinalizado && (
+                                                <div style={{ fontSize: "13px", color: "#059669", fontWeight: "bold", marginTop: "8px", backgroundColor: "#a7f3d0", padding: "4px 12px", borderRadius: "10px" }}>
+                                                    +{p.pontos_ganhos} pts
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div style={{ textAlign: 'center', width: '60px' }}>
+                                            <img src={p.logo_visitante || "/media/escudos-times/default.png"} alt="visitante" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
+                                            <div style={{ fontSize: '13px', fontWeight: 'bold', color: "#1e293b", marginTop: "5px" }}>{p.sigla_visitante}</div>
+                                        </div>
+                                    </div>
+                                );
+                            })
                         )}
                     </DialogContent>
                 </Dialog>
