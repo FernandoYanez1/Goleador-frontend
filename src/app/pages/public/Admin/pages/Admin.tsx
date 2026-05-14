@@ -193,15 +193,15 @@ export default function Admin() {
         return isNaN(data.getTime()) ? d : data.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     };
 
- // --- CÁLCULOS DE PREMIAÇÃO E COMISSÃO ---
+// --- CÁLCULOS DO DASHBOARD ADMIN (R$ 20 + Regra dos 10%) ---
     const VALOR_INSCRICAO = 20;
     const cartelasDaRodada = cartelas.filter(c => c.rodada_nome === rodadaSelecionada?.nome);
     const cartelasAprovadas = cartelasDaRodada.filter(c => c.status_pagamento === 'aprovado');
     const cartelasPendentes = cartelasDaRodada.filter(c => c.status_pagamento === 'pendente');
     
     const valorBruto = cartelasAprovadas.length * VALOR_INSCRICAO;
-    const suaComissao = valorBruto * 0.10; // 10% para você
-    const premioTotalGalera = valorBruto * 0.90; // 90% para o pódio
+    const suaComissao = valorBruto * 0.10; // 10% da banca
+    const premioTotalGalera = valorBruto * 0.90; // 90% para o prêmio
     const valorPendente = cartelasPendentes.length * VALOR_INSCRICAO;
 
     return (
@@ -214,7 +214,6 @@ export default function Admin() {
                     <Button label="Aprovar Bilhete" icon="pi pi-check-square" onClick={() => { carregarCartelas(); setExibirDialogCartelas(true); }} className="p-button-outlined p-button-secondary" />
                 </div>
 
-                {/* DASHBOARD FINANCEIRO ATUALIZADO */}
                 <div style={{ display: 'flex', gap: '20px', marginBottom: '30px', flexWrap: 'wrap' }}>
                     {/* CARD 1: SEU LUCRO */}
                     <div style={{ flex: 1, minWidth: '250px', backgroundColor: '#eff6ff', border: '1px solid #3b82f6', padding: '20px', borderRadius: '12px', textAlign: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
@@ -222,7 +221,7 @@ export default function Admin() {
                         <div style={{ color: '#1e3a8a', fontWeight: '900', fontSize: '28px' }}>
                             {suaComissao.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                         </div>
-                        <div style={{ color: '#3b82f6', fontSize: '13px', marginTop: '5px' }}>Sua parte na rodada atual</div>
+                        <div style={{ color: '#3b82f6', fontSize: '13px', marginTop: '5px' }}>Sua parte na rodada {rodadaSelecionada?.nome}</div>
                     </div>
 
                     {/* CARD 2: PRÊMIO DA GALERA */}

@@ -30,7 +30,7 @@ const Ranking = () => {
         return localStorage.getItem("bannerWppOculto") !== "true";
     });
 
-    const VALOR_INSCRICAO = 25;
+    const VALOR_INSCRICAO = 20;
 
     useEffect(() => {
         const salvo = localStorage.getItem("usuarioLogado");
@@ -66,10 +66,10 @@ const Ranking = () => {
             });
     }, [apiUrl]);
 
-   // --- LÓGICA DE PREMIAÇÃO NO RANKING ---
+ // --- NOVA LÓGICA DE PREMIAÇÃO (90% / 10%) ---
     const totalCartelasCompradas = aprovados.length;
     const valorArrecadadoTotal = totalCartelasCompradas * VALOR_INSCRICAO;
-    const valorPremioTotal = valorArrecadadoTotal * 0.90; // Mostra apenas os 90% para a galera
+    const valorPremioTotal = valorArrecadadoTotal * 0.90; // O Ranking exibe só os 90%
 
     const pontuacoesUnicas = aprovados
         .map(p => p.pontuacao_total)
@@ -192,6 +192,8 @@ const Ranking = () => {
                     </Typography>
                     <Typography variant="subtitle1" style={{ color: "#cbd5e1", marginTop: "10px", lineHeight: "1.4" }}>
                         Disputado por {totalCartelasCompradas} bilhetes validados nesta rodada.
+                        <br/>
+                        <span style={{ fontSize: "12px", color: "#64748b" }}>*10% do valor total arrecadado é retido para custos de manutenção da plataforma.</span>
                     </Typography>
                     
                     <Box mt={3} display="flex" justifyContent="center" gap={2} flexWrap="wrap" alignItems="center">

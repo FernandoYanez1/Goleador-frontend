@@ -179,7 +179,7 @@ export default function Placar() {
                                             border: "none",
                                             cursor: gerando ? "not-allowed" : "pointer"
                                         }} 
-                                        label={gerando ? "Gerando... Aguarde" : "Gerar Bilhete (R$25)"} 
+                                        label={gerando ? "Gerando... Aguarde" : "Gerar Bilhete (R$20)"} 
                                         onClick={handleEnviarApostas} 
                                         disabled={gerando} // Bloqueia evento de clique se o componente aceitar
                                     />
