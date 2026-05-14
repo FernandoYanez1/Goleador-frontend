@@ -13,13 +13,15 @@ import autoTable from "jspdf-autotable";
 const Ranking = () => {
     const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
     
-    const [aprovados, setAprovados] = useState<any[]>([]); // Agora armazena cartelas, não usuários
+    const [aprovados, setAprovados] = useState<any[]>([]); 
     const [loading, setLoading] = useState(true);
     const [gerandoPdf, setGerandoPdf] = useState(false);
     const [usuarioLogado, setUsuarioLogado] = useState<any>(null);
     const history = useHistory();
 
+    const [rodadaAtual, setRodadaAtual] = useState<any>(null);
     const [apostasBloqueadas, setApostasBloqueadas] = useState(false);
+    
     const [modalAberto, setModalAberto] = useState(false);
     const [cartelaSelecionada, setCartelaSelecionada] = useState<any>(null);
     const [palpitesSecador, setPalpitesSecador] = useState<any[]>([]);
@@ -34,29 +36,40 @@ const Ranking = () => {
         const salvo = localStorage.getItem("usuarioLogado");
         if (salvo) setUsuarioLogado(JSON.parse(salvo));
 
-        fetch(`${apiUrl}/ranking`)
-            .then((res) => res.json())
-            .then((dados) => {
-                if (Array.isArray(dados)) {
-                    setAprovados(dados); // Recebe a lista de cada bilhete aprovado independentemente
-                }
-                setLoading(false);
-            })
-            .catch((err) => {
-                console.error("Erro ao buscar ranking:", err);
-                setLoading(false);
-            });
-
+        // Busca as rodadas primeiro para descobrir qual é a atual
         fetch(`${apiUrl}/rodadas`)
             .then(res => res.json())
-            .then(data => {
-                const temRodadaAberta = data.some((r: any) => r.status === 'aberta');
-                setApostasBloqueadas(!temRodadaAberta);
+            .then(rodadasData => {
+                if (rodadasData.length > 0) {
+                    // Pega a rodada aberta, ou a última se não tiver nenhuma aberta
+                    const ativa = rodadasData.find((r: any) => r.status === 'aberta') || rodadasData[0];
+                    setRodadaAtual(ativa);
+                    setApostasBloqueadas(ativa.status !== 'aberta');
+
+                    // Agora busca o ranking e FILTRA só para a rodada atual
+                    fetch(`${apiUrl}/ranking`)
+                        .then((res) => res.json())
+                        .then((rankData) => {
+                            if (Array.isArray(rankData)) {
+                                const rankDaRodada = rankData.filter((r: any) => r.rodada_id === ativa.id);
+                                setAprovados(rankDaRodada);
+                            }
+                            setLoading(false);
+                        });
+                } else {
+                    setLoading(false);
+                }
+            })
+            .catch((err) => {
+                console.error("Erro ao buscar dados:", err);
+                setLoading(false);
             });
     }, [apiUrl]);
 
-    // O Prêmio é baseado no total de bilhetes validados
-    const valorPremioTotal = aprovados.length * VALOR_INSCRICAO;
+   // --- LÓGICA DE PREMIAÇÃO NO RANKING ---
+    const totalCartelasCompradas = aprovados.length;
+    const valorArrecadadoTotal = totalCartelasCompradas * VALOR_INSCRICAO;
+    const valorPremioTotal = valorArrecadadoTotal * 0.90; // Mostra apenas os 90% para a galera
 
     const pontuacoesUnicas = aprovados
         .map(p => p.pontuacao_total)
@@ -82,7 +95,6 @@ const Ranking = () => {
 
         setCartelaSelecionada(itemRanking);
         try {
-            // Busca as cartelas do usuário e filtra apenas o bilhete específico que foi clicado no ranking
             const res = await fetch(`${apiUrl}/meus-palpites/${itemRanking.usuario_id}`);
             const dados = await res.json();
             const bilheteEspecifico = dados.find((c: any) => c.cartela_id === itemRanking.cartela_id);
@@ -106,12 +118,13 @@ const Ranking = () => {
             doc.text("Auditoria do Bolão - Palpites Registrados", 14, 20);
             doc.setFontSize(10);
             doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 28);
-
-            const palpitesValidos = dadosAuditoria.filter((item: any) => item.status_pagamento === 'aprovado');
-            doc.text(`Total de Palpites Validados: ${palpitesValidos.length}`, 14, 34);
+            
+            // Aqui na auditoria nós também filtramos a rodada atual
+            const palpitesValidosDaRodada = dadosAuditoria.filter((item: any) => item.status_pagamento === 'aprovado' && item.rodada_nome === rodadaAtual?.nome);
+            doc.text(`Rodada: ${rodadaAtual?.nome} | Total de Palpites Validados: ${palpitesValidosDaRodada.length}`, 14, 34);
 
             const palpitesPorUsuario: any = {};
-            palpitesValidos.forEach((item: any) => {
+            palpitesValidosDaRodada.forEach((item: any) => {
                 if (!palpitesPorUsuario[item.usuario_nome]) palpitesPorUsuario[item.usuario_nome] = [];
                 palpitesPorUsuario[item.usuario_nome].push([
                     `Cartela #${item.cartela_id}`,
@@ -136,7 +149,7 @@ const Ranking = () => {
                 if (startY > 250) { doc.addPage(); startY = 20; }
             });
 
-            doc.save("Auditoria-Bolao.pdf");
+            doc.save(`Auditoria-${rodadaAtual?.nome}.pdf`);
         } catch (error) {
             alert("Erro ao gerar PDF.");
         } finally {
@@ -168,18 +181,21 @@ const Ranking = () => {
             <Container maxWidth="md">
                 
                 <Paper elevation={0} style={{ backgroundColor: "#1e293b", color: "white", padding: "30px", borderRadius: "16px", textAlign: "center", marginBottom: "20px", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.2)" }}>
+                    <Typography style={{ color: "#fcd34d", fontWeight: "bold", fontSize: "14px", marginBottom: "5px" }}>
+                        RANKING DA RODADA: {rodadaAtual?.nome}
+                    </Typography>
                     <Typography variant="h6" style={{ color: "#94a3b8", fontWeight: "bold", letterSpacing: "2px" }}>
                         PREMIAÇÃO ACUMULADA
                     </Typography>
                     <Typography variant="h2" style={{ color: "#10b981", fontWeight: "900", marginTop: "10px" }}>
                         {valorPremioTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                     </Typography>
-                    <Typography variant="subtitle1" style={{ color: "#cbd5e1", marginTop: "10px" }}>
-                        Disputado por {aprovados.length} bilhetes validados.
+                    <Typography variant="subtitle1" style={{ color: "#cbd5e1", marginTop: "10px", lineHeight: "1.4" }}>
+                        Disputado por {totalCartelasCompradas} bilhetes validados nesta rodada.
                     </Typography>
                     
                     <Box mt={3} display="flex" justifyContent="center" gap={2} flexWrap="wrap" alignItems="center">
-                        <Tooltip title={apostasBloqueadas ? "Baixar todos os palpites registrados" : "A auditoria só será liberada quando encerrar a rodada de apostas."} arrow>
+                        <Tooltip title={apostasBloqueadas ? "Baixar todos os palpites registrados desta rodada" : "A auditoria só será liberada quando encerrar a rodada de apostas."} arrow>
                             <span>
                                 <AppButton 
                                     label={gerandoPdf ? "Gerando..." : "Baixar Auditoria"} 

@@ -193,15 +193,15 @@ export default function Admin() {
         return isNaN(data.getTime()) ? d : data.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     };
 
-    // --- AQUI ACONTECE A MÁGICA DE ISOLAR A RODADA ---
-    const VALOR_INSCRICAO = 25;
-    // Filtra as cartelas para mostrar APENAS as que pertencem à rodada que você selecionou no Dropdown
+ // --- CÁLCULOS DE PREMIAÇÃO E COMISSÃO ---
+    const VALOR_INSCRICAO = 20;
     const cartelasDaRodada = cartelas.filter(c => c.rodada_nome === rodadaSelecionada?.nome);
-    
     const cartelasAprovadas = cartelasDaRodada.filter(c => c.status_pagamento === 'aprovado');
     const cartelasPendentes = cartelasDaRodada.filter(c => c.status_pagamento === 'pendente');
     
-    const valorArrecadado = cartelasAprovadas.length * VALOR_INSCRICAO;
+    const valorBruto = cartelasAprovadas.length * VALOR_INSCRICAO;
+    const suaComissao = valorBruto * 0.10; // 10% para você
+    const premioTotalGalera = valorBruto * 0.90; // 90% para o pódio
     const valorPendente = cartelasPendentes.length * VALOR_INSCRICAO;
 
     return (
@@ -214,21 +214,33 @@ export default function Admin() {
                     <Button label="Aprovar Bilhete" icon="pi pi-check-square" onClick={() => { carregarCartelas(); setExibirDialogCartelas(true); }} className="p-button-outlined p-button-secondary" />
                 </div>
 
+                {/* DASHBOARD FINANCEIRO ATUALIZADO */}
                 <div style={{ display: 'flex', gap: '20px', marginBottom: '30px', flexWrap: 'wrap' }}>
-                    <div style={{ flex: 1, minWidth: '200px', backgroundColor: '#ecfdf5', border: '1px solid #10b981', padding: '20px', borderRadius: '12px', textAlign: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-                        <div style={{ color: '#047857', fontWeight: 'bold', fontSize: '14px', marginBottom: '5px' }}>💰 VALOR ARRECADADO ({rodadaSelecionada?.nome})</div>
-                        <div style={{ color: '#065f46', fontWeight: '900', fontSize: '28px' }}>
-                            {valorArrecadado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    {/* CARD 1: SEU LUCRO */}
+                    <div style={{ flex: 1, minWidth: '250px', backgroundColor: '#eff6ff', border: '1px solid #3b82f6', padding: '20px', borderRadius: '12px', textAlign: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+                        <div style={{ color: '#1e40af', fontWeight: 'bold', fontSize: '14px', marginBottom: '5px' }}>🛡️ SEU LUCRO (10%)</div>
+                        <div style={{ color: '#1e3a8a', fontWeight: '900', fontSize: '28px' }}>
+                            {suaComissao.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                         </div>
-                        <div style={{ color: '#059669', fontSize: '13px', marginTop: '5px' }}>{cartelasAprovadas.length} cartelas aprovadas</div>
+                        <div style={{ color: '#3b82f6', fontSize: '13px', marginTop: '5px' }}>Sua parte na rodada atual</div>
                     </div>
 
-                    <div style={{ flex: 1, minWidth: '200px', backgroundColor: '#fffbeb', border: '1px solid #f59e0b', padding: '20px', borderRadius: '12px', textAlign: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-                        <div style={{ color: '#b45309', fontWeight: 'bold', fontSize: '14px', marginBottom: '5px' }}>⏳ VALOR PENDENTE ({rodadaSelecionada?.nome})</div>
+                    {/* CARD 2: PRÊMIO DA GALERA */}
+                    <div style={{ flex: 1, minWidth: '250px', backgroundColor: '#ecfdf5', border: '1px solid #10b981', padding: '20px', borderRadius: '12px', textAlign: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+                        <div style={{ color: '#047857', fontWeight: 'bold', fontSize: '14px', marginBottom: '5px' }}>🏆 PRÊMIO LÍQUIDO (90%)</div>
+                        <div style={{ color: '#065f46', fontWeight: '900', fontSize: '28px' }}>
+                            {premioTotalGalera.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </div>
+                        <div style={{ color: '#059669', fontSize: '13px', marginTop: '5px' }}>Valor a ser dividido no pódio</div>
+                    </div>
+
+                    {/* CARD 3: VALOR PENDENTE */}
+                    <div style={{ flex: 1, minWidth: '250px', backgroundColor: '#fffbeb', border: '1px solid #f59e0b', padding: '20px', borderRadius: '12px', textAlign: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+                        <div style={{ color: '#b45309', fontWeight: 'bold', fontSize: '14px', marginBottom: '5px' }}>⏳ AGUARDANDO PIX</div>
                         <div style={{ color: '#d97706', fontWeight: '900', fontSize: '28px' }}>
                             {valorPendente.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                         </div>
-                        <div style={{ color: '#b45309', fontSize: '13px', marginTop: '5px' }}>{cartelasPendentes.length} cartelas aguardando</div>
+                        <div style={{ color: '#b45309', fontSize: '13px', marginTop: '5px' }}>{cartelasPendentes.length} bilhetes não pagos</div>
                     </div>
                 </div>
 
