@@ -38,8 +38,8 @@ export default function Admin() {
             .then(data => {
                 setRodadas(data);
                 if (data.length > 0 && !rodadaSelecionada) {
-                    const aberta = data.find((r: any) => r.status === 'aberta') || data[0];
-                    setRodadaSelecionada(aberta);
+                    const ativa = data.find((r: any) => r.status === 'aberta') || data[0];
+                    setRodadaSelecionada(ativa);
                 }
             });
     };
@@ -72,9 +72,7 @@ export default function Admin() {
     }, []);
 
     useEffect(() => {
-        if (rodadaSelecionada) {
-            carregarJogos(rodadaSelecionada.id);
-        }
+        if (rodadaSelecionada) carregarJogos(rodadaSelecionada.id);
     }, [rodadaSelecionada]);
 
     const handleCriarRodada = () => {
@@ -86,35 +84,29 @@ export default function Admin() {
         }).then(() => {
             setNovaRodadaNome('');
             carregarRodadas();
-            alert("Rodada criada!");
+            alert("Nova rodada criada como RASCUNHO!");
         });
     };
 
-    const handleFinalizarRodada = () => {
+    const alterarStatusRodada = (novoStatus: string) => {
         if (!rodadaSelecionada) return;
-        if (window.confirm(`Encerrar apostas e bloquear a ${rodadaSelecionada.nome}? Ninguém mais poderá enviar palpites.`)) {
-            fetch(`${apiUrl}/rodadas/${rodadaSelecionada.id}/finalizar`, { method: 'PUT' })
-                .then(() => {
-                    alert("Rodada Bloqueada! Apostas encerradas.");
-                    fetch(`${apiUrl}/rodadas`).then(res => res.json()).then(data => {
-                        setRodadas(data);
-                        setRodadaSelecionada(data.find((r:any) => r.id === rodadaSelecionada.id));
-                    });
+        
+        let msg = "";
+        if (novoStatus === 'aberta') msg = "Tem certeza que deseja LIBERAR esta rodada para o público apostar?";
+        if (novoStatus === 'finalizada') msg = "Encerrar apostas e BLOQUEAR a rodada? (Ativa o modo secador)";
+        
+        if (window.confirm(msg)) {
+            fetch(`${apiUrl}/rodadas/${rodadaSelecionada.id}/status`, { 
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: novoStatus })
+            }).then(() => {
+                alert(`Status atualizado com sucesso!`);
+                fetch(`${apiUrl}/rodadas`).then(res => res.json()).then(data => {
+                    setRodadas(data);
+                    setRodadaSelecionada(data.find((r:any) => r.id === rodadaSelecionada.id));
                 });
-        }
-    };
-
-    const handleReabrirRodada = () => {
-        if (!rodadaSelecionada) return;
-        if (window.confirm(`Atenção: Deseja REABRIR as apostas para a ${rodadaSelecionada.nome}? Os usuários poderão voltar a comprar cartelas.`)) {
-            fetch(`${apiUrl}/rodadas/${rodadaSelecionada.id}/reabrir`, { method: 'PUT' })
-                .then(() => {
-                    alert("Rodada Reaberta com sucesso!");
-                    fetch(`${apiUrl}/rodadas`).then(res => res.json()).then(data => {
-                        setRodadas(data);
-                        setRodadaSelecionada(data.find((r:any) => r.id === rodadaSelecionada.id));
-                    });
-                });
+            });
         }
     };
 
@@ -178,7 +170,7 @@ export default function Admin() {
     };
 
     const handleDeletarCartela = (cartelaId: number) => {
-        if (window.confirm(`Tem certeza que deseja EXCLUIR a Cartela #${cartelaId}? Isso apagará os palpites do usuário permanentemente.`)) {
+        if (window.confirm(`Tem certeza que deseja EXCLUIR a Cartela #${cartelaId}? Isso apagará os palpites permanentemente.`)) {
             fetch(`${apiUrl}/deletar-cartela/${cartelaId}`, { method: 'DELETE' })
                 .then(() => {
                     alert("Cartela excluída com sucesso!");
@@ -193,15 +185,14 @@ export default function Admin() {
         return isNaN(data.getTime()) ? d : data.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     };
 
-// --- CÁLCULOS DO DASHBOARD ADMIN (R$ 20 + Regra dos 10%) ---
     const VALOR_INSCRICAO = 20;
     const cartelasDaRodada = cartelas.filter(c => c.rodada_nome === rodadaSelecionada?.nome);
     const cartelasAprovadas = cartelasDaRodada.filter(c => c.status_pagamento === 'aprovado');
     const cartelasPendentes = cartelasDaRodada.filter(c => c.status_pagamento === 'pendente');
     
     const valorBruto = cartelasAprovadas.length * VALOR_INSCRICAO;
-    const suaComissao = valorBruto * 0.10; // 10% da banca
-    const premioTotalGalera = valorBruto * 0.90; // 90% para o prêmio
+    const suaComissao = valorBruto * 0.10;
+    const premioTotalGalera = valorBruto * 0.90;
     const valorPendente = cartelasPendentes.length * VALOR_INSCRICAO;
 
     return (
@@ -215,7 +206,6 @@ export default function Admin() {
                 </div>
 
                 <div style={{ display: 'flex', gap: '20px', marginBottom: '30px', flexWrap: 'wrap' }}>
-                    {/* CARD 1: SEU LUCRO */}
                     <div style={{ flex: 1, minWidth: '250px', backgroundColor: '#eff6ff', border: '1px solid #3b82f6', padding: '20px', borderRadius: '12px', textAlign: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
                         <div style={{ color: '#1e40af', fontWeight: 'bold', fontSize: '14px', marginBottom: '5px' }}>🛡️ SEU LUCRO (10%)</div>
                         <div style={{ color: '#1e3a8a', fontWeight: '900', fontSize: '28px' }}>
@@ -224,7 +214,6 @@ export default function Admin() {
                         <div style={{ color: '#3b82f6', fontSize: '13px', marginTop: '5px' }}>Sua parte na rodada {rodadaSelecionada?.nome}</div>
                     </div>
 
-                    {/* CARD 2: PRÊMIO DA GALERA */}
                     <div style={{ flex: 1, minWidth: '250px', backgroundColor: '#ecfdf5', border: '1px solid #10b981', padding: '20px', borderRadius: '12px', textAlign: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
                         <div style={{ color: '#047857', fontWeight: 'bold', fontSize: '14px', marginBottom: '5px' }}>🏆 PRÊMIO LÍQUIDO (90%)</div>
                         <div style={{ color: '#065f46', fontWeight: '900', fontSize: '28px' }}>
@@ -233,7 +222,6 @@ export default function Admin() {
                         <div style={{ color: '#059669', fontSize: '13px', marginTop: '5px' }}>Valor a ser dividido no pódio</div>
                     </div>
 
-                    {/* CARD 3: VALOR PENDENTE */}
                     <div style={{ flex: 1, minWidth: '250px', backgroundColor: '#fffbeb', border: '1px solid #f59e0b', padding: '20px', borderRadius: '12px', textAlign: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
                         <div style={{ color: '#b45309', fontWeight: 'bold', fontSize: '14px', marginBottom: '5px' }}>⏳ AGUARDANDO PIX</div>
                         <div style={{ color: '#d97706', fontWeight: '900', fontSize: '28px' }}>
@@ -257,8 +245,10 @@ export default function Admin() {
                                 style={{ width: '250px' }} 
                             />
                             {rodadaSelecionada && (
-                                <span style={{ padding: '5px 10px', borderRadius: '5px', fontSize: '12px', fontWeight: 'bold', backgroundColor: rodadaSelecionada.status === 'aberta' ? '#dcfce7' : '#f1f5f9', color: rodadaSelecionada.status === 'aberta' ? '#16a34a' : '#64748b' }}>
-                                    {rodadaSelecionada.status === 'aberta' ? '🟢 ABERTA' : '🔒 FINALIZADA'}
+                                <span style={{ padding: '5px 10px', borderRadius: '5px', fontSize: '12px', fontWeight: 'bold', 
+                                    backgroundColor: rodadaSelecionada.status === 'aberta' ? '#dcfce7' : rodadaSelecionada.status === 'finalizada' ? '#f1f5f9' : '#e2e8f0', 
+                                    color: rodadaSelecionada.status === 'aberta' ? '#16a34a' : rodadaSelecionada.status === 'finalizada' ? '#64748b' : '#475569' }}>
+                                    {rodadaSelecionada.status === 'aberta' ? '🟢 ATIVA' : rodadaSelecionada.status === 'finalizada' ? '🔒 BLOQUEADA' : '📝 RASCUNHO'}
                                 </span>
                             )}
                         </div>
@@ -270,16 +260,22 @@ export default function Admin() {
                             <Button label="Nova Rodada" icon="pi pi-plus" onClick={handleCriarRodada} severity="success" outlined />
                         </div>
 
-                        {rodadaSelecionada?.status === 'aberta' ? (
-                            <Button label="Encerrar Rodada e Bloquear Apostas" icon="pi pi-lock" severity="danger" onClick={handleFinalizarRodada} style={{ marginLeft: 'auto' }} />
-                        ) : (
-                            rodadaSelecionada && <Button label="Reabrir Apostas" icon="pi pi-unlock" severity="success" outlined onClick={handleReabrirRodada} style={{ marginLeft: 'auto' }} />
+                        {/* BOTÕES INTELIGENTES DE FLUXO DE RODADA */}
+                        {rodadaSelecionada?.status === 'rascunho' && (
+                            <Button label="🟢 Liberar para Apostas" icon="pi pi-globe" severity="success" onClick={() => alterarStatusRodada('aberta')} style={{ marginLeft: 'auto' }} />
+                        )}
+                        {rodadaSelecionada?.status === 'aberta' && (
+                            <Button label="🔒 Encerrar e Bloquear" icon="pi pi-lock" severity="danger" onClick={() => alterarStatusRodada('finalizada')} style={{ marginLeft: 'auto' }} />
+                        )}
+                        {rodadaSelecionada?.status === 'finalizada' && (
+                            <Button label="⏪ Reabrir Apostas" icon="pi pi-unlock" severity="warning" outlined onClick={() => alterarStatusRodada('aberta')} style={{ marginLeft: 'auto' }} />
                         )}
                     </div>
                 </div>
 
                 {rodadaSelecionada && (
                     <div style={{ display: 'flex', gap: '30px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                        
                         <div style={{ flex: '1 1 400px', backgroundColor: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', opacity: rodadaSelecionada.status === 'finalizada' ? 0.5 : 1, pointerEvents: rodadaSelecionada.status === 'finalizada' ? 'none' : 'auto' }}>
                             <h2>➕ Adicionar à {rodadaSelecionada.nome}</h2>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
@@ -376,7 +372,6 @@ export default function Admin() {
             </div>
 
             <Dialog header={`Gerenciar Pagamentos - ${rodadaSelecionada?.nome || 'Geral'}`} visible={exibirDialogCartelas} style={{ width: '70vw' }} onHide={() => setExibirDialogCartelas(false)}>
-                {/* Aqui nós mostramos APENAS as cartelas da rodada selecionada */}
                 <DataTable value={cartelasDaRodada} paginator rows={10} emptyMessage="Nenhuma cartela gerada nesta rodada." sortField="id" sortOrder={-1}>
                     <Column field="id" header="Nº" sortable body={(r) => <b>#{r.id}</b>} style={{ width: '80px' }} />
                     <Column field="usuario_nome" header="Usuário" sortable />
