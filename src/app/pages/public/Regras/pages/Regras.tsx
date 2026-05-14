@@ -15,11 +15,13 @@ export default function Regras() {
 
     const regrasGerais = [
         { icon: "🔞", titulo: "Idade Mínima", texto: "A participação é permitida apenas para maiores de 18 anos." },
-        { icon: "💰", titulo: "Valor e Pagamento", texto: "A inscrição custa R$ 25,00 por rodada. Palpites só serão validados e contabilizados no prêmio após a confirmação." },
-        { icon: "⏳", titulo: "Encerramento", texto: "O sistema bloqueia novas apostas exatamente 30 minutos antes do início do primeiro jogo da rodada." },
-        { icon: "🏆", titulo: "Premiação (60/30/10)", texto: "100% do valor arrecadado (pagamentos aprovados) será dividido em: 60% para o 1º lugar, 30% para o 2º e 10% para o 3º." },
-        { icon: "🤝", titulo: "Desempate", texto: "Caso participantes terminem empatados em uma posição do pódio, o prêmio daquela posição será dividido igualmente entre eles." },
-        { icon: "🚫", titulo: "Jogos Cancelados", texto: "Se um jogo for cancelado ou adiado, ele será anulado no bolão e não renderá pontos." },
+        { icon: "💰", titulo: "Valor e Pagamento", texto: "A inscrição custa R$ 20,00 por bilhete. Palpites só serão validados e contabilizados no prêmio após a confirmação do pagamento." },
+        { icon: "🛠️", titulo: "Manutenção da Plataforma (10%)", texto: "Para garantir que o sistema rode 24h sem travamentos e com segurança de dados na nuvem, 10% do valor total arrecadado é retido para cobrir os custos operacionais." },
+        { icon: "🏆", titulo: "Premiação do Pódio (90%)", texto: "Os 90% restantes do valor arrecadado formam o prêmio líquido, dividido em: 60% para o 1º lugar, 30% para o 2º e 10% para o 3º." },
+        { icon: "🇧🇷", titulo: "Bônus Especial: Oitavas da Copa", texto: "O 1º colocado ISOLADO na rodada das Oitavas da Copa ganhará uma Camisa Oficial da Seleção! Caso haja empate no 1º lugar, o prêmio vira R$ 300,00 divididos igualmente entre os vencedores." },
+        { icon: "⏳", titulo: "Encerramento", texto: "O sistema bloqueia novas apostas (e libera o Modo Secador) no horário estipulado pelo administrador, geralmente antes do 1º jogo da rodada." },
+        { icon: "🤝", titulo: "Regra de Desempate", texto: "Caso participantes terminem empatados em uma mesma posição do pódio, o valor do prêmio financeiro daquela posição será somado e dividido igualmente entre eles." },
+        { icon: "🚫", titulo: "Jogos Cancelados", texto: "Se um jogo for cancelado ou adiado oficialmente, ele será anulado no sistema e não renderá pontos para ninguém." },
     ];
 
     const pontuacaoData = [
@@ -79,9 +81,9 @@ export default function Regras() {
                 <Grid container spacing={3} style={{ marginBottom: "40px" }}>
                     {regrasGerais.map((regra, index) => (
                         <Grid item xs={12} sm={6} key={index}>
-                            <Card style={{ height: "100%", borderRadius: "12px", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)" }}>
+                            <Card style={{ height: "100%", borderRadius: "12px", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)", borderLeft: regra.icon === "🇧🇷" ? "4px solid #10b981" : "none" }}>
                                 <CardContent>
-                                    <Typography variant="h6" style={{ fontWeight: "bold", fontSize: "18px", marginBottom: "8px" }}>
+                                    <Typography variant="h6" style={{ fontWeight: "bold", fontSize: "18px", marginBottom: "8px", color: regra.icon === "🇧🇷" ? "#047857" : "inherit" }}>
                                         {regra.icon} {regra.titulo}
                                     </Typography>
                                     <Typography variant="body2" color="textSecondary" style={{ lineHeight: 1.6 }}>
@@ -132,7 +134,7 @@ export default function Regras() {
                                 <Typography style={{ fontWeight: "bold", color: ex.cor, fontSize: "17px" }}>{ex.titulo}</Typography>
                             </AccordionSummary>
                             <AccordionDetails style={{ backgroundColor: "#f8fafc", padding: "20px", borderTop: "1px solid #e2e8f0" }}>
-                                <div style={{ display: "flex", gap: "40px", marginBottom: "15px" }}>
+                                <div style={{ display: "flex", gap: "40px", marginBottom: "15px", flexWrap: "wrap" }}>
                                     <div>
                                         <Typography variant="caption" color="textSecondary" style={{ fontWeight: "bold" }}>RESULTADO OFICIAL</Typography>
                                         <Typography variant="body1" style={{ fontWeight: "bold" }}>{ex.oficial}</Typography>
@@ -153,7 +155,7 @@ export default function Regras() {
                 {/* BOTÃO VOLTAR */}
                 <div style={{ display: "flex", justifyContent: "center", marginTop: "30px" }}>
                     <AppButton
-                        onClick={() => history.push('/')}
+                        onClick={() => history.push('/public')}
                         style={{ width: "250px", padding: "12px", fontSize: "18px", backgroundColor: "#3b82f6", border: "none" }}
                         label="Voltar para a Home" 
                     />

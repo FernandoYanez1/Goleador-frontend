@@ -6,7 +6,7 @@ import {
 } from "@mui/material";
 import AppButton from "../../../../../vendors/components/Button";
 import { useHistory } from "react-router-dom";
-import { EmojiEvents, PictureAsPdf, MilitaryTech, Visibility, Lock, WhatsApp, Close } from "@mui/icons-material";
+import { EmojiEvents, PictureAsPdf, MilitaryTech, Visibility, Lock, WhatsApp, Close, Checkroom } from "@mui/icons-material";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -29,6 +29,15 @@ const Ranking = () => {
     const [mostrarBannerWpp, setMostrarBannerWpp] = useState(() => {
         return localStorage.getItem("bannerWppOculto") !== "true";
     });
+
+    const [mostrarBannerPremio, setMostrarBannerPremio] = useState(() => {
+        return localStorage.getItem("bannerPremioOculto") !== "true";
+    });
+
+    const fecharBannerPremio = () => {
+        setMostrarBannerPremio(false);
+        localStorage.setItem("bannerPremioOculto", "true");
+    };
 
     const VALOR_INSCRICAO = 20;
 
@@ -223,6 +232,37 @@ const Ranking = () => {
                     </Box>
                 </Paper>
 
+                {/* BANNER DA PREMIAÇÃO ESPECIAL DA COPA */}
+                {mostrarBannerPremio && (
+                    <Box mb={4} style={{
+                        position: 'relative',
+                        background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                        borderRadius: '16px',
+                        padding: '25px 20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        flexWrap: 'wrap',
+                        gap: '15px',
+                        border: '1px solid #fbbf24',
+                        boxShadow: '0 10px 15px -3px rgba(245, 158, 11, 0.15)'
+                    }}>
+                        <IconButton onClick={fecharBannerPremio} style={{ position: 'absolute', top: '5px', right: '5px', color: '#fffbeb' }} size="small">
+                            <Close fontSize="small" />
+                        </IconButton>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
+                            <div style={{ backgroundColor: '#ffffff', borderRadius: '50%', width: '50px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+                                <Checkroom style={{ fontSize: '30px', color: '#059669' }} /> 
+                            </div>
+                            <div>
+                                <Typography variant="h6" style={{ color: '#ffffff', margin: 0, fontWeight: 'bold' }}>🇧🇷 Sorteio Especial: Oitavas da Copa!</Typography>
+                                <Typography variant="body2" style={{ color: '#fffbeb', margin: '4px 0 0 0' }}>O 1º lugar isolado leva uma Camisa Oficial da Seleção! (Em caso de empate, R$300 divididos).</Typography>
+                            </div>
+                        </div>
+                    </Box>
+                )}
+
                 {mostrarBannerWpp && (
                     <Box mb={4} style={{
                         position: 'relative',
@@ -404,14 +444,23 @@ const Ranking = () => {
                 </Dialog>
             </Container>
 
-            {!mostrarBannerWpp && (
-                <Fab 
-                    color="success" aria-label="whatsapp" onClick={() => window.open(linkGrupoWpp, '_blank')}
-                    style={{ position: 'fixed', bottom: '30px', right: '30px', backgroundColor: '#25D366', color: 'white', boxShadow: '0 4px 10px rgba(37, 211, 102, 0.4)' }}
-                >
-                    <WhatsApp style={{ fontSize: '30px' }} />
-                </Fab>
-            )}
+            <Box style={{ position: 'fixed', bottom: '30px', right: '30px', display: 'flex', flexDirection: 'column', gap: '15px', zIndex: 999 }}>
+                {!mostrarBannerPremio && (
+                    <Tooltip title="Ver Prêmio Especial" placement="left" arrow>
+                        <Fab onClick={() => { setMostrarBannerPremio(true); localStorage.setItem("bannerPremioOculto", "false"); }} style={{ backgroundColor: '#f59e0b', color: 'white', boxShadow: '0 4px 10px rgba(245, 158, 11, 0.4)' }}>
+                            <Checkroom style={{ fontSize: '28px' }} />
+                        </Fab>
+                    </Tooltip>
+                )}
+                
+                {!mostrarBannerWpp && (
+                    <Tooltip title="Grupo VIP" placement="left" arrow>
+                        <Fab color="success" onClick={() => window.open(linkGrupoWpp, '_blank')} style={{ backgroundColor: '#25D366', color: 'white', boxShadow: '0 4px 10px rgba(37, 211, 102, 0.4)' }}>
+                            <WhatsApp style={{ fontSize: '30px' }} />
+                        </Fab>
+                    </Tooltip>
+                )}
+            </Box>
         </div>
     );
 };
