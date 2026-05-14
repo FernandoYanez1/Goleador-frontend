@@ -16,9 +16,9 @@ export default function Regras() {
     const regrasGerais = [
         { icon: "🔞", titulo: "Idade Mínima", texto: "A participação é permitida apenas para maiores de 18 anos." },
         { icon: "💰", titulo: "Valor e Pagamento", texto: "A inscrição custa R$ 20,00 por bilhete. Palpites só serão validados e contabilizados no prêmio após a confirmação do pagamento." },
-        { icon: "🛠️", titulo: "Manutenção da Plataforma (10%)", texto: "Para garantir que o sistema rode 24h sem travamentos e com segurança de dados na nuvem, 10% do valor total arrecadado é retido para cobrir os custos operacionais." },
+        { icon: "🛠️", titulo: "Taxa de Administração (10%)", texto: "Os 10% ficam retidos como taxa de administração e manutenção. Esse percentual cobre a administração geral do bolão, os custos de infraestrutura do site e também o financiamento de premiações extras que trazemos em rodadas especiais para a galera." },
         { icon: "🏆", titulo: "Premiação do Pódio (90%)", texto: "Os 90% restantes do valor arrecadado formam o prêmio líquido, dividido em: 60% para o 1º lugar, 30% para o 2º e 10% para o 3º." },
-        { icon: "🇧🇷", titulo: "Bônus Especial: Oitavas da Copa", texto: "O 1º colocado ISOLADO na rodada das Oitavas da Copa ganhará uma Camisa Oficial da Seleção! Caso haja empate no 1º lugar, o prêmio vira R$ 300,00 divididos igualmente entre os vencedores." },
+        { icon: "👕", titulo: "Bônus Especial: Oitavas da Copa", texto: "O 1º colocado ISOLADO na rodada das Oitavas da Copa ganhará uma Camisa Oficial da Seleção! Caso haja empate no 1º lugar, o prêmio vira R$ 300,00 divididos igualmente entre os vencedores." },
         { icon: "⏳", titulo: "Encerramento", texto: "O sistema bloqueia novas apostas (e libera o Modo Secador) no horário estipulado pelo administrador, geralmente antes do 1º jogo da rodada." },
         { icon: "🤝", titulo: "Regra de Desempate", texto: "Caso participantes terminem empatados em uma mesma posição do pódio, o valor do prêmio financeiro daquela posição será somado e dividido igualmente entre eles." },
         { icon: "🚫", titulo: "Jogos Cancelados", texto: "Se um jogo for cancelado ou adiado oficialmente, ele será anulado no sistema e não renderá pontos para ninguém." },
