@@ -22,7 +22,6 @@ export default function Admin() {
     const [exibirDialogCartelas, setExibirDialogCartelas] = useState(false);
     const [cartelas, setCartelas] = useState<any[]>([]);
     
-    // Transformei data_hora em string para aceitar o input nativo HTML
     const [novoJogo, setNovoJogo] = useState<{
         time_casa: string; time_visitante: string;
         sigla_casa: string; sigla_visitante: string;
@@ -126,7 +125,6 @@ export default function Admin() {
         const dados = { 
             ...novoJogo, 
             rodada_id: rodadaSelecionada.id,
-            // Formata o input html para o formato ISO aceito pelo banco
             data_hora: novoJogo.data_hora ? new Date(novoJogo.data_hora).toISOString() : null 
         };
 
@@ -189,16 +187,19 @@ export default function Admin() {
         }
     };
 
-    // Formata exibição da data para ficar bonita na lista de jogos
     const formatarData = (d: string) => {
         if (!d) return '';
         const data = new Date(d);
         return isNaN(data.getTime()) ? d : data.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     };
 
+    // --- AQUI ACONTECE A MÁGICA DE ISOLAR A RODADA ---
     const VALOR_INSCRICAO = 25;
-    const cartelasAprovadas = cartelas.filter(c => c.status_pagamento === 'aprovado');
-    const cartelasPendentes = cartelas.filter(c => c.status_pagamento === 'pendente');
+    // Filtra as cartelas para mostrar APENAS as que pertencem à rodada que você selecionou no Dropdown
+    const cartelasDaRodada = cartelas.filter(c => c.rodada_nome === rodadaSelecionada?.nome);
+    
+    const cartelasAprovadas = cartelasDaRodada.filter(c => c.status_pagamento === 'aprovado');
+    const cartelasPendentes = cartelasDaRodada.filter(c => c.status_pagamento === 'pendente');
     
     const valorArrecadado = cartelasAprovadas.length * VALOR_INSCRICAO;
     const valorPendente = cartelasPendentes.length * VALOR_INSCRICAO;
@@ -215,7 +216,7 @@ export default function Admin() {
 
                 <div style={{ display: 'flex', gap: '20px', marginBottom: '30px', flexWrap: 'wrap' }}>
                     <div style={{ flex: 1, minWidth: '200px', backgroundColor: '#ecfdf5', border: '1px solid #10b981', padding: '20px', borderRadius: '12px', textAlign: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-                        <div style={{ color: '#047857', fontWeight: 'bold', fontSize: '14px', marginBottom: '5px' }}>💰 VALOR ARRECADADO</div>
+                        <div style={{ color: '#047857', fontWeight: 'bold', fontSize: '14px', marginBottom: '5px' }}>💰 VALOR ARRECADADO ({rodadaSelecionada?.nome})</div>
                         <div style={{ color: '#065f46', fontWeight: '900', fontSize: '28px' }}>
                             {valorArrecadado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                         </div>
@@ -223,7 +224,7 @@ export default function Admin() {
                     </div>
 
                     <div style={{ flex: 1, minWidth: '200px', backgroundColor: '#fffbeb', border: '1px solid #f59e0b', padding: '20px', borderRadius: '12px', textAlign: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-                        <div style={{ color: '#b45309', fontWeight: 'bold', fontSize: '14px', marginBottom: '5px' }}>⏳ VALOR PENDENTE (PIX)</div>
+                        <div style={{ color: '#b45309', fontWeight: 'bold', fontSize: '14px', marginBottom: '5px' }}>⏳ VALOR PENDENTE ({rodadaSelecionada?.nome})</div>
                         <div style={{ color: '#d97706', fontWeight: '900', fontSize: '28px' }}>
                             {valorPendente.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                         </div>
@@ -268,7 +269,6 @@ export default function Admin() {
 
                 {rodadaSelecionada && (
                     <div style={{ display: 'flex', gap: '30px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
-                        
                         <div style={{ flex: '1 1 400px', backgroundColor: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', opacity: rodadaSelecionada.status === 'finalizada' ? 0.5 : 1, pointerEvents: rodadaSelecionada.status === 'finalizada' ? 'none' : 'auto' }}>
                             <h2>➕ Adicionar à {rodadaSelecionada.nome}</h2>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
@@ -286,7 +286,6 @@ export default function Admin() {
                                 </div>
                                 <InputText placeholder="URL Logo Visitante" value={novoJogo.logo_visitante} onChange={(e) => setNovoJogo({...novoJogo, logo_visitante: e.target.value})} />
                                 
-                                {/* AQUI FOI TROCADO PARA O INPUT NATIVO */}
                                 <input 
                                     type="datetime-local" 
                                     value={novoJogo.data_hora} 
@@ -365,8 +364,9 @@ export default function Admin() {
                 )}
             </div>
 
-            <Dialog header="Gerenciar Pagamentos (Cartelas)" visible={exibirDialogCartelas} style={{ width: '70vw' }} onHide={() => setExibirDialogCartelas(false)}>
-                <DataTable value={cartelas} paginator rows={10} emptyMessage="Nenhuma cartela gerada." sortField="id" sortOrder={-1}>
+            <Dialog header={`Gerenciar Pagamentos - ${rodadaSelecionada?.nome || 'Geral'}`} visible={exibirDialogCartelas} style={{ width: '70vw' }} onHide={() => setExibirDialogCartelas(false)}>
+                {/* Aqui nós mostramos APENAS as cartelas da rodada selecionada */}
+                <DataTable value={cartelasDaRodada} paginator rows={10} emptyMessage="Nenhuma cartela gerada nesta rodada." sortField="id" sortOrder={-1}>
                     <Column field="id" header="Nº" sortable body={(r) => <b>#{r.id}</b>} style={{ width: '80px' }} />
                     <Column field="usuario_nome" header="Usuário" sortable />
                     <Column field="rodada_nome" header="Rodada" sortable />
