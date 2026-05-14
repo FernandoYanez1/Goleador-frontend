@@ -396,7 +396,7 @@ const Ranking = () => {
                 )}
 
                 <Box mt={4} display="flex" gap={2} justifyContent="center" flexWrap="wrap">
-                    <AppButton style={{ width: "200px", padding: "12px", backgroundColor: "#f97316", border: "none" }} label="Meus Palpites" onClick={() => history.push("/public/placar")} />
+                    <AppButton style={{ width: "200px", padding: "12px", backgroundColor: "#f97316", border: "none" }} label="Meus Palpites" onClick={() => history.push("/public/palpites")} />
                     <AppButton style={{ width: "200px", padding: "12px", backgroundColor: "#64748b", border: "none" }} label="Voltar à Home" onClick={() => history.push("/public")} />
                 </Box>
 
