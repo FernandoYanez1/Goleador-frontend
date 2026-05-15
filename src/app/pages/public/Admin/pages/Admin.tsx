@@ -6,7 +6,6 @@ import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Dropdown } from 'primereact/dropdown';
 import { useHistory } from 'react-router-dom';
-import { Tag } from 'primereact/tag';
 
 export default function Admin() {
     const history = useHistory();
@@ -186,7 +185,7 @@ export default function Admin() {
         return isNaN(data.getTime()) ? d : data.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     };
 
-    // TEMPLATES NOVOS PARA A TABELA
+    // TEMPLATES CORRIGIDOS PARA A TABELA
     const statusTemplate = (rowData: any) => {
         const isMP = rowData.metodo_pagamento === 'mercadopago';
         return (
@@ -209,12 +208,22 @@ export default function Admin() {
 
     const origemTemplate = (rowData: any) => {
         const isMP = rowData.metodo_pagamento === 'mercadopago';
+        
+        const bgColor = isMP ? '#dbeafe' : '#f1f5f9';
+        const textColor = isMP ? '#2563eb' : '#475569';
+        const label = isMP ? 'MERCADO PAGO' : 'MANUAL';
+
         return (
-            <Tag 
-                value={isMP ? "MERCADO PAGO" : "MANUAL"} 
-                severity={isMP ? "info" : "secondary"} 
-                style={{ fontSize: '10px', padding: '4px 8px' }}
-            />
+            <span style={{ 
+                backgroundColor: bgColor, 
+                color: textColor, 
+                padding: '4px 8px', 
+                borderRadius: '6px', 
+                fontWeight: 'bold', 
+                fontSize: '10px' 
+            }}>
+                {label}
+            </span>
         );
     };
 

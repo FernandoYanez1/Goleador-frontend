@@ -13,17 +13,40 @@ export default function Contato() {
     const [telefone, setTelefone] = useState('');
     const [senha, setSenha] = useState('');
     
-    const [mostrarSenha, setMostrarSenha] = useState(false); // Estado para o "Olhinho"
+    const [mostrarSenha, setMostrarSenha] = useState(false);
     const [loading, setLoading] = useState(false);
 
     const history = useHistory();
     const toast = useRef<Toast>(null);
 
+    // FUNÇÕES DE MÁSCARA
+    const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        let value = e.target.value.replace(/\D/g, ''); // Tira letras
+        if (value.length > 11) value = value.slice(0, 11);
+        value = value.replace(/(\d{3})(\d)/, '$1.$2');
+        value = value.replace(/(\d{3})(\d)/, '$1.$2');
+        value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+        setCpf(value);
+    };
+
+    const handleTelefoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length > 11) value = value.slice(0, 11);
+        value = value.replace(/^(\d{2})(\d)/g, '($1) $2');
+        value = value.replace(/(\d)(\d{4})$/, '$1-$2');
+        setTelefone(value);
+    };
+
     const handleCadastrarClick = async (e: any) => {
         if (e && e.preventDefault) e.preventDefault();
 
-        if (!nome || !email || !senha) {
-            toast.current?.show({ severity: 'warn', summary: 'Atenção', detail: 'Nome, Email e Senha são obrigatórios!', life: 3000 });
+        if (!nome || !email || !senha || !cpf || !telefone) {
+            toast.current?.show({ severity: 'warn', summary: 'Atenção', detail: 'Todos os campos são obrigatórios!', life: 3000 });
+            return;
+        }
+
+        if (cpf.length < 14) {
+            toast.current?.show({ severity: 'warn', summary: 'Atenção', detail: 'Digite um CPF válido!', life: 3000 });
             return;
         }
 
@@ -35,11 +58,6 @@ export default function Contato() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ nome, email, cpf, telefone, senha })
             });
-
-            const tipoConteudo = resposta.headers.get("content-type");
-            if (!tipoConteudo || !tipoConteudo.includes("application/json")) {
-                throw new Error("Erro na rota do servidor.");
-            }
 
             const dados = await resposta.json();
 
@@ -57,128 +75,50 @@ export default function Contato() {
         }
     };
 
-    const handleVoltarHomeClick = () => history.push('/');
-    const handleLoginClick = () => history.push("/public/login");
-
     return (
-        <div style={{ 
-            minHeight: '100vh', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center', 
-            background: '#0f172a', 
-            padding: '40px 20px' // Um pouco mais de padding vertical para telas pequenas
-        }}>
+        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0f172a', padding: '40px 20px' }}>
             <Toast position="top-center" ref={toast} />
 
-            <Card style={{ 
-                width: '100%', 
-                maxWidth: '450px', // Ligeiramente mais largo que o login para acomodar os inputs
-                borderRadius: '16px', 
-                backgroundColor: '#1e293b', 
-                border: '1px solid #334155', 
-                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)',
-                padding: '10px'
-            }}>
-                
+            <Card style={{ width: '100%', maxWidth: '450px', borderRadius: '16px', backgroundColor: '#1e293b', border: '1px solid #334155', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)', padding: '10px' }}>
                 <div style={{ textAlign: 'center', marginBottom: '25px' }}>
-                    <img 
-                        src="/media/goleador-logo.png" 
-                        alt="Logo" 
-                        style={{ height: '70px', width: 'auto', marginBottom: '10px' }} 
-                    />
+                    <img src="/media/goleador-logo.png" alt="Logo" style={{ height: '70px', width: 'auto', marginBottom: '10px' }} />
                     <h2 style={{ margin: 0, color: '#ffffff', fontSize: '24px', fontWeight: 'bold' }}>Crie sua conta</h2>
                     <p style={{ margin: '5px 0 0 0', color: '#94a3b8', fontSize: '14px' }}>Preencha seus dados para participar do bolão</p>
                 </div>
 
                 <form onSubmit={handleCadastrarClick} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                     
-                    {/* NOME */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        <label style={{ color: '#94a3b8', fontSize: '13px', fontWeight: 'bold' }}>Nome Completo *</label>
-                        <InputText 
-                            value={nome} 
-                            onChange={(e) => setNome(e.target.value)} 
-                            placeholder="Como você quer ser chamado"
-                            style={{ 
-                                width: '100%', backgroundColor: '#0f172a', border: '1px solid #475569', color: '#ffffff', borderRadius: '8px', padding: '12px'
-                            }} 
-                        />
+                        <label style={{ color: '#94a3b8', fontSize: '13px', fontWeight: 'bold' }}>Nome e Sobrenome *</label>
+                        <InputText value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome e Sobrenome" style={{ width: '100%', backgroundColor: '#0f172a', border: '1px solid #475569', color: '#ffffff', borderRadius: '8px', padding: '12px' }} />
                     </div>
 
-                    {/* EMAIL */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         <label style={{ color: '#94a3b8', fontSize: '13px', fontWeight: 'bold' }}>Email *</label>
-                        <InputText 
-                            value={email} 
-                            onChange={(e) => setEmail(e.target.value)} 
-                            placeholder="seu@email.com"
-                            style={{ 
-                                width: '100%', backgroundColor: '#0f172a', border: '1px solid #475569', color: '#ffffff', borderRadius: '8px', padding: '12px'
-                            }} 
-                        />
+                        <InputText value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" style={{ width: '100%', backgroundColor: '#0f172a', border: '1px solid #475569', color: '#ffffff', borderRadius: '8px', padding: '12px' }} />
                     </div>
 
-                    {/* CPF E TELEFONE LADO A LADO */}
                     <div style={{ display: 'flex', gap: '15px' }}>
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            <label style={{ color: '#94a3b8', fontSize: '13px', fontWeight: 'bold' }}>CPF</label>
-                            <InputText 
-                                value={cpf} 
-                                onChange={(e) => setCpf(e.target.value)} 
-                                placeholder="Apenas números"
-                                style={{ 
-                                    width: '100%', backgroundColor: '#0f172a', border: '1px solid #475569', color: '#ffffff', borderRadius: '8px', padding: '12px'
-                                }} 
-                            />
+                            <label style={{ color: '#94a3b8', fontSize: '13px', fontWeight: 'bold' }}>CPF *</label>
+                            <InputText value={cpf} onChange={handleCpfChange} placeholder="000.000.000-00" style={{ width: '100%', backgroundColor: '#0f172a', border: '1px solid #475569', color: '#ffffff', borderRadius: '8px', padding: '12px' }} />
                         </div>
 
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            <label style={{ color: '#94a3b8', fontSize: '13px', fontWeight: 'bold' }}>Telefone / WhatsApp</label>
-                            <InputText 
-                                value={telefone} 
-                                onChange={(e) => setTelefone(e.target.value)} 
-                                placeholder="(00) 00000-0000"
-                                style={{ 
-                                    width: '100%', backgroundColor: '#0f172a', border: '1px solid #475569', color: '#ffffff', borderRadius: '8px', padding: '12px'
-                                }} 
-                            />
+                            <label style={{ color: '#94a3b8', fontSize: '13px', fontWeight: 'bold' }}>WhatsApp *</label>
+                            <InputText value={telefone} onChange={handleTelefoneChange} placeholder="(00) 00000-0000" style={{ width: '100%', backgroundColor: '#0f172a', border: '1px solid #475569', color: '#ffffff', borderRadius: '8px', padding: '12px' }} />
                         </div>
                     </div>
 
-                    {/* SENHA COM OLHINHO */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         <label style={{ color: '#94a3b8', fontSize: '13px', fontWeight: 'bold' }}>Senha *</label>
                         <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                            <InputText 
-                                type={mostrarSenha ? "text" : "password"} 
-                                value={senha} 
-                                onChange={(e) => setSenha(e.target.value)} 
-                                placeholder="Crie uma senha segura"
-                                style={{ 
-                                    width: '100%', backgroundColor: '#0f172a', border: '1px solid #475569', color: '#ffffff', borderRadius: '8px', padding: '12px', paddingRight: '45px'
-                                }} 
-                            />
-                            {/* BOTÃO DO OLHINHO */}
-                            <i 
-                                className={mostrarSenha ? "pi pi-eye-slash" : "pi pi-eye"} 
-                                onClick={() => setMostrarSenha(!mostrarSenha)}
-                                style={{ 
-                                    position: 'absolute', right: '15px', color: '#64748b', cursor: 'pointer', fontSize: '18px' 
-                                }} 
-                                title={mostrarSenha ? "Ocultar Senha" : "Mostrar Senha"}
-                            />
+                            <InputText type={mostrarSenha ? "text" : "password"} value={senha} onChange={(e) => setSenha(e.target.value)} placeholder="Crie uma senha segura" style={{ width: '100%', backgroundColor: '#0f172a', border: '1px solid #475569', color: '#ffffff', borderRadius: '8px', padding: '12px', paddingRight: '45px' }} />
+                            <i className={mostrarSenha ? "pi pi-eye-slash" : "pi pi-eye"} onClick={() => setMostrarSenha(!mostrarSenha)} style={{ position: 'absolute', right: '15px', color: '#64748b', cursor: 'pointer', fontSize: '18px' }} title={mostrarSenha ? "Ocultar Senha" : "Mostrar Senha"} />
                         </div>
                     </div>
 
-                    <AppButton 
-                        label={loading ? "Cadastrando..." : "Finalizar Cadastro"} 
-                        onClick={handleCadastrarClick} 
-                        disabled={loading}
-                        style={{ 
-                            width: '100%', padding: '14px', borderRadius: '8px', backgroundColor: '#10b981', border: 'none', fontSize: '18px', fontWeight: 'bold', marginTop: '15px', color: '#ffffff'
-                        }} 
-                    />
+                    <AppButton label={loading ? "Cadastrando..." : "Finalizar Cadastro"} onClick={handleCadastrarClick} disabled={loading} style={{ width: '100%', padding: '14px', borderRadius: '8px', backgroundColor: '#10b981', border: 'none', fontSize: '18px', fontWeight: 'bold', marginTop: '15px', color: '#ffffff' }} />
                 </form>
 
                 <div style={{ display: 'flex', alignItems: 'center', margin: '25px 0' }}>
@@ -187,25 +127,9 @@ export default function Contato() {
                     <div style={{ flex: 1, height: '1px', backgroundColor: '#334155' }}></div>
                 </div>
 
-                {/* LINKS DE RODAPÉ (Padrão limpo) */}
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px' }}>
-                    <span 
-                        onClick={handleLoginClick} 
-                        style={{ color: '#60a5fa', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', textDecoration: 'none' }}
-                        onMouseOver={(e) => e.currentTarget.style.textDecoration = 'underline'}
-                        onMouseOut={(e) => e.currentTarget.style.textDecoration = 'none'}
-                    >
-                        Já possuo conta (Fazer Login)
-                    </span>
-
-                    <span 
-                        onClick={handleVoltarHomeClick} 
-                        style={{ color: '#94a3b8', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', textDecoration: 'none' }}
-                        onMouseOver={(e) => e.currentTarget.style.textDecoration = 'underline'}
-                        onMouseOut={(e) => e.currentTarget.style.textDecoration = 'none'}
-                    >
-                        Voltar para o Início
-                    </span>
+                    <span onClick={() => history.push("/public/login")} style={{ color: '#60a5fa', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', textDecoration: 'none' }}>Já possuo conta (Fazer Login)</span>
+                    <span onClick={() => history.push('/')} style={{ color: '#94a3b8', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer', textDecoration: 'none' }}>Voltar para o Início</span>
                 </div>
             </Card>
         </div>
