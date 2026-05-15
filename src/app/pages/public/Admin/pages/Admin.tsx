@@ -6,6 +6,7 @@ import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Dropdown } from 'primereact/dropdown';
 import { useHistory } from 'react-router-dom';
+import { Tag } from 'primereact/tag';
 
 export default function Admin() {
     const history = useHistory();
@@ -183,6 +184,38 @@ export default function Admin() {
         if (!d) return '';
         const data = new Date(d);
         return isNaN(data.getTime()) ? d : data.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    };
+
+    // TEMPLATES NOVOS PARA A TABELA
+    const statusTemplate = (rowData: any) => {
+        const isMP = rowData.metodo_pagamento === 'mercadopago';
+        return (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Button 
+                    label={rowData.status_pagamento === 'aprovado' ? "Aprovado" : "Pendente"} 
+                    icon={rowData.status_pagamento === 'aprovado' ? "pi pi-check" : "pi pi-clock"} 
+                    severity={rowData.status_pagamento === 'aprovado' ? "success" : "warning"}
+                    onClick={() => handleTogglePagamento(rowData.id, rowData.status_pagamento)}
+                    style={{ padding: '5px 10px', fontSize: '11px', height: '30px' }}
+                />
+                {isMP ? (
+                    <i className="pi pi-bolt" style={{ color: '#3b82f6', fontSize: '1.2rem' }} title="Automático via Mercado Pago"></i>
+                ) : (
+                    <i className="pi pi-user" style={{ color: '#64748b', fontSize: '1.2rem' }} title="Manual / Chave Direta"></i>
+                )}
+            </div>
+        );
+    };
+
+    const origemTemplate = (rowData: any) => {
+        const isMP = rowData.metodo_pagamento === 'mercadopago';
+        return (
+            <Tag 
+                value={isMP ? "MERCADO PAGO" : "MANUAL"} 
+                severity={isMP ? "info" : "secondary"} 
+                style={{ fontSize: '10px', padding: '4px 8px' }}
+            />
+        );
     };
 
     const VALOR_INSCRICAO = 20;
@@ -371,22 +404,14 @@ export default function Admin() {
                 )}
             </div>
 
-            <Dialog header={`Gerenciar Pagamentos - ${rodadaSelecionada?.nome || 'Geral'}`} visible={exibirDialogCartelas} style={{ width: '70vw' }} onHide={() => setExibirDialogCartelas(false)}>
+            <Dialog header={`Gerenciar Pagamentos - ${rodadaSelecionada?.nome || 'Geral'}`} visible={exibirDialogCartelas} style={{ width: '80vw' }} onHide={() => setExibirDialogCartelas(false)}>
                 <DataTable value={cartelasDaRodada} paginator rows={10} emptyMessage="Nenhuma cartela gerada nesta rodada." sortField="id" sortOrder={-1}>
                     <Column field="id" header="Nº" sortable body={(r) => <b>#{r.id}</b>} style={{ width: '80px' }} />
                     <Column field="usuario_nome" header="Usuário" sortable />
-                    <Column field="rodada_nome" header="Rodada" sortable />
+                    <Column header="Origem" body={origemTemplate} style={{ width: '130px' }} />
                     <Column field="data_criacao" header="Data" body={(r) => formatarData(r.data_criacao)} />
-                    <Column header="Status" body={(r) => (
-                        <Button 
-                            label={r.status_pagamento === 'aprovado' ? "Aprovado" : "Pendente"} 
-                            icon={r.status_pagamento === 'aprovado' ? "pi pi-check" : "pi pi-clock"} 
-                            severity={r.status_pagamento === 'aprovado' ? "success" : "warning"}
-                            onClick={() => handleTogglePagamento(r.id, r.status_pagamento)}
-                            style={{ padding: '5px 10px', fontSize: '12px' }}
-                        />
-                    )} />
-                    <Column header="Ações" body={(r) => (
+                    <Column header="Status / Ação" body={statusTemplate} />
+                    <Column header="Excluir" body={(r) => (
                         <Button 
                             icon="pi pi-trash" 
                             severity="danger" 
