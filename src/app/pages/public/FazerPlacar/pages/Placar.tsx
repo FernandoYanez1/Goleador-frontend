@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useHistory } from "react-router-dom";
+import { Dialog, DialogTitle, DialogContent, Typography, Box } from "@mui/material";
+import { ContentCopy, CheckCircle } from "@mui/icons-material";
 import AppButton from "../../../../../vendors/components/Button";
 
 export default function Placar() {
@@ -11,6 +13,11 @@ export default function Placar() {
     const [placares, setPlacares] = useState<any>({});
     const [carregando, setCarregando] = useState(true);
     const [gerando, setGerando] = useState(false);
+
+    // ESTADOS DO PIX AUTOMÁTICO
+    const [pixModal, setPixModal] = useState(false);
+    const [pixData, setPixData] = useState<any>(null);
+    const [copiado, setCopiado] = useState(false);
 
     useEffect(() => {
         const usuarioSalvo = localStorage.getItem('usuarioLogado');
@@ -77,9 +84,13 @@ export default function Placar() {
                 })
             });
 
+            const dadosPix = await resposta.json();
+
             if (resposta.ok) {
-                alert("Bilhete gerado com sucesso! Realize o pagamento para validar.");
-                history.push("/public/meus-palpites"); 
+                // Ao invés de ir para a tela de bilhetes, abrimos o Modal do PIX na hora!
+                setPixData(dadosPix);
+                setPixModal(true);
+                setGerando(false);
             } else {
                 alert("Erro ao processar o bilhete. Tente novamente.");
                 setGerando(false); 
@@ -88,6 +99,19 @@ export default function Placar() {
             alert("Erro de conexão com o servidor. Tente novamente.");
             setGerando(false);
         }
+    };
+
+    const copiarPix = () => {
+        if (pixData?.pix_copia_cola) {
+            navigator.clipboard.writeText(pixData.pix_copia_cola);
+            setCopiado(true);
+            setTimeout(() => setCopiado(false), 3000);
+        }
+    };
+
+    const fecharModalPix = () => {
+        setPixModal(false);
+        history.push("/public/meus-palpites");
     };
 
     if (carregando) return <div style={{ textAlign: "center", padding: "50px" }}>Carregando jogos...</div>;
@@ -132,8 +156,6 @@ export default function Placar() {
                                         </div>
                                         
                                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
-                                            
-                                            {/* TIME CASA */}
                                             <div style={{ textAlign: 'center', width: '30%', minWidth: '70px' }}>
                                                 <img src={jogo.logo_casa || "/media/escudos-times/default.png"} alt="Casa" style={{ width: '45px', height: '45px', objectFit: 'contain', marginBottom: "5px" }} />
                                                 <div style={{ fontSize: "14px", fontWeight: "bold", color: "#1e293b", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
@@ -144,7 +166,6 @@ export default function Placar() {
                                                 </div>
                                             </div>
 
-                                            {/* PLACAR (INPUTS) */}
                                             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "40%", gap: "8px" }}>
                                                 <input
                                                     type="number" min="0" max="99"
@@ -163,7 +184,6 @@ export default function Placar() {
                                                 />
                                             </div>
 
-                                            {/* TIME VISITANTE */}
                                             <div style={{ textAlign: 'center', width: '30%', minWidth: '70px' }}>
                                                 <img src={jogo.logo_visitante || "/media/escudos-times/default.png"} alt="Visitante" style={{ width: '45px', height: '45px', objectFit: 'contain', marginBottom: "5px" }} />
                                                 <div style={{ fontSize: "14px", fontWeight: "bold", color: "#1e293b", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
@@ -181,21 +201,15 @@ export default function Placar() {
                                     <AppButton 
                                         style={{ 
                                             width: "100%", maxWidth: "300px", 
-                                            padding: "12px", 
-                                            fontSize: "16px", 
-                                            backgroundColor: gerando ? "#94a3b8" : "#10b981", 
-                                            border: "none",
-                                            cursor: gerando ? "not-allowed" : "pointer"
+                                            padding: "12px", fontSize: "16px", backgroundColor: gerando ? "#94a3b8" : "#10b981", border: "none", cursor: gerando ? "not-allowed" : "pointer"
                                         }} 
-                                        label={gerando ? "Gerando..." : "Gerar Bilhete (R$20)"} 
+                                        label={gerando ? "Gerando PIX..." : "Gerar Bilhete (R$20)"} 
                                         onClick={handleEnviarApostas} 
                                         disabled={gerando} 
                                     />
                                     <AppButton 
                                         style={{ width: "100%", maxWidth: "300px", padding: "12px", fontSize: "16px", backgroundColor: "#64748b", border: "none" }} 
-                                        label="Voltar" 
-                                        onClick={() => history.push("/public")} 
-                                        disabled={gerando}
+                                        label="Voltar" onClick={() => history.push("/public")} disabled={gerando}
                                     />
                                 </div>
                             </>
@@ -203,6 +217,47 @@ export default function Placar() {
                     </>
                 )}
             </div>
+
+            {/* MODAL DE PAGAMENTO PIX */}
+            <Dialog open={pixModal} onClose={fecharModalPix} fullWidth maxWidth="xs" PaperProps={{ style: { borderRadius: "16px", padding: "10px" } }}>
+                <DialogTitle style={{ textAlign: "center", fontWeight: "900", color: "#1e293b", fontSize: "24px" }}>
+                    ✅ Bilhete #{pixData?.cartela_id} Gerado!
+                </DialogTitle>
+                <DialogContent style={{ textAlign: "center", paddingBottom: "20px" }}>
+                    <Typography style={{ color: "#475569", marginBottom: "20px" }}>
+                        Falta pouco! Pague o PIX de <b>R$ 20,00</b> abaixo para validar os seus palpites. A aprovação é automática!
+                    </Typography>
+
+                    {/* QR CODE GERADO PELO MERCADO PAGO */}
+                    <Box style={{ border: "2px dashed #10b981", borderRadius: "12px", padding: "10px", display: "inline-block", backgroundColor: "#f0fdf4", marginBottom: "20px" }}>
+                        <img 
+                            src={`data:image/jpeg;base64,${pixData?.qr_code_base64}`} 
+                            alt="QR Code PIX" 
+                            style={{ width: "200px", height: "200px" }} 
+                        />
+                    </Box>
+
+                    {/* CÓDIGO COPIA E COLA */}
+                    <Typography style={{ fontWeight: "bold", color: "#1e293b", marginBottom: "8px", fontSize: "14px" }}>Pix Copia e Cola:</Typography>
+                    <Box style={{ backgroundColor: "#f1f5f9", padding: "12px", borderRadius: "8px", wordBreak: "break-all", fontSize: "12px", color: "#64748b", marginBottom: "20px", border: "1px solid #cbd5e1", maxHeight: "60px", overflow: "hidden" }}>
+                        {pixData?.pix_copia_cola}
+                    </Box>
+
+                    <AppButton 
+                        icon={copiado ? <CheckCircle style={{ marginRight: '8px' }} /> : <ContentCopy style={{ marginRight: '8px' }} />}
+                        label={copiado ? "Código Copiado!" : "Copiar Código PIX"} 
+                        onClick={copiarPix} 
+                        style={{ width: "100%", marginBottom: "15px", backgroundColor: copiado ? "#10b981" : "#3b82f6", border: "none" }}
+                    />
+                    
+                    <AppButton 
+                        label="Já paguei (Ir para meus bilhetes)" 
+                        onClick={fecharModalPix} 
+                        style={{ width: "100%", backgroundColor: "#f59e0b", border: "none" }}
+                    />
+                </DialogContent>
+            </Dialog>
+
         </div>
     );
 }
