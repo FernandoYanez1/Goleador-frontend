@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useHistory } from "react-router-dom";
-import { Dialog, DialogTitle, DialogContent, Typography, Box } from "@mui/material";
+import { Dialog, DialogTitle, DialogContent, Typography, Box, Divider } from "@mui/material";
 import { ContentCopy, CheckCircle } from "@mui/icons-material";
 import AppButton from "../../../../../vendors/components/Button";
 
@@ -14,10 +14,14 @@ export default function Placar() {
     const [carregando, setCarregando] = useState(true);
     const [gerando, setGerando] = useState(false);
 
-    // ESTADOS DO PIX AUTOMÁTICO
+    // ESTADOS DO PIX AUTOMÁTICO E MANUAL
     const [pixModal, setPixModal] = useState(false);
     const [pixData, setPixData] = useState<any>(null);
     const [copiado, setCopiado] = useState(false);
+    const [copiadoManual, setCopiadoManual] = useState(false);
+
+    // STRING DO PIX MANUAL (CAIXA)
+    const PIX_MANUAL_CODE = "00020126330014br.gov.bcb.pix011104415991173520400005303986540520.005802BR5920FERNANDO PORTO YANEZ6008BRASILIA62070503***6304D6D7";
 
     useEffect(() => {
         const usuarioSalvo = localStorage.getItem('usuarioLogado');
@@ -87,7 +91,6 @@ export default function Placar() {
             const dadosPix = await resposta.json();
 
             if (resposta.ok) {
-                // Ao invés de ir para a tela de bilhetes, abrimos o Modal do PIX na hora!
                 setPixData(dadosPix);
                 setPixModal(true);
                 setGerando(false);
@@ -101,12 +104,18 @@ export default function Placar() {
         }
     };
 
-    const copiarPix = () => {
+    const copiarPixMercadoPago = () => {
         if (pixData?.pix_copia_cola) {
             navigator.clipboard.writeText(pixData.pix_copia_cola);
             setCopiado(true);
             setTimeout(() => setCopiado(false), 3000);
         }
+    };
+
+    const copiarPixManual = () => {
+        navigator.clipboard.writeText(PIX_MANUAL_CODE);
+        setCopiadoManual(true);
+        setTimeout(() => setCopiadoManual(false), 3000);
     };
 
     const fecharModalPix = () => {
@@ -224,30 +233,40 @@ export default function Placar() {
                     ✅ Bilhete #{pixData?.cartela_id} Gerado!
                 </DialogTitle>
                 <DialogContent style={{ textAlign: "center", paddingBottom: "20px" }}>
-                    <Typography style={{ color: "#475569", marginBottom: "20px" }}>
-                        Falta pouco! Pague o PIX de <b>R$ 20,00</b> abaixo para validar os seus palpites. A aprovação é automática!
+                    
+                    <Typography style={{ color: "#475569", marginBottom: "20px", fontSize: "14px" }}>
+                        Pague o PIX abaixo para validar os seus palpites. A aprovação é automática!
                     </Typography>
 
                     {/* QR CODE GERADO PELO MERCADO PAGO */}
-                    <Box style={{ border: "2px dashed #10b981", borderRadius: "12px", padding: "10px", display: "inline-block", backgroundColor: "#f0fdf4", marginBottom: "20px" }}>
+                    <Box style={{ border: "2px dashed #10b981", borderRadius: "12px", padding: "10px", display: "inline-block", backgroundColor: "#f0fdf4", marginBottom: "15px" }}>
                         <img 
                             src={`data:image/jpeg;base64,${pixData?.qr_code_base64}`} 
                             alt="QR Code PIX" 
-                            style={{ width: "200px", height: "200px" }} 
+                            style={{ width: "180px", height: "180px" }} 
                         />
-                    </Box>
-
-                    {/* CÓDIGO COPIA E COLA */}
-                    <Typography style={{ fontWeight: "bold", color: "#1e293b", marginBottom: "8px", fontSize: "14px" }}>Pix Copia e Cola:</Typography>
-                    <Box style={{ backgroundColor: "#f1f5f9", padding: "12px", borderRadius: "8px", wordBreak: "break-all", fontSize: "12px", color: "#64748b", marginBottom: "20px", border: "1px solid #cbd5e1", maxHeight: "60px", overflow: "hidden" }}>
-                        {pixData?.pix_copia_cola}
                     </Box>
 
                     <AppButton 
                         icon={copiado ? <CheckCircle style={{ marginRight: '8px' }} /> : <ContentCopy style={{ marginRight: '8px' }} />}
-                        label={copiado ? "Código Copiado!" : "Copiar Código PIX"} 
-                        onClick={copiarPix} 
-                        style={{ width: "100%", marginBottom: "15px", backgroundColor: copiado ? "#10b981" : "#3b82f6", border: "none" }}
+                        label={copiado ? "Código Copiado!" : "Copiar Pix do QR Code"} 
+                        onClick={copiarPixMercadoPago} 
+                        style={{ width: "100%", marginBottom: "20px", backgroundColor: copiado ? "#10b981" : "#3b82f6", border: "none" }}
+                    />
+
+                    <Divider sx={{ my: 2 }}>
+                        <Typography variant="caption" sx={{ color: "#94a3b8", fontWeight: "bold" }}>OU PAGUE MANUAL</Typography>
+                    </Divider>
+                    
+                    <Typography style={{ color: "#ef4444", fontSize: "12px", fontWeight: "bold", marginBottom: "10px" }}>
+                        Problemas com o QR Code acima? Use o PIX Direto da Caixa:
+                    </Typography>
+
+                    <AppButton 
+                        icon={copiadoManual ? <CheckCircle style={{ marginRight: '8px' }} /> : <ContentCopy style={{ marginRight: '8px' }} />}
+                        label={copiadoManual ? "Código Copiado!" : "Copiar PIX Caixa"} 
+                        onClick={copiarPixManual} 
+                        style={{ width: "100%", marginBottom: "15px", backgroundColor: copiadoManual ? "#10b981" : "#6366f1", border: "none" }}
                     />
                     
                     <AppButton 
@@ -257,7 +276,6 @@ export default function Placar() {
                     />
                 </DialogContent>
             </Dialog>
-
         </div>
     );
 }

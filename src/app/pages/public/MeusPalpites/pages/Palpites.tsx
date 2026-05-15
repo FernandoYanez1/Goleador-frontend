@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useHistory } from "react-router-dom";
 import AppButton from "../../../../../vendors/components/Button";
 import { Tooltip } from '@mui/material';
+import { ContentCopy, CheckCircle } from "@mui/icons-material";
 
 export default function MeusPalpites() {
   const history = useHistory();
@@ -15,6 +16,10 @@ export default function MeusPalpites() {
   const [rodadaHistoricoSelecionada, setRodadaHistoricoSelecionada] = useState<string>("");
   
   const [expandidos, setExpandidos] = useState<Record<number, boolean>>({});
+  const [copiadoManualId, setCopiadoManualId] = useState<number | null>(null);
+
+  // STRING DO PIX MANUAL (CAIXA)
+  const PIX_MANUAL_CODE = "00020126330014br.gov.bcb.pix011104415991173520400005303986540520.005802BR5920FERNANDO PORTO YANEZ6008BRASILIA62070503***6304D6D7";
 
   useEffect(() => {
     const usuarioSalvo = localStorage.getItem("usuarioLogado");
@@ -74,6 +79,12 @@ export default function MeusPalpites() {
       setExpandidos(prev => ({ ...prev, [cartelaId]: !prev[cartelaId] }));
   };
 
+  const copiarCodigoManual = (id: number) => {
+    navigator.clipboard.writeText(PIX_MANUAL_CODE);
+    setCopiadoManualId(id);
+    setTimeout(() => setCopiadoManualId(null), 3000);
+  };
+
   const renderCartela = (cartela: any) => {
     const isAprovado = cartela.status_pagamento === 'aprovado';
     const isOpen = expandidos[cartela.cartela_id];
@@ -104,22 +115,32 @@ export default function MeusPalpites() {
                 {!isAprovado && (
                 <div style={{ backgroundColor: "#fffbeb", border: "2px dashed #f59e0b", borderRadius: "12px", padding: "20px", marginBottom: "25px", textAlign: "center" }}>
                     <h4 style={{ color: "#b45309", margin: "0 0 10px 0", fontSize: "18px" }}>⚠️ Bilhete Aguardando Pagamento</h4>
-                    <p style={{ color: "#475569", marginBottom: "20px", fontSize: "14px" }}>Pix de <b>R$ 20,00</b> para validar este bilhete específico.</p>
+                    <p style={{ color: "#475569", marginBottom: "20px", fontSize: "14px" }}>Envie um Pix de <b>R$ 20,00</b> para validar este bilhete específico.</p>
 
-                    <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "15px", alignItems: "center" }}>
+                    <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "15px", alignItems: "center", margin: '15px 0' }}>
                         <div style={{ backgroundColor: "white", padding: "10px", borderRadius: "10px", boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}>
-                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=04415991173" alt="QR Code PIX" style={{ width: "100px", height: "100px" }} />
+                            {/* IMAGEM DO QR CODE LOCAL DA CAIXA */}
+                            <img src="/media/QRCodePIX.jpeg" alt="QR Code PIX Caixa" style={{ width: "150px", height: "150px", objectFit: 'contain' }} />
                         </div>
                         <div style={{ backgroundColor: "#fef3c7", padding: "15px", borderRadius: "8px", textAlign: "left" }}>
                             <div style={{ fontSize: "10px", fontWeight: "bold", color: "#92400e" }}>CHAVE PIX (CPF):</div>
-                            <div style={{ fontSize: "18px", fontWeight: "900", color: "#d97706", marginBottom: "5px", userSelect: "all" }}>044.159.911-73</div>
-                            <div style={{ fontSize: "14px", fontWeight: "bold", color: "#b45309" }}>Fernando Yañez</div>
+                            <div style={{ fontSize: "18px", fontWeight: "900", color: "#d97706", marginBottom: "5px" }}>044.159.911-73</div>
+                            <div style={{ fontSize: "14px", fontWeight: "bold", color: "#b45309" }}>Fernando Porto Yañez</div>
                         </div>
                     </div>
 
-                    <a href={linkWhatsapp} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: "10px", backgroundColor: "#25D366", color: "white", padding: "10px 20px", borderRadius: "8px", textDecoration: "none", fontWeight: "bold", fontSize: "14px", marginTop: "20px" }}>
-                        <i className="pi pi-whatsapp"></i> Enviar Comprovante
-                    </a>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center', marginTop: "20px" }}>
+                        <AppButton 
+                            icon={copiadoManualId === cartela.cartela_id ? <CheckCircle style={{ marginRight: '8px' }} /> : <ContentCopy style={{ marginRight: '8px' }} />}
+                            label={copiadoManualId === cartela.cartela_id ? "Código Copiado!" : "Copiar Pix Copia e Cola (Caixa)"} 
+                            onClick={() => copiarCodigoManual(cartela.cartela_id)} 
+                            style={{ width: "100%", maxWidth: '300px', backgroundColor: copiadoManualId === cartela.cartela_id ? "#10b981" : "#3b82f6", border: "none" }} 
+                        />
+
+                        <a href={linkWhatsapp} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: "10px", backgroundColor: "#25D366", color: "white", padding: "10px 20px", borderRadius: "8px", textDecoration: "none", fontWeight: "bold", fontSize: "14px", width: '100%', maxWidth: '300px', justifyContent: 'center' }}>
+                            <i className="pi pi-whatsapp"></i> Enviar Comprovante
+                        </a>
+                    </div>
                 </div>
                 )}
 
@@ -194,7 +215,7 @@ export default function MeusPalpites() {
       ? cartelasAtuais 
       : cartelasAntigas.filter(c => c.rodada_nome === rodadaHistoricoSelecionada);
 
-  // === NOVIDADE AQUI: Pega a maior pontuação em vez da soma ===
+  // A LÓGICA DA MELHOR PONTUAÇÃO MANTIDA!
   const bilhetesAprovados = cartelasAExibir.filter(c => c.status_pagamento === 'aprovado');
   const pontuacaoNaTela = bilhetesAprovados.length > 0 
       ? Math.max(...bilhetesAprovados.map(c => c.total_pontos || 0)) 
