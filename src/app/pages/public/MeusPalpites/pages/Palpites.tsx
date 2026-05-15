@@ -194,9 +194,11 @@ export default function MeusPalpites() {
       ? cartelasAtuais 
       : cartelasAntigas.filter(c => c.rodada_nome === rodadaHistoricoSelecionada);
 
-  const pontuacaoNaTela = cartelasAExibir
-    .filter(c => c.status_pagamento === 'aprovado')
-    .reduce((acc, c) => acc + c.total_pontos, 0);
+  // === NOVIDADE AQUI: Pega a maior pontuação em vez da soma ===
+  const bilhetesAprovados = cartelasAExibir.filter(c => c.status_pagamento === 'aprovado');
+  const pontuacaoNaTela = bilhetesAprovados.length > 0 
+      ? Math.max(...bilhetesAprovados.map(c => c.total_pontos || 0)) 
+      : 0;
 
   return (
     <div style={{ background: "#e2e8f0", paddingBottom: "50px", minHeight: "100vh", paddingTop: "40px" }}>
@@ -209,7 +211,7 @@ export default function MeusPalpites() {
             <span style={{ color: "#94a3b8", fontSize: "16px" }}>{nomeUsuario}</span>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: "12px", color: "#fbbf24", fontWeight: "bold", letterSpacing: "1px" }}>{modoExibicao === 'atual' ? 'PONTOS NA RODADA' : 'PONTOS NO HISTÓRICO'}</div>
+            <div style={{ fontSize: "12px", color: "#fbbf24", fontWeight: "bold", letterSpacing: "1px" }}>{modoExibicao === 'atual' ? 'MELHOR PONTUAÇÃO' : 'PONTOS NO HISTÓRICO'}</div>
             <div style={{ fontSize: "36px", fontWeight: "bold", color: "white", lineHeight: "1" }}>{pontuacaoNaTela}</div>
           </div>
         </div>
