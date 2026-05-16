@@ -88,23 +88,6 @@ export default function Admin() {
         });
     };
 
-    const handleDeletarRodada = () => {
-        if (!rodadaSelecionada) return;
-        if (window.confirm(`🧨 TEM CERTEZA? Isso vai excluir a rodada "${rodadaSelecionada.nome}" completamente!`)) {
-            fetch(`${apiUrl}/rodadas/${rodadaSelecionada.id}`, { method: 'DELETE' })
-                .then((res) => {
-                    if (res.ok) {
-                        alert("Rodada excluída com sucesso!");
-                        setRodadaSelecionada(null);
-                        carregarRodadas();
-                    } else {
-                        alert("Ops! Parece que o seu servidor não tem a rota de deletar rodadas ativada. Você pode apagá-la direto pelo painel do seu banco de dados (Neon) ou apenas ignorá-la mudando o nome dela para 'Teste'.");
-                    }
-                })
-                .catch(() => alert("Erro ao tentar excluir a rodada."));
-        }
-    };
-
     const alterarStatusRodada = (novoStatus: string) => {
         if (!rodadaSelecionada) return;
         
@@ -318,7 +301,6 @@ export default function Admin() {
                             <Button label="Nova Rodada" icon="pi pi-plus" onClick={handleCriarRodada} severity="success" outlined />
                         </div>
 
-                        {/* BOTÕES DE AÇÃO REAGRUPADOS À DIREITA COM A LIXEIRA SEMPRE VISÍVEL */}
                         <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px' }}>
                             {rodadaSelecionada?.status === 'rascunho' && (
                                 <Button label="🟢 Liberar" icon="pi pi-globe" severity="success" onClick={() => alterarStatusRodada('aberta')} />
@@ -328,10 +310,6 @@ export default function Admin() {
                             )}
                             {rodadaSelecionada?.status === 'finalizada' && (
                                 <Button label="⏪ Reabrir" icon="pi pi-unlock" severity="warning" outlined onClick={() => alterarStatusRodada('aberta')} />
-                            )}
-                            
-                            {rodadaSelecionada && (
-                                <Button icon="pi pi-trash" severity="danger" outlined onClick={handleDeletarRodada} tooltip="Excluir Rodada Definitivamente" />
                             )}
                         </div>
                     </div>
