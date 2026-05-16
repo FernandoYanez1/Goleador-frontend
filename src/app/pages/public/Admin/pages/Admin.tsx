@@ -88,7 +88,6 @@ export default function Admin() {
         });
     };
 
-    // NOVA FUNÇÃO DE DELETAR RODADA
     const handleDeletarRodada = () => {
         if (!rodadaSelecionada) return;
         if (window.confirm(`🧨 TEM CERTEZA? Isso vai excluir a rodada "${rodadaSelecionada.nome}" completamente!`)) {
@@ -99,8 +98,7 @@ export default function Admin() {
                         setRodadaSelecionada(null);
                         carregarRodadas();
                     } else {
-                        // Se o backend não tiver essa rota configurada, avisamos o usuário
-                        alert("Ops! Parece que o seu servidor não tem a rota de deletar rodadas ativada. Você pode apagá-la direto pelo painel do seu banco de dados (Neon) ou apenas ignorá-la.");
+                        alert("Ops! Parece que o seu servidor não tem a rota de deletar rodadas ativada. Você pode apagá-la direto pelo painel do seu banco de dados (Neon) ou apenas ignorá-la mudando o nome dela para 'Teste'.");
                     }
                 })
                 .catch(() => alert("Erro ao tentar excluir a rodada."));
@@ -320,19 +318,22 @@ export default function Admin() {
                             <Button label="Nova Rodada" icon="pi pi-plus" onClick={handleCriarRodada} severity="success" outlined />
                         </div>
 
-                        {rodadaSelecionada?.status === 'rascunho' && (
-                            <>
-                                <Button label="🟢 Liberar para Apostas" icon="pi pi-globe" severity="success" onClick={() => alterarStatusRodada('aberta')} style={{ marginLeft: 'auto' }} />
-                                {/* BOTÃO DE EXCLUIR RODADA AQUI */}
-                                <Button label="Excluir Rodada" icon="pi pi-trash" severity="danger" outlined onClick={handleDeletarRodada} />
-                            </>
-                        )}
-                        {rodadaSelecionada?.status === 'aberta' && (
-                            <Button label="🔒 Encerrar e Bloquear" icon="pi pi-lock" severity="danger" onClick={() => alterarStatusRodada('finalizada')} style={{ marginLeft: 'auto' }} />
-                        )}
-                        {rodadaSelecionada?.status === 'finalizada' && (
-                            <Button label="⏪ Reabrir Apostas" icon="pi pi-unlock" severity="warning" outlined onClick={() => alterarStatusRodada('aberta')} style={{ marginLeft: 'auto' }} />
-                        )}
+                        {/* BOTÕES DE AÇÃO REAGRUPADOS À DIREITA COM A LIXEIRA SEMPRE VISÍVEL */}
+                        <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px' }}>
+                            {rodadaSelecionada?.status === 'rascunho' && (
+                                <Button label="🟢 Liberar" icon="pi pi-globe" severity="success" onClick={() => alterarStatusRodada('aberta')} />
+                            )}
+                            {rodadaSelecionada?.status === 'aberta' && (
+                                <Button label="🔒 Encerrar" icon="pi pi-lock" severity="danger" onClick={() => alterarStatusRodada('finalizada')} />
+                            )}
+                            {rodadaSelecionada?.status === 'finalizada' && (
+                                <Button label="⏪ Reabrir" icon="pi pi-unlock" severity="warning" outlined onClick={() => alterarStatusRodada('aberta')} />
+                            )}
+                            
+                            {rodadaSelecionada && (
+                                <Button icon="pi pi-trash" severity="danger" outlined onClick={handleDeletarRodada} tooltip="Excluir Rodada Definitivamente" />
+                            )}
+                        </div>
                     </div>
                 </div>
 
