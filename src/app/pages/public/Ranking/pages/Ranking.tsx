@@ -62,7 +62,6 @@ const Ranking = () => {
             .then(rodadasData => {
                 if (rodadasData.length > 0) {
                     
-                    // LÓGICA BLINDADA: Ignora rascunhos. Pega a Aberta, se não tiver, pega a Finalizada mais recente.
                     let ativa = rodadasData.find((r: any) => r.status === 'aberta');
                     
                     if (!ativa) {
@@ -72,7 +71,6 @@ const Ranking = () => {
                         }
                     }
 
-                    // Se por acaso não tiver nem aberta nem finalizada, pega a primeira só pra não quebrar a tela
                     if (!ativa) ativa = rodadasData[0]; 
 
                     setRodadaAtual(ativa);
@@ -184,14 +182,24 @@ const Ranking = () => {
 
             const dadosAuditoria = await res.json();
             
-            const palpitesValidosDaRodada = dadosAuditoria.filter((item: any) => {
-                const rodadaNomeItem = item.rodada_nome || item.nome_rodada;
-                const statusPg = item.status_pagamento || item.status_pag;
-                return statusPg === 'aprovado' && rodadaNomeItem === rodadaAtual?.nome;
+            // SOLUÇÃO INFALÍVEL: Pega os IDs exatos das cartelas que já estão aparecendo no Ranking da tela
+            const idsAprovadosNaTela = aprovados.map(a => a.cartela_id);
+            
+            let palpitesValidosDaRodada = dadosAuditoria.filter((item: any) => {
+                const idCartela = item.cartela_id || item.id_cartela;
+                return idsAprovadosNaTela.includes(idCartela);
             });
 
+            // FALLBACK: Se algo der muito errado no cruzamento, tenta puxar pelo menos pelo nome da rodada
             if (palpitesValidosDaRodada.length === 0) {
-                alert("Nenhum palpite validado/pago foi encontrado para esta rodada ainda.");
+                 palpitesValidosDaRodada = dadosAuditoria.filter((item: any) => {
+                    const rodadaNomeItem = item.rodada_nome || item.nome_rodada || "";
+                    return rodadaNomeItem.includes(rodadaAtual?.nome);
+                });
+            }
+
+            if (palpitesValidosDaRodada.length === 0) {
+                alert("Nenhum palpite encontrado no banco para gerar o PDF. Verifique se os usuários enviaram as apostas.");
                 setGerandoPdf(false);
                 return;
             }
@@ -270,7 +278,6 @@ const Ranking = () => {
             <Container maxWidth="md">
                 
                 <Paper elevation={0} style={{ backgroundColor: "#1e293b", color: "white", padding: "30px", borderRadius: "16px", textAlign: "center", marginBottom: "20px", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.2)" }}>
-                    {/* TÍTULO LIMPO, SEM DROPDOWN */}
                     <Typography style={{ color: "#fcd34d", fontWeight: "bold", fontSize: "14px", marginBottom: "15px" }}>
                         RANKING DA RODADA: {rodadaAtual?.nome}
                     </Typography>
