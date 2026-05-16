@@ -21,8 +21,6 @@ const Ranking = () => {
 
     const [rodadaAtual, setRodadaAtual] = useState<any>(null);
     const [apostasBloqueadas, setApostasBloqueadas] = useState(false);
-    
-    // Novo estado para saber quantos jogos já terminaram
     const [statusJogos, setStatusJogos] = useState({ finalizados: 0, total: 0 });
     
     const [modalAberto, setModalAberto] = useState(false);
@@ -44,7 +42,6 @@ const Ranking = () => {
 
     const VALOR_INSCRICAO = 20;
 
-    // Mascarar telefone apenas para o PDF de Auditoria
     const mascararTelefone = (tel: string) => {
         if (!tel) return "Não Informado";
         const limpo = tel.replace(/\D/g, "");
@@ -64,11 +61,15 @@ const Ranking = () => {
             .then(res => res.json())
             .then(rodadasData => {
                 if (rodadasData.length > 0) {
-                    const ativa = rodadasData.find((r: any) => r.status === 'aberta') || rodadasData[0];
+                    
+                    // LÓGICA INTELIGENTE: Puxa a Aberta, se não tiver, puxa a Finalizada. (Ignora Rascunhos de rodadas futuras)
+                    let ativa = rodadasData.find((r: any) => r.status === 'aberta');
+                    if (!ativa) ativa = rodadasData.find((r: any) => r.status === 'finalizada');
+                    if (!ativa) ativa = rodadasData[0]; 
+
                     setRodadaAtual(ativa);
                     setApostasBloqueadas(ativa.status !== 'aberta');
 
-                    // Faz as duas buscas (Ranking e Jogos) ao mesmo tempo para cruzar as informações
                     Promise.all([
                         fetch(`${apiUrl}/ranking`).then(res => res.json()),
                         fetch(`${apiUrl}/jogos?rodada_id=${ativa.id}`).then(res => res.json())
@@ -76,13 +77,11 @@ const Ranking = () => {
                         
                         if (Array.isArray(rankData)) {
                             const rankDaRodada = rankData.filter((r: any) => r.rodada_id === ativa.id);
-                            // Garante que a lista venha do maior pro menor
                             rankDaRodada.sort((a, b) => b.pontuacao_total - a.pontuacao_total);
                             setAprovados(rankDaRodada);
                         }
                         
                         if (Array.isArray(jogosData)) {
-                            // Conta quantos jogos já tem o resultado cadastrado
                             const jogosFinalizados = jogosData.filter((j: any) => j.gols_casa !== null && j.gols_visitante !== null).length;
                             setStatusJogos({ finalizados: jogosFinalizados, total: jogosData.length });
                         }
@@ -106,13 +105,13 @@ const Ranking = () => {
     const valorArrecadadoTotal = totalCartelasCompradas * VALOR_INSCRICAO;
     const valorPremioTotal = valorArrecadadoTotal * 0.90;
 
-    // Regra principal: O Pódio só aparece se pelo menos 1 jogo tiver resultado
+    // PÓDIO INTELIGENTE: Só mostra se houver 1 ou mais resultados preenchidos no painel
     const mostrarPodio = statusJogos.finalizados > 0;
 
     const pontuacoesUnicas = aprovados
         .map(p => p.pontuacao_total)
         .filter((valor, indice, array) => array.indexOf(valor) === indice)
-        .sort((a, b) => b - a); // Maior pontuação sempre em primeiro
+        .sort((a, b) => b - a); 
 
     const score1 = pontuacoesUnicas[0]; 
     const score2 = pontuacoesUnicas[1]; 
@@ -131,14 +130,14 @@ const Ranking = () => {
         const todosDoPodioIds = [...ganhadores1, ...ganhadores2, ...ganhadores3].map(u => u.cartela_id);
         restoRanking = aprovados.filter(u => !todosDoPodioIds.includes(u.cartela_id));
     } else {
-        restoRanking = [...aprovados]; // Se não tem pódio, todo mundo vai para a lista neutra
+        restoRanking = [...aprovados]; 
     }
 
     const premio1PorPessoa = (valorPremioTotal * 0.60) / (ganhadores1.length || 1);
     const premio2PorPessoa = (valorPremioTotal * 0.30) / (ganhadores2.length || 1);
     const premio3PorPessoa = (valorPremioTotal * 0.10) / (ganhadores3.length || 1);
 
-    // Definição das Etiquetas de Status da Rodada
+    // ETIQUETAS DINÂMICAS DE STATUS DA RODADA
     let textoStatusRodada = "Aguardando Resultados ⏳";
     let corStatusRodada = "#64748b"; 
     
@@ -265,7 +264,7 @@ const Ranking = () => {
             <Container maxWidth="md">
                 
                 <Paper elevation={0} style={{ backgroundColor: "#1e293b", color: "white", padding: "30px", borderRadius: "16px", textAlign: "center", marginBottom: "20px", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.2)" }}>
-                    <Typography style={{ color: "#fcd34d", fontWeight: "bold", fontSize: "14px", marginBottom: "5px" }}>
+                    <Typography style={{ color: "#fcd34d", fontWeight: "bold", fontSize: "14px", marginBottom: "10px" }}>
                         RANKING DA RODADA: {rodadaAtual?.nome}
                     </Typography>
                     
@@ -312,7 +311,6 @@ const Ranking = () => {
                     </Box>
                 </Paper>
 
-                {/* BANNER DA PREMIAÇÃO ESPECIAL DA COPA */}
                 {mostrarBannerPremio && (
                     <Box mb={4} style={{
                         position: 'relative',
@@ -378,7 +376,6 @@ const Ranking = () => {
                 )}
 
                 <Box mb={5}>
-                    {/* SÓ MOSTRA O PÓDIO SE TIVERMOS JOGOS FINALIZADOS */}
                     {mostrarPodio && ganhadores1.length > 0 && (
                         <Paper style={{ padding: "20px", borderRadius: "12px", backgroundColor: "#fffbeb", borderLeft: "6px solid #fbbf24", marginBottom: "15px" }}>
                             <Typography variant="subtitle2" style={{ color: "#b45309", fontWeight: "bold", marginBottom: "10px", display: "flex", alignItems: "center", gap: "5px" }}>
@@ -449,7 +446,6 @@ const Ranking = () => {
                     )}
                 </Box>
 
-                {/* LISTA GERAL (Mostra todo mundo quando pódio estiver oculto, ou do 4º lugar pra baixo quando estiver visível) */}
                 {restoRanking.length > 0 && (
                     <Paper elevation={2} style={{ padding: "10px", borderRadius: "16px", backgroundColor: "white" }}>
                         <List>
@@ -458,7 +454,6 @@ const Ranking = () => {
                                     <ListItem onClick={() => abrirSecador(participant)} style={{ padding: "15px", cursor: "pointer" }}>
                                         <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
                                             
-                                            {/* Só mostra números #4, #5 se o Pódio estiver visível, senão mostra um traço */}
                                             <Typography style={{ fontWeight: "900", color: "#94a3b8", width: "40px" }}>
                                                 {mostrarPodio ? `#${index + 4}` : "-"}
                                             </Typography>
