@@ -22,6 +22,9 @@ const Ranking = () => {
     const [rodadaAtual, setRodadaAtual] = useState<any>(null);
     const [apostasBloqueadas, setApostasBloqueadas] = useState(false);
     
+    // Novo estado para saber quantos jogos já terminaram
+    const [statusJogos, setStatusJogos] = useState({ finalizados: 0, total: 0 });
+    
     const [modalAberto, setModalAberto] = useState(false);
     const [cartelaSelecionada, setCartelaSelecionada] = useState<any>(null);
     const [palpitesSecador, setPalpitesSecador] = useState<any[]>([]);
@@ -41,60 +44,113 @@ const Ranking = () => {
 
     const VALOR_INSCRICAO = 20;
 
+    // Mascarar telefone apenas para o PDF de Auditoria
+    const mascararTelefone = (tel: string) => {
+        if (!tel) return "Não Informado";
+        const limpo = tel.replace(/\D/g, "");
+        if (limpo.length === 11) {
+            return `(${limpo.substring(0, 2)}) ${limpo.substring(2, 3)}****-${limpo.substring(7)}`;
+        } else if (limpo.length === 10) {
+            return `(${limpo.substring(0, 2)}) ****-${limpo.substring(6)}`;
+        }
+        return tel;
+    };
+
     useEffect(() => {
         const salvo = localStorage.getItem("usuarioLogado");
         if (salvo) setUsuarioLogado(JSON.parse(salvo));
 
-        // Busca as rodadas primeiro para descobrir qual é a atual
         fetch(`${apiUrl}/rodadas`)
             .then(res => res.json())
             .then(rodadasData => {
                 if (rodadasData.length > 0) {
-                    // Pega a rodada aberta, ou a última se não tiver nenhuma aberta
                     const ativa = rodadasData.find((r: any) => r.status === 'aberta') || rodadasData[0];
                     setRodadaAtual(ativa);
                     setApostasBloqueadas(ativa.status !== 'aberta');
 
-                    // Agora busca o ranking e FILTRA só para a rodada atual
-                    fetch(`${apiUrl}/ranking`)
-                        .then((res) => res.json())
-                        .then((rankData) => {
-                            if (Array.isArray(rankData)) {
-                                const rankDaRodada = rankData.filter((r: any) => r.rodada_id === ativa.id);
-                                setAprovados(rankDaRodada);
-                            }
-                            setLoading(false);
-                        });
+                    // Faz as duas buscas (Ranking e Jogos) ao mesmo tempo para cruzar as informações
+                    Promise.all([
+                        fetch(`${apiUrl}/ranking`).then(res => res.json()),
+                        fetch(`${apiUrl}/jogos?rodada_id=${ativa.id}`).then(res => res.json())
+                    ]).then(([rankData, jogosData]) => {
+                        
+                        if (Array.isArray(rankData)) {
+                            const rankDaRodada = rankData.filter((r: any) => r.rodada_id === ativa.id);
+                            // Garante que a lista venha do maior pro menor
+                            rankDaRodada.sort((a, b) => b.pontuacao_total - a.pontuacao_total);
+                            setAprovados(rankDaRodada);
+                        }
+                        
+                        if (Array.isArray(jogosData)) {
+                            // Conta quantos jogos já tem o resultado cadastrado
+                            const jogosFinalizados = jogosData.filter((j: any) => j.gols_casa !== null && j.gols_visitante !== null).length;
+                            setStatusJogos({ finalizados: jogosFinalizados, total: jogosData.length });
+                        }
+                        
+                        setLoading(false);
+                    }).catch((err) => {
+                        console.error("Erro ao buscar dados:", err);
+                        setLoading(false);
+                    });
                 } else {
                     setLoading(false);
                 }
             })
             .catch((err) => {
-                console.error("Erro ao buscar dados:", err);
+                console.error("Erro ao buscar rodadas:", err);
                 setLoading(false);
             });
     }, [apiUrl]);
 
- // --- NOVA LÓGICA DE PREMIAÇÃO (90% / 10%) ---
     const totalCartelasCompradas = aprovados.length;
     const valorArrecadadoTotal = totalCartelasCompradas * VALOR_INSCRICAO;
-    const valorPremioTotal = valorArrecadadoTotal * 0.90; // O Ranking exibe só os 90%
+    const valorPremioTotal = valorArrecadadoTotal * 0.90;
+
+    // Regra principal: O Pódio só aparece se pelo menos 1 jogo tiver resultado
+    const mostrarPodio = statusJogos.finalizados > 0;
 
     const pontuacoesUnicas = aprovados
         .map(p => p.pontuacao_total)
-        .filter((valor, indice, array) => array.indexOf(valor) === indice);
+        .filter((valor, indice, array) => array.indexOf(valor) === indice)
+        .sort((a, b) => b - a); // Maior pontuação sempre em primeiro
 
     const score1 = pontuacoesUnicas[0]; 
     const score2 = pontuacoesUnicas[1]; 
     const score3 = pontuacoesUnicas[2]; 
 
-    const ganhadores1 = aprovados.filter(p => p.pontuacao_total === score1);
-    const ganhadores2 = aprovados.filter(p => p.pontuacao_total === score2);
-    const ganhadores3 = aprovados.filter(p => p.pontuacao_total === score3);
+    let ganhadores1: any[] = [];
+    let ganhadores2: any[] = [];
+    let ganhadores3: any[] = [];
+    let restoRanking: any[] = [];
+
+    if (mostrarPodio) {
+        ganhadores1 = aprovados.filter(p => p.pontuacao_total === score1);
+        ganhadores2 = aprovados.filter(p => p.pontuacao_total === score2);
+        ganhadores3 = aprovados.filter(p => p.pontuacao_total === score3);
+        
+        const todosDoPodioIds = [...ganhadores1, ...ganhadores2, ...ganhadores3].map(u => u.cartela_id);
+        restoRanking = aprovados.filter(u => !todosDoPodioIds.includes(u.cartela_id));
+    } else {
+        restoRanking = [...aprovados]; // Se não tem pódio, todo mundo vai para a lista neutra
+    }
 
     const premio1PorPessoa = (valorPremioTotal * 0.60) / (ganhadores1.length || 1);
     const premio2PorPessoa = (valorPremioTotal * 0.30) / (ganhadores2.length || 1);
     const premio3PorPessoa = (valorPremioTotal * 0.10) / (ganhadores3.length || 1);
+
+    // Definição das Etiquetas de Status da Rodada
+    let textoStatusRodada = "Aguardando Resultados ⏳";
+    let corStatusRodada = "#64748b"; 
+    
+    if (statusJogos.total > 0) {
+        if (statusJogos.finalizados === statusJogos.total) {
+            textoStatusRodada = "✅ RANKING FINAL (Concluído)";
+            corStatusRodada = "#10b981"; 
+        } else if (statusJogos.finalizados > 0) {
+            textoStatusRodada = `🔄 PARCIAL (${statusJogos.finalizados}/${statusJogos.total} jogos)`;
+            corStatusRodada = "#3b82f6"; 
+        }
+    }
 
     const abrirSecador = async (itemRanking: any) => {
         if (!apostasBloqueadas) {
@@ -122,45 +178,67 @@ const Ranking = () => {
             if (!res.ok) throw new Error("Rota não encontrada.");
 
             const dadosAuditoria = await res.json();
+            
+            const palpitesValidosDaRodada = dadosAuditoria.filter((item: any) => {
+                const rodadaNomeItem = item.rodada_nome || item.nome_rodada;
+                const statusPg = item.status_pagamento || item.status_pag;
+                return statusPg === 'aprovado' && rodadaNomeItem === rodadaAtual?.nome;
+            });
+
+            if (palpitesValidosDaRodada.length === 0) {
+                alert("Nenhum palpite validado/pago foi encontrado para esta rodada ainda.");
+                setGerandoPdf(false);
+                return;
+            }
+
             const doc = new jsPDF();
             doc.setFontSize(18);
-            doc.text("Auditoria do Bolão - Palpites Registrados", 14, 20);
+            doc.text("Auditoria do Bolao - Palpites Registrados", 14, 20);
             doc.setFontSize(10);
             doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 28);
-            
-            // Aqui na auditoria nós também filtramos a rodada atual
-            const palpitesValidosDaRodada = dadosAuditoria.filter((item: any) => item.status_pagamento === 'aprovado' && item.rodada_nome === rodadaAtual?.nome);
             doc.text(`Rodada: ${rodadaAtual?.nome} | Total de Palpites Validados: ${palpitesValidosDaRodada.length}`, 14, 34);
 
             const palpitesPorUsuario: any = {};
             palpitesValidosDaRodada.forEach((item: any) => {
-                if (!palpitesPorUsuario[item.usuario_nome]) palpitesPorUsuario[item.usuario_nome] = [];
-                palpitesPorUsuario[item.usuario_nome].push([
-                    `Cartela #${item.cartela_id}`,
+                const identificadorUsuario = item.usuario_nome || item.nome_usuario || item.nome || "Participante";
+                const celularUsuario = item.telefone || item.celular || "";
+                
+                const nomeSeguro = identificadorUsuario; // Nome mantido
+                const telefoneSeguro = celularUsuario ? ` - ${mascararTelefone(celularUsuario)}` : "";
+                const chaveAgrupamento = `${nomeSeguro}${telefoneSeguro}`;
+
+                if (!palpitesPorUsuario[chaveAgrupamento]) palpitesPorUsuario[chaveAgrupamento] = [];
+                palpitesPorUsuario[chaveAgrupamento].push([
+                    `Cartela #${item.cartela_id || item.id_cartela}`,
                     `${item.time_casa} x ${item.time_visitante}`,
                     `${item.palpite_casa} x ${item.palpite_visitante}`
                 ]);
             });
 
             let startY = 45;
-            Object.keys(palpitesPorUsuario).forEach((nome) => {
-                doc.setFontSize(12);
-                doc.text(`Participante: ${nome}`, 14, startY);
+            Object.keys(palpitesPorUsuario).forEach((chaveParticipante) => {
+                if (startY > 240) { doc.addPage(); startY = 20; }
+                
+                doc.setFontSize(11);
+                doc.setTextColor(30, 41, 59);
+                doc.text(`Participante: ${chaveParticipante}`, 14, startY);
+                
                 autoTable(doc, {
-                    startY: startY + 5,
-                    head: [['Nº Cartela', 'Partida', 'Palpite do Usuário']],
-                    body: palpitesPorUsuario[nome],
+                    startY: startY + 3,
+                    head: [['No Cartela', 'Partida', 'Palpite Registrado']],
+                    body: palpitesPorUsuario[chaveParticipante],
                     theme: 'grid',
-                    headStyles: { fillColor: [30, 41, 59] },
-                    margin: { left: 14 }
+                    headStyles: { fillColor: [30, 41, 59], fontStyle: 'bold' },
+                    styles: { fontSize: 9 },
+                    margin: { left: 14, right: 14 }
                 });
-                startY = (doc as any).lastAutoTable.finalY + 15;
-                if (startY > 250) { doc.addPage(); startY = 20; }
+                startY = (doc as any).lastAutoTable.finalY + 12;
             });
 
             doc.save(`Auditoria-${rodadaAtual?.nome}.pdf`);
         } catch (error) {
-            alert("Erro ao gerar PDF.");
+            console.error(error);
+            alert("Erro ao ler os registros da rota de auditoria do servidor.");
         } finally {
             setGerandoPdf(false);
         }
@@ -182,9 +260,6 @@ const Ranking = () => {
         );
     }
 
-    const todosDoPodioIds = [...ganhadores1, ...ganhadores2, ...ganhadores3].map(u => u.cartela_id);
-    const restoRanking = aprovados.filter(u => !todosDoPodioIds.includes(u.cartela_id));
-
     return (
         <div style={{ backgroundColor: "#e2e8f0", minHeight: "100vh", padding: "40px 0", position: "relative" }}>
             <Container maxWidth="md">
@@ -193,7 +268,12 @@ const Ranking = () => {
                     <Typography style={{ color: "#fcd34d", fontWeight: "bold", fontSize: "14px", marginBottom: "5px" }}>
                         RANKING DA RODADA: {rodadaAtual?.nome}
                     </Typography>
-                    <Typography variant="h6" style={{ color: "#94a3b8", fontWeight: "bold", letterSpacing: "2px" }}>
+                    
+                    <Box display="inline-block" px={2} py={0.5} borderRadius={2} mb={2} style={{ backgroundColor: corStatusRodada, fontWeight: "bold", fontSize: "12px", color: "white" }}>
+                        {textoStatusRodada}
+                    </Box>
+
+                    <Typography variant="h6" style={{ color: "#94a3b8", fontWeight: "bold", letterSpacing: "2px", marginTop: "10px" }}>
                         PREMIAÇÃO ACUMULADA
                     </Typography>
                     <Typography variant="h2" style={{ color: "#10b981", fontWeight: "900", marginTop: "10px" }}>
@@ -298,7 +378,8 @@ const Ranking = () => {
                 )}
 
                 <Box mb={5}>
-                    {ganhadores1.length > 0 && (
+                    {/* SÓ MOSTRA O PÓDIO SE TIVERMOS JOGOS FINALIZADOS */}
+                    {mostrarPodio && ganhadores1.length > 0 && (
                         <Paper style={{ padding: "20px", borderRadius: "12px", backgroundColor: "#fffbeb", borderLeft: "6px solid #fbbf24", marginBottom: "15px" }}>
                             <Typography variant="subtitle2" style={{ color: "#b45309", fontWeight: "bold", marginBottom: "10px", display: "flex", alignItems: "center", gap: "5px" }}>
                                 <EmojiEvents style={{ color: "#fbbf24" }} /> 1º Lugar (60%) 
@@ -306,7 +387,7 @@ const Ranking = () => {
                             {ganhadores1.map(g => (
                                 <div key={g.cartela_id} onClick={() => abrirSecador(g)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", borderBottom: "1px dashed #fcd34d", paddingBottom: "10px", cursor: "pointer" }}>
                                     <Typography variant="h6" style={{ fontWeight: "900", color: "#1e293b", display: "flex", alignItems: "center", gap: "8px" }}>
-                                        {g.nome} 
+                                        {g.nome || g.usuario_nome} 
                                         <span style={{ fontSize: '12px', backgroundColor: '#fde68a', color: '#92400e', padding: '2px 8px', borderRadius: '8px' }}>
                                             Bilhete #{g.cartela_id}
                                         </span>
@@ -321,7 +402,7 @@ const Ranking = () => {
                         </Paper>
                     )}
 
-                    {ganhadores2.length > 0 && (
+                    {mostrarPodio && ganhadores2.length > 0 && (
                         <Paper style={{ padding: "20px", borderRadius: "12px", backgroundColor: "#f1f5f9", borderLeft: "6px solid #94a3b8", marginBottom: "15px" }}>
                             <Typography variant="subtitle2" style={{ color: "#475569", fontWeight: "bold", marginBottom: "10px", display: "flex", alignItems: "center", gap: "5px" }}>
                                 <MilitaryTech style={{ color: "#94a3b8" }} /> 2º Lugar (30%)
@@ -329,7 +410,7 @@ const Ranking = () => {
                             {ganhadores2.map(g => (
                                 <div key={g.cartela_id} onClick={() => abrirSecador(g)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", borderBottom: "1px dashed #cbd5e1", paddingBottom: "10px", cursor: "pointer" }}>
                                     <Typography variant="h6" style={{ fontWeight: "bold", color: "#1e293b", display: "flex", alignItems: "center", gap: "8px" }}>
-                                        {g.nome} 
+                                        {g.nome || g.usuario_nome} 
                                         <span style={{ fontSize: '12px', backgroundColor: '#e2e8f0', color: '#475569', padding: '2px 8px', borderRadius: '8px' }}>
                                             Bilhete #{g.cartela_id}
                                         </span>
@@ -344,7 +425,7 @@ const Ranking = () => {
                         </Paper>
                     )}
 
-                    {ganhadores3.length > 0 && (
+                    {mostrarPodio && ganhadores3.length > 0 && (
                         <Paper style={{ padding: "20px", borderRadius: "12px", backgroundColor: "#fef2f2", borderLeft: "6px solid #b45309", marginBottom: "15px" }}>
                             <Typography variant="subtitle2" style={{ color: "#9a3412", fontWeight: "bold", marginBottom: "10px", display: "flex", alignItems: "center", gap: "5px" }}>
                                 <MilitaryTech style={{ color: "#b45309" }} /> 3º Lugar (10%)
@@ -352,7 +433,7 @@ const Ranking = () => {
                             {ganhadores3.map(g => (
                                 <div key={g.cartela_id} onClick={() => abrirSecador(g)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", borderBottom: "1px dashed #fed7aa", paddingBottom: "10px", cursor: "pointer" }}>
                                     <Typography variant="h6" style={{ fontWeight: "bold", color: "#1e293b", display: "flex", alignItems: "center", gap: "8px" }}>
-                                        {g.nome} 
+                                        {g.nome || g.usuario_nome} 
                                         <span style={{ fontSize: '12px', backgroundColor: '#ffedd5', color: '#9a3412', padding: '2px 8px', borderRadius: '8px' }}>
                                             Bilhete #{g.cartela_id}
                                         </span>
@@ -368,6 +449,7 @@ const Ranking = () => {
                     )}
                 </Box>
 
+                {/* LISTA GERAL (Mostra todo mundo quando pódio estiver oculto, ou do 4º lugar pra baixo quando estiver visível) */}
                 {restoRanking.length > 0 && (
                     <Paper elevation={2} style={{ padding: "10px", borderRadius: "16px", backgroundColor: "white" }}>
                         <List>
@@ -375,10 +457,15 @@ const Ranking = () => {
                                 <React.Fragment key={index}>
                                     <ListItem onClick={() => abrirSecador(participant)} style={{ padding: "15px", cursor: "pointer" }}>
                                         <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
-                                            <Typography style={{ fontWeight: "900", color: "#94a3b8", width: "40px" }}>#</Typography>
+                                            
+                                            {/* Só mostra números #4, #5 se o Pódio estiver visível, senão mostra um traço */}
+                                            <Typography style={{ fontWeight: "900", color: "#94a3b8", width: "40px" }}>
+                                                {mostrarPodio ? `#${index + 4}` : "-"}
+                                            </Typography>
+                                            
                                             <ListItemText primary={
                                                 <span style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: "bold", color: "#334155" }}>
-                                                    {participant.nome} 
+                                                    {participant.nome || participant.usuario_nome} 
                                                     <span style={{ fontSize: '11px', backgroundColor: '#f1f5f9', color: '#64748b', padding: '2px 8px', borderRadius: '8px' }}>
                                                         Bilhete #{participant.cartela_id}
                                                     </span>
@@ -407,7 +494,7 @@ const Ranking = () => {
                     </DialogTitle>
                     <DialogContent style={{ padding: "20px" }}>
                         <div style={{ textAlign: "center", marginBottom: "20px", color: "#64748b" }}>
-                            Palpites de <strong>{cartelaSelecionada?.nome}</strong> para este bilhete
+                            Palpites de <strong>{cartelaSelecionada?.nome || cartelaSelecionada?.usuario_nome}</strong> para este bilhete
                         </div>
                         {palpitesSecador.length === 0 ? (
                             <Typography style={{ textAlign: "center", color: "#64748b", padding: "30px 0" }}>Nenhum palpite encontrado.</Typography>
