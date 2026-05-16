@@ -88,6 +88,25 @@ export default function Admin() {
         });
     };
 
+    // NOVA FUNÇÃO DE DELETAR RODADA
+    const handleDeletarRodada = () => {
+        if (!rodadaSelecionada) return;
+        if (window.confirm(`🧨 TEM CERTEZA? Isso vai excluir a rodada "${rodadaSelecionada.nome}" completamente!`)) {
+            fetch(`${apiUrl}/rodadas/${rodadaSelecionada.id}`, { method: 'DELETE' })
+                .then((res) => {
+                    if (res.ok) {
+                        alert("Rodada excluída com sucesso!");
+                        setRodadaSelecionada(null);
+                        carregarRodadas();
+                    } else {
+                        // Se o backend não tiver essa rota configurada, avisamos o usuário
+                        alert("Ops! Parece que o seu servidor não tem a rota de deletar rodadas ativada. Você pode apagá-la direto pelo painel do seu banco de dados (Neon) ou apenas ignorá-la.");
+                    }
+                })
+                .catch(() => alert("Erro ao tentar excluir a rodada."));
+        }
+    };
+
     const alterarStatusRodada = (novoStatus: string) => {
         if (!rodadaSelecionada) return;
         
@@ -302,7 +321,11 @@ export default function Admin() {
                         </div>
 
                         {rodadaSelecionada?.status === 'rascunho' && (
-                            <Button label="🟢 Liberar para Apostas" icon="pi pi-globe" severity="success" onClick={() => alterarStatusRodada('aberta')} style={{ marginLeft: 'auto' }} />
+                            <>
+                                <Button label="🟢 Liberar para Apostas" icon="pi pi-globe" severity="success" onClick={() => alterarStatusRodada('aberta')} style={{ marginLeft: 'auto' }} />
+                                {/* BOTÃO DE EXCLUIR RODADA AQUI */}
+                                <Button label="Excluir Rodada" icon="pi pi-trash" severity="danger" outlined onClick={handleDeletarRodada} />
+                            </>
                         )}
                         {rodadaSelecionada?.status === 'aberta' && (
                             <Button label="🔒 Encerrar e Bloquear" icon="pi pi-lock" severity="danger" onClick={() => alterarStatusRodada('finalizada')} style={{ marginLeft: 'auto' }} />
