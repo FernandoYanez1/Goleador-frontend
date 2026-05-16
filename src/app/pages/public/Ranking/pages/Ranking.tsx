@@ -13,10 +13,7 @@ import autoTable from "jspdf-autotable";
 const Ranking = () => {
     const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
     
-    const [todasRodadas, setTodasRodadas] = useState<any[]>([]);
-    const [rankingCompleto, setRankingCompleto] = useState<any[]>([]);
     const [aprovados, setAprovados] = useState<any[]>([]); 
-    
     const [loading, setLoading] = useState(true);
     const [gerandoPdf, setGerandoPdf] = useState(false);
     const [usuarioLogado, setUsuarioLogado] = useState<any>(null);
@@ -56,73 +53,61 @@ const Ranking = () => {
         return tel;
     };
 
-    // CARGA INICIAL DE DADOS
     useEffect(() => {
         const salvo = localStorage.getItem("usuarioLogado");
         if (salvo) setUsuarioLogado(JSON.parse(salvo));
 
-        Promise.all([
-            fetch(`${apiUrl}/rodadas`).then(res => res.json()),
-            fetch(`${apiUrl}/ranking`).then(res => res.json())
-        ]).then(([rodadasData, rankData]) => {
-            
-            if (Array.isArray(rodadasData) && rodadasData.length > 0) {
-                setTodasRodadas(rodadasData);
-                
-                // --- A MÁGICA ACONTECE AQUI ---
-                // 1. Tenta achar uma rodada ABERTA
-                let ativa = rodadasData.find((r: any) => r.status === 'aberta');
-                
-                // 2. Se não tiver aberta, pega todas as FINALIZADAS e puxa a MAIS RECENTE (maior ID)
-                if (!ativa) {
-                    const finalizadas = rodadasData.filter((r: any) => r.status === 'finalizada');
-                    if (finalizadas.length > 0) {
-                        ativa = finalizadas.sort((a: any, b: any) => b.id - a.id)[0];
+        fetch(`${apiUrl}/rodadas`)
+            .then(res => res.json())
+            .then(rodadasData => {
+                if (rodadasData.length > 0) {
+                    
+                    // LÓGICA BLINDADA: Ignora rascunhos. Pega a Aberta, se não tiver, pega a Finalizada mais recente.
+                    let ativa = rodadasData.find((r: any) => r.status === 'aberta');
+                    
+                    if (!ativa) {
+                        const finalizadas = rodadasData.filter((r: any) => r.status === 'finalizada');
+                        if (finalizadas.length > 0) {
+                            ativa = finalizadas.sort((a: any, b: any) => b.id - a.id)[0];
+                        }
                     }
-                }
 
-                // 3. Se não tiver nada disso, puxa o último rascunho criado
-                if (!ativa) {
-                    ativa = rodadasData.sort((a: any, b: any) => b.id - a.id)[0];
-                }
+                    // Se por acaso não tiver nem aberta nem finalizada, pega a primeira só pra não quebrar a tela
+                    if (!ativa) ativa = rodadasData[0]; 
 
-                setRodadaAtual(ativa);
-            }
-            
-            if (Array.isArray(rankData)) {
-                setRankingCompleto(rankData);
-            }
-        }).catch(err => {
-            console.error("Erro ao carregar dados iniciais:", err);
-            setLoading(false);
-        });
-    }, [apiUrl]);
+                    setRodadaAtual(ativa);
+                    setApostasBloqueadas(ativa.status !== 'aberta');
 
-    // ATUALIZA A TELA QUANDO A RODADA MUDA NO DROPDOWN PÚBLICO
-    useEffect(() => {
-        if (rodadaAtual) {
-            setApostasBloqueadas(rodadaAtual.status !== 'aberta');
-            
-            if (rankingCompleto.length > 0) {
-                const rankDaRodada = rankingCompleto.filter((r: any) => r.rodada_id === rodadaAtual.id);
-                rankDaRodada.sort((a, b) => b.pontuacao_total - a.pontuacao_total);
-                setAprovados(rankDaRodada);
-            } else {
-                setAprovados([]);
-            }
-
-            fetch(`${apiUrl}/jogos?rodada_id=${rodadaAtual.id}`)
-                .then(res => res.json())
-                .then(jogosData => {
-                    if (Array.isArray(jogosData)) {
-                        const jogosFinalizados = jogosData.filter((j: any) => j.gols_casa !== null && j.gols_visitante !== null).length;
-                        setStatusJogos({ finalizados: jogosFinalizados, total: jogosData.length });
-                    }
+                    Promise.all([
+                        fetch(`${apiUrl}/ranking`).then(res => res.json()),
+                        fetch(`${apiUrl}/jogos?rodada_id=${ativa.id}`).then(res => res.json())
+                    ]).then(([rankData, jogosData]) => {
+                        
+                        if (Array.isArray(rankData)) {
+                            const rankDaRodada = rankData.filter((r: any) => r.rodada_id === ativa.id);
+                            rankDaRodada.sort((a, b) => b.pontuacao_total - a.pontuacao_total);
+                            setAprovados(rankDaRodada);
+                        }
+                        
+                        if (Array.isArray(jogosData)) {
+                            const jogosFinalizados = jogosData.filter((j: any) => j.gols_casa !== null && j.gols_visitante !== null).length;
+                            setStatusJogos({ finalizados: jogosFinalizados, total: jogosData.length });
+                        }
+                        
+                        setLoading(false);
+                    }).catch((err) => {
+                        console.error("Erro ao buscar dados:", err);
+                        setLoading(false);
+                    });
+                } else {
                     setLoading(false);
-                })
-                .catch(() => setLoading(false));
-        }
-    }, [rodadaAtual, rankingCompleto, apiUrl]);
+                }
+            })
+            .catch((err) => {
+                console.error("Erro ao buscar rodadas:", err);
+                setLoading(false);
+            });
+    }, [apiUrl]);
 
     const totalCartelasCompradas = aprovados.length;
     const valorArrecadadoTotal = totalCartelasCompradas * VALOR_INSCRICAO;
@@ -285,27 +270,11 @@ const Ranking = () => {
             <Container maxWidth="md">
                 
                 <Paper elevation={0} style={{ backgroundColor: "#1e293b", color: "white", padding: "30px", borderRadius: "16px", textAlign: "center", marginBottom: "20px", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.2)" }}>
-                    <Typography style={{ color: "#fcd34d", fontWeight: "bold", fontSize: "14px", marginBottom: "10px" }}>
-                        SELECIONE A RODADA DO RANKING:
+                    {/* TÍTULO LIMPO, SEM DROPDOWN */}
+                    <Typography style={{ color: "#fcd34d", fontWeight: "bold", fontSize: "14px", marginBottom: "15px" }}>
+                        RANKING DA RODADA: {rodadaAtual?.nome}
                     </Typography>
                     
-                    <Box mb={3} display="flex" justifyContent="center">
-                        <select 
-                            value={rodadaAtual?.id || ""} 
-                            onChange={(e) => {
-                                const r = todasRodadas.find(x => x.id === Number(e.target.value));
-                                if (r) setRodadaAtual(r);
-                            }}
-                            style={{ padding: "10px 15px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "16px", fontWeight: "bold", color: "#1e293b", backgroundColor: "white", cursor: "pointer", width: "100%", maxWidth: "300px" }}
-                        >
-                            {todasRodadas.map(r => (
-                                <option key={r.id} value={r.id}>
-                                    {r.nome} {r.status === 'aberta' ? '🟢' : r.status === 'finalizada' ? '🔒' : '📝'}
-                                </option>
-                            ))}
-                        </select>
-                    </Box>
-
                     <Box display="inline-block" px={2} py={0.5} borderRadius={2} mb={2} style={{ backgroundColor: corStatusRodada, fontWeight: "bold", fontSize: "12px", color: "white" }}>
                         {textoStatusRodada}
                     </Box>
