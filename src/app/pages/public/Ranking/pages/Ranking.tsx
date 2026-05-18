@@ -62,15 +62,18 @@ const Ranking = () => {
             .then(rodadasData => {
                 if (rodadasData.length > 0) {
                     
-                    let ativa = rodadasData.find((r: any) => r.status === 'aberta');
+                    // LÓGICA DE PRIORIDADE MÁXIMA: 
+                    // 1º Tenta achar a marcada manualmente por você no Admin (exibir_no_ranking === true)
+                    let ativa = rodadasData.find((r: any) => r.exibir_no_ranking === true);
                     
+                    // Fallbacks automáticos de segurança caso nenhuma esteja marcada:
+                    if (!ativa) ativa = rodadasData.find((r: any) => r.status === 'aberta');
                     if (!ativa) {
                         const finalizadas = rodadasData.filter((r: any) => r.status === 'finalizada');
                         if (finalizadas.length > 0) {
                             ativa = finalizadas.sort((a: any, b: any) => b.id - a.id)[0];
                         }
                     }
-
                     if (!ativa) ativa = rodadasData[0]; 
 
                     setRodadaAtual(ativa);
@@ -182,7 +185,6 @@ const Ranking = () => {
 
             const dadosAuditoria = await res.json();
             
-            // SOLUÇÃO INFALÍVEL: Pega os IDs exatos das cartelas que já estão aparecendo no Ranking da tela
             const idsAprovadosNaTela = aprovados.map(a => a.cartela_id);
             
             let palpitesValidosDaRodada = dadosAuditoria.filter((item: any) => {
@@ -190,7 +192,6 @@ const Ranking = () => {
                 return idsAprovadosNaTela.includes(idCartela);
             });
 
-            // FALLBACK: Se algo der muito errado no cruzamento, tenta puxar pelo menos pelo nome da rodada
             if (palpitesValidosDaRodada.length === 0) {
                  palpitesValidosDaRodada = dadosAuditoria.filter((item: any) => {
                     const rodadaNomeItem = item.rodada_nome || item.nome_rodada || "";
@@ -199,7 +200,7 @@ const Ranking = () => {
             }
 
             if (palpitesValidosDaRodada.length === 0) {
-                alert("Nenhum palpite encontrado no banco para gerar o PDF. Verifique se os usuários enviaram as apostas.");
+                alert("Nenhum palpite encontrado no banco para gerar o PDF.");
                 setGerandoPdf(false);
                 return;
             }

@@ -38,7 +38,7 @@ export default function Admin() {
             .then(data => {
                 setRodadas(data);
                 if (data.length > 0 && !rodadaSelecionada) {
-                    const ativa = data.find((r: any) => r.status === 'aberta') || data[0];
+                    const ativa = data.find((r: any) => r.exibir_no_ranking === true) || data.find((r: any) => r.status === 'aberta') || data[0];
                     setRodadaSelecionada(ativa);
                 }
             });
@@ -88,6 +88,23 @@ export default function Admin() {
         });
     };
 
+    // NOVA FUNÇÃO: FIXAR A RODADA NO RANKING PÚBLICO
+    const handleDefinirRodadaRanking = () => {
+        if (!rodadaSelecionada) return;
+        fetch(`${apiUrl}/admin/definir-ranking`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rodada_id: rodadaSelecionada.id })
+        }).then((res) => {
+            if (res.ok) {
+                alert(`Sucesso! A rodada "${rodadaSelecionada.nome}" agora é a rodada oficial exibida no Ranking.`);
+                carregarRodadas();
+            } else {
+                alert("Erro ao salvar configuração no servidor.");
+            }
+        });
+    };
+
     const alterarStatusRodada = (novoStatus: string) => {
         if (!rodadaSelecionada) return;
         
@@ -101,7 +118,7 @@ export default function Admin() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: novoStatus })
             }).then(() => {
-                alert(`Status atualizado com sucesso!`);
+                alert(`Status updated com sucesso!`);
                 fetch(`${apiUrl}/rodadas`).then(res => res.json()).then(data => {
                     setRodadas(data);
                     setRodadaSelecionada(data.find((r:any) => r.id === rodadaSelecionada.id));
@@ -292,6 +309,11 @@ export default function Admin() {
                                     {rodadaSelecionada.status === 'aberta' ? '🟢 ATIVA' : rodadaSelecionada.status === 'finalizada' ? '🔒 BLOQUEADA' : '📝 RASCUNHO'}
                                 </span>
                             )}
+                            {rodadaSelecionada?.exibir_no_ranking && (
+                                <span style={{ backgroundColor: '#e0f2fe', color: '#0369a1', padding: '5px 10px', borderRadius: '5px', fontSize: '12px', fontWeight: 'bold' }}>
+                                    🌟 NO RANKING PÚBLICO
+                                </span>
+                            )}
                         </div>
 
                         <span style={{ color: '#cbd5e1' }}>|</span>
@@ -302,6 +324,9 @@ export default function Admin() {
                         </div>
 
                         <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px' }}>
+                            {rodadaSelecionada && (
+                                <Button label="🌟 Fixar no Ranking" icon="pi pi-star" severity="info" onClick={handleDefinirRodadaRanking} title="Define esta rodada como a padrão visível no ranking público" />
+                            )}
                             {rodadaSelecionada?.status === 'rascunho' && (
                                 <Button label="🟢 Liberar" icon="pi pi-globe" severity="success" onClick={() => alterarStatusRodada('aberta')} />
                             )}
