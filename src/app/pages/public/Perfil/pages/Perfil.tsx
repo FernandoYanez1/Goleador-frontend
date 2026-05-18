@@ -20,50 +20,65 @@ export default function Perfil() {
         const user = JSON.parse(salvo);
         setUsuario(user);
 
-        // 1. Busca os Bilhetes e Placares Exatos
-        fetch(`${apiUrl}/estatisticas/${user.id}`)
-            .then(res => res.json())
-            .then(data => {
-                // 2. Busca o Hall da Fama para garimpar os pódios
-                fetch(`${apiUrl}/hall-da-fama`)
-                    .then(res => res.json())
-                    .then(hallData => {
-                        let podiosConta = 0;
+        const carregarEstatisticas = async () => {
+            try {
+                // 1. Busca Bilhetes e Cravadas
+                const resEst = await fetch(`${apiUrl}/estatisticas/${user.id}`);
+                let bilhetes = 0;
+                let cravadas = 0;
+                
+                if (resEst.ok) {
+                    const data = await resEst.json();
+                    bilhetes = data.total_bilhetes || 0;
+                    cravadas = data.placares_exatos || 0;
+                }
+
+                // 2. Busca Hall da Fama para contar os pódios
+                const resHall = await fetch(`${apiUrl}/hall-da-fama`);
+                let podiosConta = 0;
+
+                if (resHall.ok) {
+                    const hallData = await resHall.json();
+                    const rodadasAgrupadas: any = {};
+                    
+                    hallData.forEach((item: any) => {
+                        if (!rodadasAgrupadas[item.rodada_id]) rodadasAgrupadas[item.rodada_id] = [];
+                        rodadasAgrupadas[item.rodada_id].push(item);
+                    });
+
+                    Object.keys(rodadasAgrupadas).forEach(rodadaId => {
+                        const ranking = rodadasAgrupadas[rodadaId];
                         
-                        // Agrupa todo mundo por rodada para descobrirmos quem ficou no Top 3 de cada uma
-                        const rodadasAgrupadas: any = {};
-                        hallData.forEach((item: any) => {
-                            if (!rodadasAgrupadas[item.rodada_id]) rodadasAgrupadas[item.rodada_id] = [];
-                            rodadasAgrupadas[item.rodada_id].push(item);
-                        });
-
-                        Object.keys(rodadasAgrupadas).forEach(rodadaId => {
-                            const ranking = rodadasAgrupadas[rodadaId];
+                        const pontuacoes = ranking
+                            .map((r: any) => Number(r.pontuacao_total))
+                            .filter((valor: number, indice: number, array: number[]) => array.indexOf(valor) === indice)
+                            .sort((a: number, b: number) => b - a);
                             
-                            // Acha as 3 maiores notas únicas dessa rodada (usando filter compatível)
-                            const pontuacoes = ranking
-                                .map((r: any) => Number(r.pontuacao_total))
-                                .filter((valor: number, indice: number, array: number[]) => array.indexOf(valor) === indice)
-                                .sort((a: number, b: number) => b - a);
-                                
-                            const top3 = pontuacoes.slice(0, 3);
-                            
-                            // Vê se os bilhetes deste usuário bateram alguma dessas 3 notas
-                            const meusBilhetesAqui = ranking.filter((r: any) => r.usuario_id === user.id);
-                            meusBilhetesAqui.forEach((meu: any) => {
-                                if (top3.includes(Number(meu.pontuacao_total))) {
-                                    podiosConta++;
-                                }
-                            });
-                        });
-
-                        setEstatisticas({
-                            bilhetes: data.total_bilhetes || 0,
-                            cravadas: data.placares_exatos || 0,
-                            podios: podiosConta
+                        const top3 = pontuacoes.slice(0, 3);
+                        
+                        // Garante que os tipos sejam iguais (Number)
+                        const meusBilhetesAqui = ranking.filter((r: any) => Number(r.usuario_id) === Number(user.id));
+                        meusBilhetesAqui.forEach((meu: any) => {
+                            // TRAVA: Só conta pódio se a pessoa tiver mais que 0 pontos (evita contar empate geral no início da rodada)
+                            if (top3.includes(Number(meu.pontuacao_total)) && Number(meu.pontuacao_total) > 0) {
+                                podiosConta++;
+                            }
                         });
                     });
-            });
+                }
+
+                setEstatisticas({
+                    bilhetes,
+                    cravadas,
+                    podios: podiosConta
+                });
+
+            } catch (error) {
+                console.error("Erro ao carregar estatísticas:", error);
+            }
+        };
+
+        carregarEstatisticas();
     }, [history, apiUrl]);
 
     const handleLogout = () => {
@@ -79,13 +94,14 @@ export default function Perfil() {
         <div style={{ backgroundColor: "#e2e8f0", minHeight: "100vh", padding: "40px 20px" }}>
             <Box maxWidth="600px" margin="0 auto">
                 
-                {/* CABEÇALHO DO PERFIL */}
-                <Paper style={{ padding: "30px", borderRadius: "16px", textAlign: "center", backgroundColor: "#1e293b", color: "white", marginBottom: "30px", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.2)" }}>
-                    <div style={{ width: "80px", height: "80px", backgroundColor: "#3b82f6", borderRadius: "50%", margin: "0 auto 15px auto", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "32px", fontWeight: "bold" }}>
+                {/* CABEÇALHO DO PERFIL CORRIGIDO AS CORES */}
+                <Paper style={{ padding: "30px", borderRadius: "16px", textAlign: "center", backgroundColor: "#1e293b", marginBottom: "30px", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.2)" }}>
+                    <div style={{ width: "80px", height: "80px", backgroundColor: "#3b82f6", borderRadius: "50%", margin: "0 auto 15px auto", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "32px", fontWeight: "bold", color: "white" }}>
                         {usuario.nome.charAt(0).toUpperCase()}
                     </div>
-                    <Typography variant="h5" fontWeight="bold">{usuario.nome}</Typography>
-                    <Typography variant="body2" color="#94a3b8" mt={1}>{usuario.email}</Typography>
+                    {/* Forçamos a cor branca no nome e cinza claro no email */}
+                    <Typography variant="h5" fontWeight="bold" style={{ color: "#ffffff" }}>{usuario.nome}</Typography>
+                    <Typography variant="body2" mt={1} style={{ color: "#94a3b8" }}>{usuario.email}</Typography>
                 </Paper>
 
                 {/* ESTATÍSTICAS */}
@@ -119,6 +135,7 @@ export default function Perfil() {
 
                 {/* BOTÕES DE AÇÃO */}
                 <Box display="flex" flexDirection="column" gap={2}>
+                    <AppButton label="Histórico de Pódios" onClick={() => history.push('/public/hall-da-fama')} style={{ backgroundColor: "#1e293b", border: "1px solid #334155", padding: "14px", fontSize: "16px", fontWeight: "bold", color: "white" }} />
                     <AppButton label="Ver Meus Bilhetes" onClick={() => history.push('/public/palpites')} style={{ backgroundColor: "#f97316", border: "none", padding: "14px", fontSize: "16px", fontWeight: "bold" }} />
                     <AppButton label="Voltar à Home" onClick={() => history.push('/public')} style={{ backgroundColor: "#64748b", border: "none", padding: "14px", fontSize: "16px", fontWeight: "bold" }} />
                     

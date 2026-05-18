@@ -9,7 +9,6 @@ import MeusPalpites from "./MeusPalpites/pages/Palpites";
 import Admin from "./Admin/pages/Admin";
 import HallFama from "./HallFama/pages/HallFama";
 
-
 export default function PublicPage() {
     return (
         <>
@@ -20,8 +19,8 @@ export default function PublicPage() {
                 <Route path="/public/placar" component={Placar} />
                 <Route path="/public/meus-palpites" component={MeusPalpites} />
                 <Route path="/public/admin" component={Admin} />
-                <Route path="/public" component={HomePage} /> 
-                <Route path="/hallfama" component={HallFama} />               
+                <Route path="/public/hall-da-fama" component={HallFama} /> {/* ROTA CORRIGIDA */}
+                <Route exact path="/public" component={HomePage} /> {/* EXACT ADICIONADO AQUI */}
             </Switch>
         </>
     );
