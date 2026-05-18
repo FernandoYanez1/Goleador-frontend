@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useHistory } from 'react-router-dom';
 import AppButton from '../../../../../vendors/components/Button';
-import { Box, Typography, Paper, Grid } from '@mui/material';
+import { Box, Typography, Paper, Grid, Button, Divider } from '@mui/material';
 import { EmojiEvents, ConfirmationNumber, TrackChanges, Logout } from '@mui/icons-material';
 
 export default function Perfil() {
@@ -40,8 +40,12 @@ export default function Perfil() {
                         Object.keys(rodadasAgrupadas).forEach(rodadaId => {
                             const ranking = rodadasAgrupadas[rodadaId];
                             
-                            // Acha as 3 maiores notas únicas dessa rodada
-                            const pontuacoes = [...new Set(ranking.map((r: any) => Number(r.pontuacao_total)))].sort((a, b) => b - a);
+                            // Acha as 3 maiores notas únicas dessa rodada (usando filter compatível)
+                            const pontuacoes = ranking
+                                .map((r: any) => Number(r.pontuacao_total))
+                                .filter((valor: number, indice: number, array: number[]) => array.indexOf(valor) === indice)
+                                .sort((a: number, b: number) => b - a);
+                                
                             const top3 = pontuacoes.slice(0, 3);
                             
                             // Vê se os bilhetes deste usuário bateram alguma dessas 3 notas

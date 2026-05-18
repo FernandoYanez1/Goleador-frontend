@@ -16,8 +16,7 @@ export default function Topbar() {
   const estaLogado = !!usuarioSalvo;
   const usuario = estaLogado ? JSON.parse(usuarioSalvo) : null;
 
-  // TRAVA DE SEGURANÇA: Só aparece se o nome for Fernando
-  // Você também pode usar: usuario?.email === 'seu-email@gmail.com'
+  // TRAVA DE SEGURANÇA: Só aparece se o email for o seu
   const eAdmin =
     usuario?.email === "yanezfer31@gmail.com";
 
@@ -28,6 +27,7 @@ export default function Topbar() {
   const handlePlacarClick = () => history.push("/public/placar");
   const handleRankingClick = () => history.push("/public/ranking");
   const handleAdminClick = () => history.push("/public/admin");
+  const handleHallFamaClick = () => history.push("/public/hall-da-fama");
 
   return (
     <>
@@ -53,8 +53,11 @@ export default function Topbar() {
             <div onClick={handleRankingClick}>
               <h5>RANKING</h5>
             </div>
+            <div onClick={handleHallFamaClick}>
+              <h5>HALL DA FAMA</h5>
+            </div>
 
-            {/* BOTÃO VIP: SÓ O FERNANDO VÊ */}
+            {/* BOTÃO VIP: SÓ O ADMIN VÊ */}
             {eAdmin && (
               <div
                 onClick={handleAdminClick}
@@ -84,7 +87,7 @@ export default function Topbar() {
               </div>
             ) : (
               <div className="meu-perfil" onClick={handleLoginClick}>
-                <h5>ENTRAR / CADASTRAR</h5>
+                <h5>ENTRAR</h5>
                 <FontAwesomeIcon
                   style={{ marginLeft: "5px" }}
                   color="white"
@@ -144,6 +147,9 @@ export default function Topbar() {
           </div>
           <div onClick={handleRankingClick}>
             <h5>RANKING</h5>
+          </div>
+          <div onClick={handleHallFamaClick}>
+            <h5>HALL DA FAMA</h5>
           </div>
           <div onClick={handleRegrasClick}>
             <h5>REGRAS</h5>
