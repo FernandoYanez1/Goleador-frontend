@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faAnglesRight } from "@fortawesome/free-solid-svg-icons/faAnglesRight";
-import { faShieldHalved } from "@fortawesome/free-solid-svg-icons"; // Ícone de escudo para o Admin
 import AppButton from "../../../../../vendors/components/Button";
 import { faBars } from "@fortawesome/free-solid-svg-icons";
 import If from "../../../../../vendors/components/If";
@@ -27,7 +26,6 @@ export default function Topbar() {
   const handlePlacarClick = () => history.push("/public/placar");
   const handleRankingClick = () => history.push("/public/ranking");
   const handleAdminClick = () => history.push("/public/admin");
-  const handleHallFamaClick = () => history.push("/public/hall-da-fama");
 
   return (
     <>
@@ -52,9 +50,6 @@ export default function Topbar() {
             </div>
             <div onClick={handleRankingClick}>
               <h5>RANKING</h5>
-            </div>
-            <div onClick={handleHallFamaClick}>
-              <h5>HALL DA FAMA</h5>
             </div>
 
             {/* BOTÃO VIP: SÓ O ADMIN VÊ */}
@@ -87,7 +82,7 @@ export default function Topbar() {
               </div>
             ) : (
               <div className="meu-perfil" onClick={handleLoginClick}>
-                <h5>ENTRAR</h5>
+                <h5>ENTRAR / CADASTRAR</h5>
                 <FontAwesomeIcon
                   style={{ marginLeft: "5px" }}
                   color="white"
@@ -147,9 +142,6 @@ export default function Topbar() {
           </div>
           <div onClick={handleRankingClick}>
             <h5>RANKING</h5>
-          </div>
-          <div onClick={handleHallFamaClick}>
-            <h5>HALL DA FAMA</h5>
           </div>
           <div onClick={handleRegrasClick}>
             <h5>REGRAS</h5>

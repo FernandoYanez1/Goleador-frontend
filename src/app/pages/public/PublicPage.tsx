@@ -7,7 +7,6 @@ import Perfil from "./Perfil/pages/Perfil";
 import Placar from "./FazerPlacar/pages/Placar";
 import MeusPalpites from "./MeusPalpites/pages/Palpites";
 import Admin from "./Admin/pages/Admin";
-import HallFama from "./HallFama/pages/HallFama";
 
 export default function PublicPage() {
     return (
@@ -19,9 +18,6 @@ export default function PublicPage() {
                 <Route path="/public/placar" component={Placar} />
                 <Route path="/public/meus-palpites" component={MeusPalpites} />
                 <Route path="/public/admin" component={Admin} />
-                <Route path="/public/hall-da-fama" component={HallFama} />
-                
-                {/* Deixe o /public sem o exact e sempre no final, ele serve de fallback para a Home */}
                 <Route path="/public" component={HomePage} /> 
             </Switch>
         </>

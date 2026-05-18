@@ -30,7 +30,7 @@ export default function Perfil() {
                 const resPalpites = await fetch(`${apiUrl}/meus-palpites/${user.id}`);
                 if (resPalpites.ok) {
                     const palpitesData = await resPalpites.json();
-                    bilhetes = palpitesData.length; // Quantidade de bilhetes (cartelas) que ele tem
+                    bilhetes = palpitesData.length; 
                     
                     palpitesData.forEach((bilhete: any) => {
                         if (bilhete.palpites && Array.isArray(bilhete.palpites)) {
@@ -56,7 +56,6 @@ export default function Perfil() {
                     finalizadas.forEach((rodada: any) => {
                         const rankingDaRodada = rankingData.filter((rank: any) => rank.rodada_id === rodada.id);
                         
-                        // Acha as 3 maiores notas
                         const pontuacoesUnicas = rankingDaRodada
                             .map((p: any) => Number(p.pontuacao_total))
                             .filter((valor: number, indice: number, array: number[]) => array.indexOf(valor) === indice)
@@ -64,7 +63,6 @@ export default function Perfil() {
 
                         const top3 = pontuacoesUnicas.slice(0, 3);
 
-                        // Meus bilhetes na rodada finalizada
                         const meusBilhetesAqui = rankingDaRodada.filter((r: any) => Number(r.usuario_id) === Number(user.id));
                         
                         meusBilhetesAqui.forEach((meu: any) => {
@@ -139,7 +137,6 @@ export default function Perfil() {
 
                 {/* BOTÕES DE AÇÃO */}
                 <Box display="flex" flexDirection="column" gap={2}>
-                    <AppButton label="Histórico de Pódios" onClick={() => history.push('/public/hall-da-fama')} style={{ backgroundColor: "#1e293b", border: "1px solid #334155", padding: "14px", fontSize: "16px", fontWeight: "bold", color: "white" }} />
                     <AppButton label="Ver Meus Bilhetes" onClick={() => history.push('/public/palpites')} style={{ backgroundColor: "#f97316", border: "none", padding: "14px", fontSize: "16px", fontWeight: "bold" }} />
                     <AppButton label="Voltar à Home" onClick={() => history.push('/public')} style={{ backgroundColor: "#64748b", border: "none", padding: "14px", fontSize: "16px", fontWeight: "bold" }} />
                     
