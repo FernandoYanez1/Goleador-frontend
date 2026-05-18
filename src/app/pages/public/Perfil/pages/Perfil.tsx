@@ -22,56 +22,61 @@ export default function Perfil() {
 
         const carregarEstatisticas = async () => {
             try {
-                // 1. Busca Bilhetes e Cravadas
-                const resEst = await fetch(`${apiUrl}/estatisticas/${user.id}`);
                 let bilhetes = 0;
                 let cravadas = 0;
-                
-                if (resEst.ok) {
-                    const data = await resEst.json();
-                    bilhetes = data.total_bilhetes || 0;
-                    cravadas = data.placares_exatos || 0;
-                }
-
-                // 2. Busca Hall da Fama para contar os pódios
-                const resHall = await fetch(`${apiUrl}/hall-da-fama`);
                 let podiosConta = 0;
 
-                if (resHall.ok) {
-                    const hallData = await resHall.json();
-                    const rodadasAgrupadas: any = {};
+                // 1. Busca os Bilhetes do Usuário e calcula Cravadas (Placares Exatos = 15pts)
+                const resPalpites = await fetch(`${apiUrl}/meus-palpites/${user.id}`);
+                if (resPalpites.ok) {
+                    const palpitesData = await resPalpites.json();
+                    bilhetes = palpitesData.length; // Quantidade de bilhetes (cartelas) que ele tem
                     
-                    hallData.forEach((item: any) => {
-                        if (!rodadasAgrupadas[item.rodada_id]) rodadasAgrupadas[item.rodada_id] = [];
-                        rodadasAgrupadas[item.rodada_id].push(item);
+                    palpitesData.forEach((bilhete: any) => {
+                        if (bilhete.palpites && Array.isArray(bilhete.palpites)) {
+                            bilhete.palpites.forEach((p: any) => {
+                                if (Number(p.pontos_ganhos) === 15) cravadas++;
+                            });
+                        }
                     });
+                }
 
-                    Object.keys(rodadasAgrupadas).forEach(rodadaId => {
-                        const ranking = rodadasAgrupadas[rodadaId];
+                // 2. Busca Ranking e Rodadas para calcular Pódios
+                const [resRodadas, resRanking] = await Promise.all([
+                    fetch(`${apiUrl}/rodadas`),
+                    fetch(`${apiUrl}/ranking`)
+                ]);
+
+                if (resRodadas.ok && resRanking.ok) {
+                    const rodadasData = await resRodadas.json();
+                    const rankingData = await resRanking.json();
+
+                    const finalizadas = rodadasData.filter((r: any) => r.status === 'finalizada');
+
+                    finalizadas.forEach((rodada: any) => {
+                        const rankingDaRodada = rankingData.filter((rank: any) => rank.rodada_id === rodada.id);
                         
-                        const pontuacoes = ranking
-                            .map((r: any) => Number(r.pontuacao_total))
+                        // Acha as 3 maiores notas
+                        const pontuacoesUnicas = rankingDaRodada
+                            .map((p: any) => Number(p.pontuacao_total))
                             .filter((valor: number, indice: number, array: number[]) => array.indexOf(valor) === indice)
                             .sort((a: number, b: number) => b - a);
-                            
-                        const top3 = pontuacoes.slice(0, 3);
+
+                        const top3 = pontuacoesUnicas.slice(0, 3);
+
+                        // Meus bilhetes na rodada finalizada
+                        const meusBilhetesAqui = rankingDaRodada.filter((r: any) => Number(r.usuario_id) === Number(user.id));
                         
-                        // Garante que os tipos sejam iguais (Number)
-                        const meusBilhetesAqui = ranking.filter((r: any) => Number(r.usuario_id) === Number(user.id));
                         meusBilhetesAqui.forEach((meu: any) => {
-                            // TRAVA: Só conta pódio se a pessoa tiver mais que 0 pontos (evita contar empate geral no início da rodada)
-                            if (top3.includes(Number(meu.pontuacao_total)) && Number(meu.pontuacao_total) > 0) {
+                            const minhaNota = Number(meu.pontuacao_total);
+                            if (top3.includes(minhaNota) && minhaNota > 0) {
                                 podiosConta++;
                             }
                         });
                     });
                 }
 
-                setEstatisticas({
-                    bilhetes,
-                    cravadas,
-                    podios: podiosConta
-                });
+                setEstatisticas({ bilhetes, cravadas, podios: podiosConta });
 
             } catch (error) {
                 console.error("Erro ao carregar estatísticas:", error);
@@ -94,12 +99,11 @@ export default function Perfil() {
         <div style={{ backgroundColor: "#e2e8f0", minHeight: "100vh", padding: "40px 20px" }}>
             <Box maxWidth="600px" margin="0 auto">
                 
-                {/* CABEÇALHO DO PERFIL CORRIGIDO AS CORES */}
+                {/* CABEÇALHO DO PERFIL */}
                 <Paper style={{ padding: "30px", borderRadius: "16px", textAlign: "center", backgroundColor: "#1e293b", marginBottom: "30px", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.2)" }}>
                     <div style={{ width: "80px", height: "80px", backgroundColor: "#3b82f6", borderRadius: "50%", margin: "0 auto 15px auto", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "32px", fontWeight: "bold", color: "white" }}>
                         {usuario.nome.charAt(0).toUpperCase()}
                     </div>
-                    {/* Forçamos a cor branca no nome e cinza claro no email */}
                     <Typography variant="h5" fontWeight="bold" style={{ color: "#ffffff" }}>{usuario.nome}</Typography>
                     <Typography variant="body2" mt={1} style={{ color: "#94a3b8" }}>{usuario.email}</Typography>
                 </Paper>

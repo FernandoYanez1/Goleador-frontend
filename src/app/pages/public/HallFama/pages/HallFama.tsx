@@ -11,48 +11,50 @@ export default function HallFama() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetch(`${apiUrl}/hall-da-fama`)
-            .then(res => res.json())
-            .then(data => {
-                // Agrupar por Rodada
-                const agrupado: any = {};
-                data.forEach((item: any) => {
-                    if (!agrupado[item.rodada_id]) {
-                        agrupado[item.rodada_id] = {
-                            nome: item.rodada_nome,
-                            participantes: []
-                        };
-                    }
-                    agrupado[item.rodada_id].participantes.push(item);
-                });
+        // Puxa as rodadas e os rankings que já funcionam no sistema
+        Promise.all([
+            fetch(`${apiUrl}/rodadas`).then(res => res.json()),
+            fetch(`${apiUrl}/ranking`).then(res => res.json())
+        ])
+        .then(([rodadasData, rankingData]) => {
+            // Filtra só as rodadas finalizadas e pega as últimas 40
+            const finalizadas = rodadasData
+                .filter((r: any) => r.status === 'finalizada')
+                .sort((a: any, b: any) => b.id - a.id)
+                .slice(0, 40);
 
-                // Transformar em array, pegar as últimas 40 e processar o Top 3
-                const lista = Object.values(agrupado).reverse().slice(0, 40).map((rodada: any) => {
-                    
-                    // LÓGICA BLINDADA CONTRA ERRO DE TYPESCRIPT
-                    const pontuacoesUnicas = rodada.participantes
-                        .map((p: any) => Number(p.pontuacao_total))
-                        .filter((valor: number, indice: number, array: number[]) => array.indexOf(valor) === indice)
-                        .sort((a: number, b: number) => b - a);
-                    
-                    return {
-                        ...rodada,
-                        top1: rodada.participantes.filter((p: any) => Number(p.pontuacao_total) === pontuacoesUnicas[0]),
-                        top2: rodada.participantes.filter((p: any) => Number(p.pontuacao_total) === pontuacoesUnicas[1]),
-                        top3: rodada.participantes.filter((p: any) => Number(p.pontuacao_total) === pontuacoesUnicas[2])
-                    };
-                });
+            const lista = finalizadas.map((rodada: any) => {
+                // Filtra os palpites apenas desta rodada
+                const participantes = rankingData.filter((rank: any) => rank.rodada_id === rodada.id);
+                
+                // Encontra as 3 maiores pontuações
+                const pontuacoesUnicas = participantes
+                    .map((p: any) => Number(p.pontuacao_total))
+                    .filter((valor: number, indice: number, array: number[]) => array.indexOf(valor) === indice)
+                    .sort((a: number, b: number) => b - a);
 
-                setRodadasFinalizadas(lista);
-                setLoading(false);
-            })
-            .catch(() => setLoading(false));
+                return {
+                    nome: rodada.nome,
+                    top1: participantes.filter((p: any) => Number(p.pontuacao_total) === pontuacoesUnicas[0] && pontuacoesUnicas[0] > 0),
+                    top2: participantes.filter((p: any) => Number(p.pontuacao_total) === pontuacoesUnicas[1] && pontuacoesUnicas[1] > 0),
+                    top3: participantes.filter((p: any) => Number(p.pontuacao_total) === pontuacoesUnicas[2] && pontuacoesUnicas[2] > 0)
+                };
+            });
+
+            // Só mostra a rodada no Hall da Fama se alguém fez algum ponto (com a trava do TypeScript corrigida)
+            setRodadasFinalizadas(lista.filter((r: any) => r.top1.length > 0));
+            setLoading(false);
+        })
+        .catch(err => {
+            console.error(err);
+            setLoading(false);
+        });
     }, [apiUrl]);
 
     if (loading) {
         return (
-            <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
-                <CircularProgress />
+            <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh" bgcolor="#0f172a">
+                <CircularProgress style={{ color: "#fbbf24" }} />
             </Box>
         );
     }
@@ -67,6 +69,10 @@ export default function HallFama() {
                     <Typography variant="h6" color="#94a3b8">Galeria de Grandes Campeões do Goleador VIP</Typography>
                 </Box>
 
+                {rodadasFinalizadas.length === 0 && (
+                    <Typography textAlign="center" color="#94a3b8" mb={4}>Nenhuma rodada finalizada para exibir ainda.</Typography>
+                )}
+
                 {rodadasFinalizadas.map((rodada, idx) => (
                     <Paper key={idx} style={{ backgroundColor: "#1e293b", borderRadius: "16px", padding: "25px", marginBottom: "30px", border: "1px solid #334155" }}>
                         <Typography variant="h5" fontWeight="bold" color="#fcd34d" mb={3} textAlign="center">
@@ -77,9 +83,9 @@ export default function HallFama() {
                             {/* PRATA */}
                             {rodada.top2.length > 0 && (
                                 <Box textAlign="center" order={{ xs: 2, sm: 1 }}>
-                                    <Avatar style={{ backgroundColor: "#94a3b8", width: 50, height: 50, margin: "0 auto 10px auto" }}>2º</Avatar>
+                                    <Avatar style={{ backgroundColor: "#94a3b8", width: 50, height: 50, margin: "0 auto 10px auto", fontWeight: 'bold', color: 'white' }}>2º</Avatar>
                                     {rodada.top2.map((p: any) => (
-                                        <Typography key={p.cartela_id} variant="body2" fontWeight="bold">{p.usuario_nome}</Typography>
+                                        <Typography key={p.cartela_id} variant="body2" fontWeight="bold">{p.nome || p.usuario_nome}</Typography>
                                     ))}
                                     <Typography variant="caption" color="#94a3b8">{rodada.top2[0].pontuacao_total} pts</Typography>
                                 </Box>
@@ -89,9 +95,9 @@ export default function HallFama() {
                             {rodada.top1.length > 0 && (
                                 <Box textAlign="center" order={{ xs: 1, sm: 2 }} mb={2}>
                                     <EmojiEvents style={{ color: "#fbbf24", fontSize: "60px" }} />
-                                    <Avatar style={{ backgroundColor: "#fbbf24", width: 70, height: 70, margin: "0 auto 10px auto", border: "4px solid #fcd34d" }}>1º</Avatar>
+                                    <Avatar style={{ backgroundColor: "#fbbf24", width: 70, height: 70, margin: "0 auto 10px auto", border: "4px solid #fcd34d", fontWeight: 'bold', color: '#b45309' }}>1º</Avatar>
                                     {rodada.top1.map((p: any) => (
-                                        <Typography key={p.cartela_id} variant="h6" fontWeight="900" color="#fbbf24">{p.usuario_nome}</Typography>
+                                        <Typography key={p.cartela_id} variant="h6" fontWeight="900" color="#fbbf24">{p.nome || p.usuario_nome}</Typography>
                                     ))}
                                     <Typography variant="body1" fontWeight="bold">{rodada.top1[0].pontuacao_total} pts</Typography>
                                 </Box>
@@ -100,9 +106,9 @@ export default function HallFama() {
                             {/* BRONZE */}
                             {rodada.top3.length > 0 && (
                                 <Box textAlign="center" order={{ xs: 3, sm: 3 }}>
-                                    <Avatar style={{ backgroundColor: "#cd7f32", width: 45, height: 45, margin: "0 auto 10px auto" }}>3º</Avatar>
+                                    <Avatar style={{ backgroundColor: "#cd7f32", width: 45, height: 45, margin: "0 auto 10px auto", fontWeight: 'bold', color: 'white' }}>3º</Avatar>
                                     {rodada.top3.map((p: any) => (
-                                        <Typography key={p.cartela_id} variant="body2" fontWeight="bold">{p.usuario_nome}</Typography>
+                                        <Typography key={p.cartela_id} variant="body2" fontWeight="bold">{p.nome || p.usuario_nome}</Typography>
                                     ))}
                                     <Typography variant="caption" color="#94a3b8">{rodada.top3[0].pontuacao_total} pts</Typography>
                                 </Box>
