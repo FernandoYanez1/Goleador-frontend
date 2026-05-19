@@ -1,564 +1,129 @@
-import React, { useState, useEffect } from "react";
-import { 
-    Container, Typography, Paper, List, ListItem, ListItemText, 
-    Divider, CircularProgress, Box, Dialog, DialogTitle, 
-    DialogContent, Tooltip, IconButton, Fab 
-} from "@mui/material";
-import AppButton from "../../../../../vendors/components/Button";
-import { useHistory } from "react-router-dom";
-import { EmojiEvents, PictureAsPdf, MilitaryTech, Visibility, Lock, WhatsApp, Close, Checkroom } from "@mui/icons-material";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import React, { useState, useEffect } from 'react';
+import { useHistory } from 'react-router-dom';
+import { Container, Typography, Paper, Box, CircularProgress, MenuItem, TextField, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
+import { EmojiEvents } from '@mui/icons-material';
+import AppButton from '../../../../../vendors/components/Button';
 
-const Ranking = () => {
-    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
-    
-    const [aprovados, setAprovados] = useState<any[]>([]); 
-    const [loading, setLoading] = useState(true);
-    const [gerandoPdf, setGerandoPdf] = useState(false);
-    const [usuarioLogado, setUsuarioLogado] = useState<any>(null);
+export default function Ranking() {
     const history = useHistory();
+    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
-    const [rodadaAtual, setRodadaAtual] = useState<any>(null);
-    const [apostasBloqueadas, setApostasBloqueadas] = useState(false);
-    const [statusJogos, setStatusJogos] = useState({ finalizados: 0, total: 0 });
-    
-    const [modalAberto, setModalAberto] = useState(false);
-    const [cartelaSelecionada, setCartelaSelecionada] = useState<any>(null);
-    const [palpitesSecador, setPalpitesSecador] = useState<any[]>([]);
-
-    const [mostrarBannerWpp, setMostrarBannerWpp] = useState(() => {
-        return localStorage.getItem("bannerWppOculto") !== "true";
-    });
-
-    const [mostrarBannerPremio, setMostrarBannerPremio] = useState(() => {
-        return localStorage.getItem("bannerPremioOculto") !== "true";
-    });
-
-    const fecharBannerPremio = () => {
-        setMostrarBannerPremio(false);
-        localStorage.setItem("bannerPremioOculto", "true");
-    };
-
-    const VALOR_INSCRICAO = 20;
-
-    const mascararTelefone = (tel: string) => {
-        if (!tel) return "Não Informado";
-        const limpo = tel.replace(/\D/g, "");
-        if (limpo.length === 11) {
-            return `(${limpo.substring(0, 2)}) ${limpo.substring(2, 3)}****-${limpo.substring(7)}`;
-        } else if (limpo.length === 10) {
-            return `(${limpo.substring(0, 2)}) ****-${limpo.substring(6)}`;
-        }
-        return tel;
-    };
+    const [rodadas, setRodadas] = useState<any[]>([]);
+    const [rodadaSelecionada, setRodadaSelecionada] = useState<number | ''>('');
+    const [rankingData, setRankingData] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const salvo = localStorage.getItem("usuarioLogado");
-        if (salvo) setUsuarioLogado(JSON.parse(salvo));
-
-        fetch(`${apiUrl}/rodadas`)
-            .then(res => res.json())
-            .then(rodadasData => {
-                if (rodadasData.length > 0) {
-                    
-                    // LÓGICA DE PRIORIDADE MÁXIMA: 
-                    // 1º Tenta achar a marcada manualmente por você no Admin (exibir_no_ranking === true)
-                    let ativa = rodadasData.find((r: any) => r.exibir_no_ranking === true);
-                    
-                    // Fallbacks automáticos de segurança caso nenhuma esteja marcada:
-                    if (!ativa) ativa = rodadasData.find((r: any) => r.status === 'aberta');
-                    if (!ativa) {
-                        const finalizadas = rodadasData.filter((r: any) => r.status === 'finalizada');
-                        if (finalizadas.length > 0) {
-                            ativa = finalizadas.sort((a: any, b: any) => b.id - a.id)[0];
-                        }
-                    }
-                    if (!ativa) ativa = rodadasData[0]; 
-
-                    setRodadaAtual(ativa);
-                    setApostasBloqueadas(ativa.status !== 'aberta');
-
-                    Promise.all([
-                        fetch(`${apiUrl}/ranking`).then(res => res.json()),
-                        fetch(`${apiUrl}/jogos?rodada_id=${ativa.id}`).then(res => res.json())
-                    ]).then(([rankData, jogosData]) => {
-                        
-                        if (Array.isArray(rankData)) {
-                            const rankDaRodada = rankData.filter((r: any) => r.rodada_id === ativa.id);
-                            rankDaRodada.sort((a, b) => b.pontuacao_total - a.pontuacao_total);
-                            setAprovados(rankDaRodada);
-                        }
-                        
-                        if (Array.isArray(jogosData)) {
-                            const jogosFinalizados = jogosData.filter((j: any) => j.gols_casa !== null && j.gols_visitante !== null).length;
-                            setStatusJogos({ finalizados: jogosFinalizados, total: jogosData.length });
-                        }
-                        
-                        setLoading(false);
-                    }).catch((err) => {
-                        console.error("Erro ao buscar dados:", err);
-                        setLoading(false);
-                    });
+        // Puxa as rodadas e o ranking global
+        Promise.all([
+            fetch(`${apiUrl}/rodadas`).then(res => res.json()),
+            fetch(`${apiUrl}/ranking`).then(res => res.json())
+        ])
+        .then(([rodadasData, rankingResponse]) => {
+            setRodadas(rodadasData);
+            
+            // BLINDAGEM DO TYPESCRIPT AQUI: Aceita número ou texto vazio
+            let rodadaPadrao: number | '' = '';
+            
+            if (rodadasData.length > 0) {
+                const fixada = rodadasData.find((r: any) => r.exibir_no_ranking === true);
+                if (fixada) {
+                    rodadaPadrao = fixada.id;
                 } else {
-                    setLoading(false);
+                    const abertas = rodadasData.filter((r: any) => r.status === 'aberta');
+                    rodadaPadrao = abertas.length > 0 ? abertas[0].id : rodadasData[0].id;
                 }
-            })
-            .catch((err) => {
-                console.error("Erro ao buscar rodadas:", err);
-                setLoading(false);
-            });
+            }
+            
+            setRodadaSelecionada(rodadaPadrao);
+            setRankingData(rankingResponse);
+            setLoading(false);
+        })
+        .catch(() => setLoading(false));
     }, [apiUrl]);
 
-    const totalCartelasCompradas = aprovados.length;
-    const valorArrecadadoTotal = totalCartelasCompradas * VALOR_INSCRICAO;
-    const valorPremioTotal = valorArrecadadoTotal * 0.90;
-
-    const mostrarPodio = statusJogos.finalizados > 0;
-
-    const pontuacoesUnicas = aprovados
-        .map(p => p.pontuacao_total)
-        .filter((valor, indice, array) => array.indexOf(valor) === indice)
-        .sort((a, b) => b - a); 
-
-    const score1 = pontuacoesUnicas[0]; 
-    const score2 = pontuacoesUnicas[1]; 
-    const score3 = pontuacoesUnicas[2]; 
-
-    let ganhadores1: any[] = [];
-    let ganhadores2: any[] = [];
-    let ganhadores3: any[] = [];
-    let restoRanking: any[] = [];
-
-    if (mostrarPodio) {
-        ganhadores1 = aprovados.filter(p => p.pontuacao_total === score1);
-        ganhadores2 = aprovados.filter(p => p.pontuacao_total === score2);
-        ganhadores3 = aprovados.filter(p => p.pontuacao_total === score3);
-        
-        const todosDoPodioIds = [...ganhadores1, ...ganhadores2, ...ganhadores3].map(u => u.cartela_id);
-        restoRanking = aprovados.filter(u => !todosDoPodioIds.includes(u.cartela_id));
-    } else {
-        restoRanking = [...aprovados]; 
-    }
-
-    const premio1PorPessoa = (valorPremioTotal * 0.60) / (ganhadores1.length || 1);
-    const premio2PorPessoa = (valorPremioTotal * 0.30) / (ganhadores2.length || 1);
-    const premio3PorPessoa = (valorPremioTotal * 0.10) / (ganhadores3.length || 1);
-
-    let textoStatusRodada = "Aguardando Resultados ⏳";
-    let corStatusRodada = "#64748b"; 
-    
-    if (statusJogos.total > 0) {
-        if (statusJogos.finalizados === statusJogos.total) {
-            textoStatusRodada = "✅ RANKING FINAL (Concluído)";
-            corStatusRodada = "#10b981"; 
-        } else if (statusJogos.finalizados > 0) {
-            textoStatusRodada = `🔄 PARCIAL (${statusJogos.finalizados}/${statusJogos.total} jogos)`;
-            corStatusRodada = "#3b82f6"; 
-        }
-    }
-
-    const abrirSecador = async (itemRanking: any) => {
-        if (!apostasBloqueadas) {
-            alert("🔒 O Modo Secador só é liberado quando o Admin encerrar as apostas da rodada!");
-            return;
-        }
-
-        setCartelaSelecionada(itemRanking);
-        try {
-            const res = await fetch(`${apiUrl}/meus-palpites/${itemRanking.usuario_id}`);
-            const dados = await res.json();
-            const bilheteEspecifico = dados.find((c: any) => c.cartela_id === itemRanking.cartela_id);
-            
-            setPalpitesSecador(bilheteEspecifico ? bilheteEspecifico.palpites : []);
-            setModalAberto(true);
-        } catch (error) {
-            alert("Erro ao buscar os palpites deste bilhete.");
-        }
-    };
-
-    const handleBaixarAuditoria = async () => {
-        setGerandoPdf(true);
-        try {
-            const res = await fetch(`${apiUrl}/auditoria`);
-            if (!res.ok) throw new Error("Rota não encontrada.");
-
-            const dadosAuditoria = await res.json();
-            
-            const idsAprovadosNaTela = aprovados.map(a => a.cartela_id);
-            
-            let palpitesValidosDaRodada = dadosAuditoria.filter((item: any) => {
-                const idCartela = item.cartela_id || item.id_cartela;
-                return idsAprovadosNaTela.includes(idCartela);
-            });
-
-            if (palpitesValidosDaRodada.length === 0) {
-                 palpitesValidosDaRodada = dadosAuditoria.filter((item: any) => {
-                    const rodadaNomeItem = item.rodada_nome || item.nome_rodada || "";
-                    return rodadaNomeItem.includes(rodadaAtual?.nome);
-                });
-            }
-
-            if (palpitesValidosDaRodada.length === 0) {
-                alert("Nenhum palpite encontrado no banco para gerar o PDF.");
-                setGerandoPdf(false);
-                return;
-            }
-
-            const doc = new jsPDF();
-            doc.setFontSize(18);
-            doc.text("Auditoria do Bolao - Palpites Registrados", 14, 20);
-            doc.setFontSize(10);
-            doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 28);
-            doc.text(`Rodada: ${rodadaAtual?.nome} | Total de Palpites Validados: ${palpitesValidosDaRodada.length}`, 14, 34);
-
-            const palpitesPorUsuario: any = {};
-            palpitesValidosDaRodada.forEach((item: any) => {
-                const identificadorUsuario = item.usuario_nome || item.nome_usuario || item.nome || "Participante";
-                const celularUsuario = item.telefone || item.celular || "";
-                
-                const nomeSeguro = identificadorUsuario; 
-                const telefoneSeguro = celularUsuario ? ` - ${mascararTelefone(celularUsuario)}` : "";
-                const chaveAgrupamento = `${nomeSeguro}${telefoneSeguro}`;
-
-                if (!palpitesPorUsuario[chaveAgrupamento]) palpitesPorUsuario[chaveAgrupamento] = [];
-                palpitesPorUsuario[chaveAgrupamento].push([
-                    `Cartela #${item.cartela_id || item.id_cartela}`,
-                    `${item.time_casa} x ${item.time_visitante}`,
-                    `${item.palpite_casa} x ${item.palpite_visitante}`
-                ]);
-            });
-
-            let startY = 45;
-            Object.keys(palpitesPorUsuario).forEach((chaveParticipante) => {
-                if (startY > 240) { doc.addPage(); startY = 20; }
-                
-                doc.setFontSize(11);
-                doc.setTextColor(30, 41, 59);
-                doc.text(`Participante: ${chaveParticipante}`, 14, startY);
-                
-                autoTable(doc, {
-                    startY: startY + 3,
-                    head: [['No Cartela', 'Partida', 'Palpite Registrado']],
-                    body: palpitesPorUsuario[chaveParticipante],
-                    theme: 'grid',
-                    headStyles: { fillColor: [30, 41, 59], fontStyle: 'bold' },
-                    styles: { fontSize: 9 },
-                    margin: { left: 14, right: 14 }
-                });
-                startY = (doc as any).lastAutoTable.finalY + 12;
-            });
-
-            doc.save(`Auditoria-${rodadaAtual?.nome}.pdf`);
-        } catch (error) {
-            console.error(error);
-            alert("Erro ao ler os registros da rota de auditoria do servidor.");
-        } finally {
-            setGerandoPdf(false);
-        }
-    };
-
-    const fecharBannerWpp = () => {
-        setMostrarBannerWpp(false);
-        localStorage.setItem("bannerWppOculto", "true");
-    };
-
-    const linkGrupoWpp = 'https://chat.whatsapp.com/KzLHler3sA95Bh5EuKmEs2';
+    const rankingFiltrado = rankingData.filter(item => item.rodada_id === rodadaSelecionada);
 
     if (loading) {
-        return (
-            <Container maxWidth="md" style={{ textAlign: "center", marginTop: "100px" }}>
-                <CircularProgress style={{ color: "#fbbf24" }} />
-                <Typography style={{ color: "#1e293b", marginTop: "20px", fontWeight: "bold" }}>Calculando Ranking Oficial...</Typography>
-            </Container>
-        );
+        return <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh" bgcolor="#0f172a"><CircularProgress style={{ color: "#fbbf24" }} /></Box>;
     }
 
     return (
-        <div style={{ backgroundColor: "#e2e8f0", minHeight: "100vh", padding: "40px 0", position: "relative" }}>
+        <div style={{ backgroundColor: "#0f172a", minHeight: "100vh", padding: "40px 20px", color: "white" }}>
             <Container maxWidth="md">
                 
-                <Paper elevation={0} style={{ backgroundColor: "#1e293b", color: "white", padding: "30px", borderRadius: "16px", textAlign: "center", marginBottom: "20px", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.2)" }}>
-                    <Typography style={{ color: "#fcd34d", fontWeight: "bold", fontSize: "14px", marginBottom: "15px" }}>
-                        RANKING DA RODADA: {rodadaAtual?.nome}
-                    </Typography>
-                    
-                    <Box display="inline-block" px={2} py={0.5} borderRadius={2} mb={2} style={{ backgroundColor: corStatusRodada, fontWeight: "bold", fontSize: "12px", color: "white" }}>
-                        {textoStatusRodada}
+                <Box textAlign="center" mb={4}>
+                    <EmojiEvents style={{ color: "#fbbf24", fontSize: "60px" }} />
+                    <Typography variant="h3" fontWeight="900" style={{ color: "#fcd34d" }}>RANKING GERAL</Typography>
+                    <Typography variant="body1" color="#94a3b8" mt={1}>Acompanhe a pontuação dos aprovados em tempo real</Typography>
+                </Box>
+
+                <Paper style={{ padding: '20px', borderRadius: '16px', backgroundColor: '#1e293b', border: '1px solid #334155' }}>
+                    <Box mb={4}>
+                        <TextField
+                            select
+                            label="Filtrar por Desafio/Rodada"
+                            value={rodadaSelecionada}
+                            onChange={(e) => setRodadaSelecionada(Number(e.target.value))}
+                            fullWidth
+                            variant="filled"
+                            sx={{ backgroundColor: '#fff', borderRadius: '8px' }}
+                        >
+                            {rodadas.map((rodada) => (
+                                <MenuItem key={rodada.id} value={rodada.id}>
+                                    {rodada.nome} {rodada.exibir_no_ranking ? "🌟 (OFICIAL)" : ""}
+                                </MenuItem>
+                            ))}
+                        </TextField>
                     </Box>
 
-                    <Typography variant="h6" style={{ color: "#94a3b8", fontWeight: "bold", letterSpacing: "2px", marginTop: "10px" }}>
-                        PREMIAÇÃO ACUMULADA
-                    </Typography>
-                    <Typography variant="h2" style={{ color: "#10b981", fontWeight: "900", marginTop: "10px" }}>
-                        {valorPremioTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                    </Typography>
-                    <Typography variant="subtitle1" style={{ color: "#cbd5e1", marginTop: "10px", lineHeight: "1.4" }}>
-                        Disputado por {totalCartelasCompradas} bilhetes validados nesta rodada.
-                        <br/>
-                    </Typography>
-                    
-                    <Box mt={3} display="flex" justifyContent="center" gap={2} flexWrap="wrap" alignItems="center">
-                        <Tooltip title={apostasBloqueadas ? "Baixar todos os palpites registrados desta rodada" : "A auditoria só será liberada quando encerrar a rodada de apostas."} arrow>
-                            <span>
-                                <AppButton 
-                                    label={gerandoPdf ? "Gerando..." : "Baixar Auditoria"} 
-                                    icon={apostasBloqueadas ? <PictureAsPdf style={{ marginRight: '8px' }} /> : <Lock style={{ marginRight: '8px' }} />}
-                                    onClick={handleBaixarAuditoria}
-                                    disabled={!apostasBloqueadas || gerandoPdf} 
-                                    style={{ 
-                                        backgroundColor: apostasBloqueadas ? "#3b82f6" : "#475569", 
-                                        border: "none", 
-                                        color: "white", 
-                                        padding: "10px 20px",
-                                        opacity: apostasBloqueadas ? 1 : 0.6,
-                                        cursor: apostasBloqueadas ? "pointer" : "not-allowed"
-                                    }}
-                                />
-                            </span>
-                        </Tooltip>
-
-                        <div style={{ backgroundColor: apostasBloqueadas ? "#10b981" : "#ef4444", color: "white", padding: "10px 20px", borderRadius: "8px", display: "flex", alignItems: "center", gap: "8px", fontWeight: "bold" }}>
-                            {apostasBloqueadas ? <Visibility /> : <Lock />}
-                            {apostasBloqueadas ? "Modo Secador Liberado" : "Secador Bloqueado"}
-                        </div>
-                    </Box>
+                    <TableContainer>
+                        <Table>
+                            <TableHead style={{ backgroundColor: '#0f172a' }}>
+                                <TableRow>
+                                    <TableCell style={{ color: '#94a3b8', fontWeight: 'bold' }}>Posição</TableCell>
+                                    <TableCell style={{ color: '#94a3b8', fontWeight: 'bold' }}>Apostador</TableCell>
+                                    <TableCell style={{ color: '#94a3b8', fontWeight: 'bold', textAlign: 'center' }}>Bilhete</TableCell>
+                                    <TableCell style={{ color: '#fbbf24', fontWeight: '900', textAlign: 'right' }}>Pontos</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {rankingFiltrado.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={4} align="center" style={{ color: '#94a3b8', padding: '30px' }}>
+                                            Nenhum bilhete aprovado nesta rodada ainda.
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    rankingFiltrado.map((item, index) => {
+                                        const ePodio = index < 3;
+                                        return (
+                                            <TableRow key={item.cartela_id} style={{ backgroundColor: ePodio ? 'rgba(251, 191, 36, 0.1)' : 'transparent' }}>
+                                                <TableCell style={{ color: ePodio ? '#fbbf24' : 'white', fontWeight: 'bold', fontSize: ePodio ? '18px' : '14px' }}>
+                                                    {index + 1}º
+                                                </TableCell>
+                                                <TableCell style={{ color: 'white', fontWeight: ePodio ? 'bold' : 'normal' }}>
+                                                    {item.nome}
+                                                </TableCell>
+                                                <TableCell style={{ color: '#94a3b8', textAlign: 'center' }}>
+                                                    #{item.numero_bilhete || item.cartela_id}
+                                                </TableCell>
+                                                <TableCell style={{ color: '#fbbf24', fontWeight: '900', textAlign: 'right', fontSize: '16px' }}>
+                                                    {item.pontuacao_total}
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })
+                                )}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
                 </Paper>
 
-                {mostrarBannerPremio && (
-                    <Box mb={4} style={{
-                        position: 'relative',
-                        background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                        borderRadius: '16px',
-                        padding: '25px 20px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        flexWrap: 'wrap',
-                        gap: '15px',
-                        border: '1px solid #fbbf24',
-                        boxShadow: '0 10px 15px -3px rgba(245, 158, 11, 0.15)'
-                    }}>
-                        <IconButton onClick={fecharBannerPremio} style={{ position: 'absolute', top: '5px', right: '5px', color: '#fffbeb' }} size="small">
-                            <Close fontSize="small" />
-                        </IconButton>
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
-                            <div style={{ backgroundColor: '#ffffff', borderRadius: '50%', width: '50px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-                                <Checkroom style={{ fontSize: '30px', color: '#059669' }} /> 
-                            </div>
-                            <div>
-                                <Typography variant="h6" style={{ color: '#ffffff', margin: 0, fontWeight: 'bold' }}>👕 Sorteio Especial: Oitavas da Copa!</Typography>
-                                <Typography variant="body2" style={{ color: '#fffbeb', margin: '4px 0 0 0' }}>O 1º lugar isolado leva uma Camisa Oficial da Seleção! (Em caso de empate, R$300 divididos).</Typography>
-                            </div>
-                        </div>
-                    </Box>
-                )}
-
-                {mostrarBannerWpp && (
-                    <Box mb={4} style={{
-                        position: 'relative',
-                        background: 'linear-gradient(135deg, #1e293b 0%, #064e3b 100%)',
-                        borderRadius: '16px',
-                        padding: '25px 20px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        flexWrap: 'wrap',
-                        gap: '15px',
-                        border: '1px solid #10b981',
-                        boxShadow: '0 10px 15px -3px rgba(16, 185, 129, 0.15)'
-                    }}>
-                        <IconButton onClick={fecharBannerWpp} style={{ position: 'absolute', top: '5px', right: '5px', color: '#94a3b8' }} size="small">
-                            <Close fontSize="small" />
-                        </IconButton>
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
-                            <div style={{ backgroundColor: '#25D366', borderRadius: '50%', width: '50px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.3)' }}>
-                                <WhatsApp style={{ fontSize: '30px', color: '#ffffff' }} />
-                            </div>
-                            <div>
-                                <Typography variant="h6" style={{ color: '#ffffff', margin: 0, fontWeight: 'bold' }}>Seja um Goleador e entre no nosso grupo</Typography>
-                                <Typography variant="body2" style={{ color: '#94a3b8', margin: '4px 0 0 0' }}>Avisos, ranking atualizado e mais informações no nosso grupo VIP.</Typography>
-                            </div>
-                        </div>
-
-                        <button onClick={() => window.open(linkGrupoWpp, '_blank')} style={{ backgroundColor: '#25D366', color: '#ffffff', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: 'bold', fontSize: '15px', cursor: 'pointer', boxShadow: '0 4px 6px rgba(37, 211, 102, 0.3)' }}>
-                            Entrar no Grupo
-                        </button>
-                    </Box>
-                )}
-
-                <Box mb={5}>
-                    {mostrarPodio && ganhadores1.length > 0 && (
-                        <Paper style={{ padding: "20px", borderRadius: "12px", backgroundColor: "#fffbeb", borderLeft: "6px solid #fbbf24", marginBottom: "15px" }}>
-                            <Typography variant="subtitle2" style={{ color: "#b45309", fontWeight: "bold", marginBottom: "10px", display: "flex", alignItems: "center", gap: "5px" }}>
-                                <EmojiEvents style={{ color: "#fbbf24" }} /> 1º Lugar (60%) 
-                            </Typography>
-                            {ganhadores1.map(g => (
-                                <div key={g.cartela_id} onClick={() => abrirSecador(g)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", borderBottom: "1px dashed #fcd34d", paddingBottom: "10px", cursor: "pointer" }}>
-                                    <Typography variant="h6" style={{ fontWeight: "900", color: "#1e293b", display: "flex", alignItems: "center", gap: "8px" }}>
-                                        {g.nome || g.usuario_nome} 
-                                        <span style={{ fontSize: '12px', backgroundColor: '#fde68a', color: '#92400e', padding: '2px 8px', borderRadius: '8px' }}>
-                                            Bilhete #{g.cartela_id}
-                                        </span>
-                                        <Visibility style={{ fontSize: "16px", color: "#94a3b8" }} />
-                                    </Typography>
-                                    <div style={{ textAlign: "right" }}>
-                                        <Typography style={{ fontWeight: "900", color: "#d97706" }}>{g.pontuacao_total} pts</Typography>
-                                        <Typography variant="caption" style={{ color: "#047857", fontWeight: "bold", backgroundColor: "#d1fae5", padding: "4px 8px", borderRadius: "4px" }}>{premio1PorPessoa.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</Typography>
-                                    </div>
-                                </div>
-                            ))}
-                        </Paper>
-                    )}
-
-                    {mostrarPodio && ganhadores2.length > 0 && (
-                        <Paper style={{ padding: "20px", borderRadius: "12px", backgroundColor: "#f1f5f9", borderLeft: "6px solid #94a3b8", marginBottom: "15px" }}>
-                            <Typography variant="subtitle2" style={{ color: "#475569", fontWeight: "bold", marginBottom: "10px", display: "flex", alignItems: "center", gap: "5px" }}>
-                                <MilitaryTech style={{ color: "#94a3b8" }} /> 2º Lugar (30%)
-                            </Typography>
-                            {ganhadores2.map(g => (
-                                <div key={g.cartela_id} onClick={() => abrirSecador(g)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", borderBottom: "1px dashed #cbd5e1", paddingBottom: "10px", cursor: "pointer" }}>
-                                    <Typography variant="h6" style={{ fontWeight: "bold", color: "#1e293b", display: "flex", alignItems: "center", gap: "8px" }}>
-                                        {g.nome || g.usuario_nome} 
-                                        <span style={{ fontSize: '12px', backgroundColor: '#e2e8f0', color: '#475569', padding: '2px 8px', borderRadius: '8px' }}>
-                                            Bilhete #{g.cartela_id}
-                                        </span>
-                                        <Visibility style={{ fontSize: "16px", color: "#94a3b8" }} />
-                                    </Typography>
-                                    <div style={{ textAlign: "right" }}>
-                                        <Typography style={{ fontWeight: "900", color: "#64748b" }}>{g.pontuacao_total} pts</Typography>
-                                        <Typography variant="caption" style={{ color: "#047857", fontWeight: "bold", backgroundColor: "#d1fae5", padding: "4px 8px", borderRadius: "4px" }}>{premio2PorPessoa.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</Typography>
-                                    </div>
-                                </div>
-                            ))}
-                        </Paper>
-                    )}
-
-                    {mostrarPodio && ganhadores3.length > 0 && (
-                        <Paper style={{ padding: "20px", borderRadius: "12px", backgroundColor: "#fef2f2", borderLeft: "6px solid #b45309", marginBottom: "15px" }}>
-                            <Typography variant="subtitle2" style={{ color: "#9a3412", fontWeight: "bold", marginBottom: "10px", display: "flex", alignItems: "center", gap: "5px" }}>
-                                <MilitaryTech style={{ color: "#b45309" }} /> 3º Lugar (10%)
-                            </Typography>
-                            {ganhadores3.map(g => (
-                                <div key={g.cartela_id} onClick={() => abrirSecador(g)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", borderBottom: "1px dashed #fed7aa", paddingBottom: "10px", cursor: "pointer" }}>
-                                    <Typography variant="h6" style={{ fontWeight: "bold", color: "#1e293b", display: "flex", alignItems: "center", gap: "8px" }}>
-                                        {g.nome || g.usuario_nome} 
-                                        <span style={{ fontSize: '12px', backgroundColor: '#ffedd5', color: '#9a3412', padding: '2px 8px', borderRadius: '8px' }}>
-                                            Bilhete #{g.cartela_id}
-                                        </span>
-                                        <Visibility style={{ fontSize: "16px", color: "#94a3b8" }} />
-                                    </Typography>
-                                    <div style={{ textAlign: "right" }}>
-                                        <Typography style={{ fontWeight: "900", color: "#9a3412" }}>{g.pontuacao_total} pts</Typography>
-                                        <Typography variant="caption" style={{ color: "#047857", fontWeight: "bold", backgroundColor: "#d1fae5", padding: "4px 8px", borderRadius: "4px" }}>{premio3PorPessoa.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</Typography>
-                                    </div>
-                                </div>
-                            ))}
-                        </Paper>
-                    )}
+                <Box mt={4} textAlign="center">
+                    <AppButton label="Voltar ao Início" onClick={() => history.push('/public')} style={{ backgroundColor: "#334155", border: "none" }} />
                 </Box>
-
-                {restoRanking.length > 0 && (
-                    <Paper elevation={2} style={{ padding: "10px", borderRadius: "16px", backgroundColor: "white" }}>
-                        <List>
-                            {restoRanking.map((participant, index) => (
-                                <React.Fragment key={index}>
-                                    <ListItem onClick={() => abrirSecador(participant)} style={{ padding: "15px", cursor: "pointer" }}>
-                                        <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
-                                            
-                                            <Typography style={{ fontWeight: "900", color: "#94a3b8", width: "40px" }}>
-                                                {mostrarPodio ? `#${index + 4}` : "-"}
-                                            </Typography>
-                                            
-                                            <ListItemText primary={
-                                                <span style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: "bold", color: "#334155" }}>
-                                                    {participant.nome || participant.usuario_nome} 
-                                                    <span style={{ fontSize: '11px', backgroundColor: '#f1f5f9', color: '#64748b', padding: '2px 8px', borderRadius: '8px' }}>
-                                                        Bilhete #{participant.cartela_id}
-                                                    </span>
-                                                    <Visibility style={{ fontSize: "16px", color: "#cbd5e1" }} />
-                                                </span>
-                                            } />
-                                            <Typography style={{ fontWeight: "900", color: "#1e293b" }}>{participant.pontuacao_total} pts</Typography>
-                                        </div>
-                                    </ListItem>
-                                    {index < restoRanking.length - 1 && <Divider />}
-                                </React.Fragment>
-                            ))}
-                        </List>
-                    </Paper>
-                )}
-
-                <Box mt={4} display="flex" gap={2} justifyContent="center" flexWrap="wrap">
-                    <AppButton style={{ width: "200px", padding: "12px", backgroundColor: "#f97316", border: "none" }} label="Meus Palpites" onClick={() => history.push("/public/palpites")} />
-                    <AppButton style={{ width: "200px", padding: "12px", backgroundColor: "#64748b", border: "none" }} label="Voltar à Home" onClick={() => history.push("/public")} />
-                </Box>
-
-                <Dialog open={modalAberto} onClose={() => setModalAberto(false)} fullWidth maxWidth="sm" PaperProps={{ style: { borderRadius: "16px", backgroundColor: "#f8fafc" } }}>
-                    <DialogTitle style={{ backgroundColor: "#1e293b", color: "white", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px" }}>
-                        <span style={{ fontWeight: "bold", color: "white" }}>🔍 Secador: Bilhete #{cartelaSelecionada?.cartela_id}</span>
-                        <AppButton label="X" onClick={() => setModalAberto(false)} style={{ background: "rgba(255,255,255,0.1)", border: "none", color: "white", padding: "5px 15px", minWidth: "auto" }} />
-                    </DialogTitle>
-                    <DialogContent style={{ padding: "20px" }}>
-                        <div style={{ textAlign: "center", marginBottom: "20px", color: "#64748b" }}>
-                            Palpites de <strong>{cartelaSelecionada?.nome || cartelaSelecionada?.usuario_nome}</strong> para este bilhete
-                        </div>
-                        {palpitesSecador.length === 0 ? (
-                            <Typography style={{ textAlign: "center", color: "#64748b", padding: "30px 0" }}>Nenhum palpite encontrado.</Typography>
-                        ) : (
-                            palpitesSecador.map((p: any, i: number) => {
-                                const jogoFinalizado = p.gols_casa !== null && p.gols_visitante !== null;
-                                return (
-                                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'white', padding: '15px', borderRadius: '12px', marginBottom: '10px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-                                        <div style={{ textAlign: 'center', width: '60px' }}>
-                                            <img src={p.logo_casa || "/media/escudos-times/default.png"} alt="casa" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
-                                            <div style={{ fontSize: '13px', fontWeight: 'bold', color: "#1e293b", marginTop: "5px" }}>{p.sigla_casa}</div>
-                                        </div>
-                                        
-                                        <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                            <div style={{ fontSize: '22px', fontWeight: '900', backgroundColor: '#f1f5f9', padding: '8px 24px', borderRadius: '8px', border: "1px solid #e2e8f0", color: "#1e293b", display: "flex", alignItems: "center", gap: "10px" }}>
-                                                {p.palpite_casa} <span style={{ color: "#94a3b8", fontSize: "16px" }}>X</span> {p.palpite_visitante}
-                                            </div>
-                                            {jogoFinalizado && (
-                                                <div style={{ fontSize: "13px", color: "#059669", fontWeight: "bold", marginTop: "8px", backgroundColor: "#a7f3d0", padding: "4px 12px", borderRadius: "10px" }}>
-                                                    +{p.pontos_ganhos} pts
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div style={{ textAlign: 'center', width: '60px' }}>
-                                            <img src={p.logo_visitante || "/media/escudos-times/default.png"} alt="visitante" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
-                                            <div style={{ fontSize: '13px', fontWeight: 'bold', color: "#1e293b", marginTop: "5px" }}>{p.sigla_visitante}</div>
-                                        </div>
-                                    </div>
-                                );
-                            })
-                        )}
-                    </DialogContent>
-                </Dialog>
             </Container>
-
-            <Box style={{ position: 'fixed', bottom: '30px', right: '30px', display: 'flex', flexDirection: 'column', gap: '15px', zIndex: 999 }}>
-                {!mostrarBannerPremio && (
-                    <Tooltip title="Ver Prêmio Especial" placement="left" arrow>
-                        <Fab onClick={() => { setMostrarBannerPremio(true); localStorage.setItem("bannerPremioOculto", "false"); }} style={{ backgroundColor: '#f59e0b', color: 'white', boxShadow: '0 4px 10px rgba(245, 158, 11, 0.4)' }}>
-                            <Checkroom style={{ fontSize: '28px' }} />
-                        </Fab>
-                    </Tooltip>
-                )}
-                
-                {!mostrarBannerWpp && (
-                    <Tooltip title="Grupo VIP" placement="left" arrow>
-                        <Fab color="success" onClick={() => window.open(linkGrupoWpp, '_blank')} style={{ backgroundColor: '#25D366', color: 'white', boxShadow: '0 4px 10px rgba(37, 211, 102, 0.4)' }}>
-                            <WhatsApp style={{ fontSize: '30px' }} />
-                        </Fab>
-                    </Tooltip>
-                )}
-            </Box>
         </div>
     );
-};
-
-export default Ranking;
+}

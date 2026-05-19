@@ -443,7 +443,7 @@ export default function Admin() {
             {/* MODAL: BILHETES E PAGAMENTOS */}
             <Dialog header={`Gerenciar Pagamentos - ${rodadaSelecionada?.nome || 'Geral'}`} visible={exibirDialogCartelas} style={{ width: '80vw' }} onHide={() => setExibirDialogCartelas(false)}>
                 <DataTable value={cartelasDaRodada} paginator rows={10} emptyMessage="Nenhum bilhete nesta rodada." sortField="id" sortOrder={-1}>
-                    <Column field="id" header="Nº" sortable body={(r) => <b>#{r.id}</b>} style={{ width: '80px' }} />
+                    <Column field="numero_bilhete" header="Nº" sortable body={(r) => <b>#{r.numero_bilhete || r.id}</b>} style={{ width: '80px' }} />
                     <Column field="usuario_nome" header="Usuário" sortable />
                     <Column header="Origem" body={origemTemplate} style={{ width: '130px' }} />
                     <Column field="data_criacao" header="Data" body={(r) => formatarData(r.data_criacao)} />
