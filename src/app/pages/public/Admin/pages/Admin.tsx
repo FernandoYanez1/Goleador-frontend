@@ -128,21 +128,45 @@ export default function Admin() {
     };
 
     const handleCadastrarJogo = () => {
-        if (!rodadaSelecionada) return;
-        fetch(`${apiUrl}/cadastrar-jogo`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                ...novoJogo, 
-                rodada_id: rodadaSelecionada.id,
-                data_hora: novoJogo.data_hora ? new Date(novoJogo.data_hora).toISOString() : null 
-            })
-        }).then(() => {
-            alert("Confronto cadastrado!");
-            setNovoJogo({ time_casa: '', time_visitante: '', sigla_casa: '', sigla_visitante: '', logo_casa: '', logo_visitante: '', data_hora: '' });
-            fetch(`${apiUrl}/jogos?rodada_id=${rodadaSelecionada.id}`).then(res => res.json()).then(setJogos);
+
+    if (!rodadaSelecionada) return;
+
+    if (
+        !novoJogo.time_casa_id ||
+        !novoJogo.time_visitante_id
+    ) {
+        return alert("Selecione os dois times.");
+    }
+
+    fetch(`${apiUrl}/cadastrar-jogo`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            rodada_id: rodadaSelecionada.id,
+            time_casa_id: novoJogo.time_casa_id,
+            time_visitante_id: novoJogo.time_visitante_id,
+            data_hora: novoJogo.data_hora
+                ? new Date(novoJogo.data_hora).toISOString()
+                : null
+        })
+    }).then(() => {
+
+        alert("Confronto cadastrado!");
+
+        setNovoJogo({
+            time_casa_id: null,
+            time_visitante_id: null,
+            data_hora: ''
         });
-    };
+
+        fetch(`${apiUrl}/jogos?rodada_id=${rodadaSelecionada.id}`)
+            .then(res => res.json())
+            .then(setJogos);
+
+    });
+};
 
     const handleDeletarJogo = (id: number) => {
         if(window.confirm("Excluir a partida? Palpites vinculados a ela também sumirão.")) {
