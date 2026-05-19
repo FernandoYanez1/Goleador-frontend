@@ -362,54 +362,74 @@ export default function Placar() {
                             <Button variant="text" color="secondary" onClick={handleVoltar}>Voltar</Button>
                         </Box>
 
-                        <Box mb={4} p={3} style={{ background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', color: 'white', borderRadius: '12px' }}>
-                            <Typography variant="h6" style={{ color: '#fbbf24', fontWeight: 'bold' }}>CONTAGEM REGRESSIVA ⌛</Typography>
-                            <Typography variant="h4" fontWeight="900" my={2}>
-                                {tempoRestante.dias}d : {tempoRestante.horas}h : {tempoRestante.minutos}m : {tempoRestante.segundos}s
-                            </Typography>
-                            <Typography variant="caption" color="#94a3b8">O mercado fecha estritamente no dia 11/06 às 15:00h.</Typography>
-                        </Box>
+                        <Box 
+  mb={4} 
+  p={3} 
+  style={{ 
+    background: '#0f172a', // Azul muito escuro (quase preto)
+    color: '#ffffff', 
+    borderRadius: '16px',
+    border: '1px solid #334155', // Borda sutil
+    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)'
+  }}
+>
+  <Typography variant="caption" style={{ color: '#fbbf24', letterSpacing: '1px', fontWeight: 'bold' }}>
+    CONTAGEM REGRESSIVA PARA O INÍCIO
+  </Typography>
+  
+  <Box display="flex" justifyContent="center" gap={2} mt={2}>
+    {[
+      { label: 'DIAS', value: tempoRestante.dias },
+      { label: 'HRS', value: tempoRestante.horas },
+      { label: 'MIN', value: tempoRestante.minutos },
+      { label: 'SEG', value: tempoRestante.segundos }
+    ].map((item, index) => (
+      <Box key={index} textAlign="center">
+        <Typography variant="h4" fontWeight="900" color="#fbbf24">{item.value}</Typography>
+        <Typography variant="caption" color="#94a3b8" fontWeight="bold">{item.label}</Typography>
+      </Box>
+    ))}
+  </Box>
+</Box>
 
                         <Box my={4} maxWidth="400px" margin="0 auto">
-                            <TextField
-                                select
-                                label="Selecione o País Campeão"
-                                value={selecaoEscolhida}
-                                onChange={(e) => setSelecaoEscolhida(e.target.value)}
-                                fullWidth
-                                variant="outlined"
-                                SelectProps={{
-                                    MenuProps: {
-                                        style: { maxHeight: 400 } // Impede que o dropdown fique maior que a tela
-                                    }
-                                }}
-                            >
-                                {/* LISTA DE FAVORITOS */}
-                                <ListSubheader style={{ backgroundColor: '#fffbeb', color: '#b45309', fontWeight: '900', lineHeight: '36px' }}>
-                                    ⭐ FAVORITOS
-                                </ListSubheader>
-                                {favoritos.map((team: any) => (
-                                    <MenuItem key={team.id} value={team.nome}>
-                                        <Box display="flex" alignItems="center" gap={2}>
-                                            <img src={team.bandeira || team.logo_url} alt={team.sigla} style={{ width: '30px', height: '20px', objectFit: 'cover', borderRadius: '2px', border: '1px solid #e2e8f0' }} />
-                                            <Typography fontWeight="bold">{team.nome} ({team.sigla})</Typography>
-                                        </Box>
-                                    </MenuItem>
-                                ))}
-                                
-                                {/* LISTA DO RESTANTE DAS SELEÇÕES */}
-                                <ListSubheader style={{ backgroundColor: '#f1f5f9', color: '#475569', fontWeight: '900', lineHeight: '36px' }}>
-                                    🌍 OUTRAS SELEÇÕES
-                                </ListSubheader>
-                                {outrasSelecoes.map((team: any) => (
-                                    <MenuItem key={team.id} value={team.nome}>
-                                        <Box display="flex" alignItems="center" gap={2}>
-                                            <img src={team.bandeira || team.logo_url} alt={team.sigla} style={{ width: '30px', height: '20px', objectFit: 'cover', borderRadius: '2px', border: '1px solid #e2e8f0' }} />
-                                            <Typography fontWeight="bold">{team.nome} ({team.sigla})</Typography>
-                                        </Box>
-                                    </MenuItem>
-                                ))}
-                            </TextField>
+                            {/* NOVO SELETOR VISUAL DE SELEÇÕES */}
+<Typography variant="h6" gutterBottom fontWeight="bold" mt={3}>
+  Escolha sua Seleção:
+</Typography>
+
+<Grid container spacing={2} justifyContent="center" mt={2}>
+  {selecoesCopa.map((team: any) => {
+    const isSelected = selecaoEscolhida === team.nome;
+    return (
+      <Grid item xs={6} sm={4} md={3} key={team.id}>
+        <Box 
+          onClick={() => setSelecaoEscolhida(team.nome)}
+          style={{
+            padding: '10px',
+            border: isSelected ? '2px solid #fbbf24' : '1px solid #e2e8f0',
+            borderRadius: '12px',
+            cursor: 'pointer',
+            backgroundColor: isSelected ? '#fffbeb' : '#fff',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            transition: '0.3s'
+          }}
+        >
+          <img 
+            src={team.bandeira || team.logo_url} 
+            alt={team.sigla} 
+            style={{ width: '40px', height: '28px', objectFit: 'cover', borderRadius: '4px', marginBottom: '8px' }} 
+          />
+          <Typography variant="body2" fontWeight={isSelected ? "bold" : "normal"}>
+            {team.nome}
+          </Typography>
+        </Box>
+      </Grid>
+    );
+  })}
+</Grid>
                         </Box>
 
                         <Box mt={4}>
