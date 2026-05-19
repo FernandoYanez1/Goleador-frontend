@@ -10,17 +10,15 @@ export default function Placar() {
 
     const [usuario, setUsuario] = useState<any>(null);
     const [rodadas, setRodadas] = useState<any[]>([]);
-    const [teams, setTeams] = useState<any[]>([]);
+    const [teams, setTeams] = useState<any[]>([]); 
     const [loading, setLoading] = useState(true);
 
-    // Estados para o fluxo de palpites
     const [rodadaAtiva, setRodadaAtiva] = useState<any>(null);
     const [jogos, setJogos] = useState<any[]>([]);
     const [palpitesPlacares, setPalpitesPlacares] = useState<any>({});
     const [selecaoEscolhida, setSelecaoEscolhida] = useState<string>('');
     const [enviandoAposta, setEnviandoAposta] = useState(false);
 
-    // Estado do Cronómetro da Copa (Alvo: 11/06/2026 às 15:00)
     const [tempoRestante, setTempoRestante] = useState({ dias: 0, horas: 0, minutos: 0, segundos: 0, expirado: false });
 
     useEffect(() => {
@@ -31,36 +29,38 @@ export default function Placar() {
         }
         setUsuario(JSON.parse(salvo));
 
-        // Carrega as rodadas abertas e a lista de seleções do banco
         Promise.all([
             fetch(`${apiUrl}/rodadas`).then(res => res.json()),
             fetch(`${apiUrl}/teams`).then(res => res.json())
         ])
         .then(([rodadasData, teamsData]) => {
-            // Filtra apenas rodadas que estejam com status 'aberta'
-            const abertas = rodadasData
-    .filter(
-        (r: any) =>
-            r.status === 'aberta' ||
-            r.status === 'pausada'
-    )
-    .sort((a: any, b: any) => {
-
-        if (a.fixado_ranking && !b.fixado_ranking) return -1;
-        if (!a.fixado_ranking && b.fixado_ranking) return 1;
-
-        return b.id - a.id;
-    });
+            const abertas = rodadasData.filter((r: any) => r.status === 'aberta');
             setRodadas(abertas);
             setTeams(teamsData);
-            setLoading(false);
+            
+            // LÓGICA DE SALTO INTELIGENTE: Se só tem 1 aberta, já seleciona ela direto.
+            if (abertas.length === 1) {
+                setRodadaAtiva(abertas[0]);
+                if (abertas[0].tipo === 'placares') {
+                    fetch(`${apiUrl}/jogos?rodada_id=${abertas[0].id}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            setJogos(data);
+                            setLoading(false);
+                        });
+                } else {
+                    setLoading(false);
+                }
+            } else {
+                setLoading(false);
+            }
         })
         .catch(err => {
             console.error(err);
             setLoading(false);
         });
 
-        // Configuração do Countdown
+        // Configuração do Countdown (Copa do Mundo)
         const dataAlvo = new Date('2026-06-11T15:00:00').getTime();
         const intervalo = setInterval(() => {
             const agora = new Date().getTime();
@@ -82,11 +82,6 @@ export default function Placar() {
     }, [history, apiUrl]);
 
     const selecionarModoJogo = (rodada: any) => {
-        if (rodada.status === 'pausada') {
-    return alert(
-        '⚠️ As apostas desta rodada estão temporariamente pausadas.'
-    );
-}
         setRodadaAtiva(rodada);
         if (rodada.tipo === 'placares') {
             setLoading(true);
@@ -96,21 +91,25 @@ export default function Placar() {
                     setJogos(data);
                     setLoading(false);
                 });
+        } else {
+            setLoading(false);
         }
     };
 
     const handlePlacarChange = (matchId: number, campo: 'casa' | 'visitante', valor: string) => {
+        // Remove tudo que não for número (bloqueia letras e sinais)
+        const valorLimpo = valor.replace(/\D/g, ''); 
+        
         setPalpitesPlacares({
             ...palpitesPlacares,
             [matchId]: {
                 ...palpitesPlacares[matchId],
-                [campo]: valor
+                [campo]: valorLimpo
             }
         });
     };
 
     const submeterApostaPlacares = async () => {
-        // Validação básica para garantir que todos os jogos foram preenchidos
         for (let jogo of jogos) {
             const p = palpitesPlacares[jogo.id];
             if (!p || p.casa === undefined || p.visitante === undefined || p.casa === '' || p.visitante === '') {
@@ -182,6 +181,15 @@ export default function Placar() {
         }
     };
 
+    // Botão Voltar: Só exibe se houver MAIS de uma rodada aberta, permitindo voltar ao Lobby
+    const handleVoltar = () => {
+        if (rodadas.length > 1) {
+            setRodadaAtiva(null);
+        } else {
+            history.push('/public');
+        }
+    };
+
     if (loading) {
         return (
             <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh" bgcolor="#f4f6f9">
@@ -194,86 +202,55 @@ export default function Placar() {
         <div style={{ backgroundColor: "#f4f6f9", minHeight: "100vh", padding: "40px 20px" }}>
             <Container maxWidth="md">
                 
-                {/* ETAPA 1: LOBBY DE SELECÇÃO DO BILHETE */}
+                {/* ETAPA 1: LOBBY DE SELEÇÃO (Ocultado automaticamente se só houver 1 rodada) */}
                 {!rodadaAtiva && (
                     <>
                         <Box textAlign="center" mb={5}>
                             <Typography variant="h4" fontWeight="900" color="#1e293b">Escolha o seu Desafio ⚽</Typography>
-                            <Typography variant="body1" color="#64748b" mt={1}>Selecione em qual modalidade deseja registar os seus palpites nesta rodada</Typography>
+                            <Typography variant="body1" color="#64748b" mt={1}>Temos múltiplas rodadas abertas. Selecione qual deseja participar.</Typography>
                         </Box>
 
-                        <Grid container spacing={3}>
+                        <Grid container spacing={3} justifyContent="center">
                             {rodadas.map((rodada) => {
                                 const eCampeao = rodada.tipo === 'campeao';
                                 const eCopa = rodada.nome.toLowerCase().includes('copa');
                                 
                                 return (
-                                    <Grid item xs={12} sm={4} key={rodada.id}>
-                                        <Card style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'between', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: eCampeao ? '2px solid #fbbf24' : 'none' }}>
+                                    <Grid item xs={12} sm={5} md={4} key={rodada.id}>
+                                        <Card style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'between', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: eCampeao ? '2px solid #fbbf24' : 'none', backgroundColor: '#1e293b', color: 'white' }}>
                                             <CardContent style={{ textAlign: 'center', flexGrow: 1, padding: '25px' }}>
                                                 <Box mb={2} display="flex" justifyContent="center">
                                                     {eCampeao ? <Stars style={{ fontSize: 50, color: '#fbbf24' }} /> : eCopa ? <Public style={{ fontSize: 50, color: '#3b82f6' }} /> : <SportsSoccer style={{ fontSize: 50, color: '#10b981' }} />}
                                                 </Box>
-                                                <Box>
-
-    <Typography
-        variant="h5"
-        fontWeight="bold"
-        color="#1e293b"
-    >
-        {rodada.nome}
-    </Typography>
-
-    <Typography
-        variant="caption"
-        style={{
-            backgroundColor:
-                rodada.status === 'pausada'
-                    ? '#f59e0b'
-                    : '#10b981',
-            color: 'white',
-            padding: '4px 10px',
-            borderRadius: '999px',
-            fontWeight: 'bold',
-            marginTop: '8px',
-            display: 'inline-block'
-        }}
-    >
-        {rodada.status === 'pausada'
-            ? '⏸️ PAUSADA'
-            : '🟢 ABERTA'}
-    </Typography>
-
-</Box>
+                                                <Typography variant="h5" fontWeight="bold">{rodada.nome}</Typography>
                                                 
                                                 <Typography variant="h4" fontWeight="900" color="#10b981" my={2}>
                                                     {Number(rodada.preco).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                                                 </Typography>
 
                                                 {eCampeao && (
-                                                    <Box style={{ backgroundColor: '#fffbeb', border: '1px solid #fef3c7', padding: '10px', borderRadius: '8px', marginTop: '15px' }}>
-                                                        <Typography variant="caption" color="#b45309" fontWeight="bold" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                                                    <Box style={{ backgroundColor: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.3)', padding: '10px', borderRadius: '8px', marginTop: '15px' }}>
+                                                        <Typography variant="caption" style={{ color: '#fbbf24', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontWeight: 'bold' }}>
                                                             <Timer fontSize="small" /> 
-                                                            {tempoRestante.expirado ? "ENCERRADO" : `Restam: ${tempoRestante.dias}d ${tempoRestante.horas}h ${tempoRestante.minutos}m`}
+                                                            {tempoRestante.expirado ? "ENCERRADO" : `Restam: ${tempoRestante.dias}d ${tempoRestante.horas}h`}
                                                         </Typography>
                                                     </Box>
                                                 )}
                                             </CardContent>
                                             <CardActions style={{ padding: '20px', paddingTop: 0 }}>
                                                 <AppButton 
-                                                    label={
-    rodada.status === 'pausada'
-        ? 'Apostas Pausadas'
-        : eCampeao && tempoRestante.expirado
-            ? 'Inscrições Fechadas'
-            : 'Escolher Bilhete'
-}
-                                                    disabled={
-    rodada.status === 'pausada' ||
-    (eCampeao && tempoRestante.expirado)
-}
+                                                    label={eCampeao && tempoRestante.expirado ? "Inscrições Fechadas" : "Escolher Bilhete"} 
+                                                    disabled={eCampeao && tempoRestante.expirado}
                                                     onClick={() => selecionarModoJogo(rodada)} 
-                                                    style={{ width: '100%', border: 'none', backgroundColor: eCampeao ? '#fbbf24' : '#1e293b' }} 
+                                                    style={{ 
+                                                        width: '100%', 
+                                                        border: 'none', 
+                                                        backgroundColor: eCampeao ? '#fbbf24' : '#3b82f6', 
+                                                        color: eCampeao ? '#1e293b' : '#ffffff', 
+                                                        fontWeight: 'bold', 
+                                                        fontSize: '15px', 
+                                                        padding: '12px' 
+                                                    }} 
                                                 />
                                             </CardActions>
                                         </Card>
@@ -284,63 +261,78 @@ export default function Placar() {
                     </>
                 )}
 
-                {/* ETAPA 2 (MODO JOGOS): FORMULÁRIO DE PLACARES */}
+                {/* ETAPA 2: FORMULÁRIO DE PLACARES */}
                 {rodadaAtiva && rodadaAtiva.tipo === 'placares' && (
                     <Paper style={{ padding: '30px', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
                         <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-                            <Typography variant="h5" fontWeight="bold" color="#1e293b">Preencher: {rodadaAtiva.nome}</Typography>
-                            <Button variant="text" color="secondary" onClick={() => setRodadaAtiva(null)}>Voltar</Button>
+                            <Typography variant="h5" fontWeight="bold" color="#1e293b">{rodadaAtiva.nome}</Typography>
+                            <Button variant="text" color="secondary" onClick={handleVoltar}>Voltar</Button>
                         </Box>
 
                         {jogos.map((jogo) => (
                             <Box key={jogo.id} mb={3} p={2} style={{ border: '1px solid #e2e8f0', borderRadius: '12px', backgroundColor: '#fff' }}>
-                                <Grid container alignItems="center" justifyContent="center" spacing={2}>
-                                    <Grid item xs={4} textAlign="right" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px' }}>
-                                        <Typography fontWeight="bold">{jogo.time_casa}</Typography>
-                                        <img src={jogo.logo_casa || "/media/escudos-times/default.png"} alt="casa" style={{ width: 35, height: 35, objectFit: 'contain' }} />
+                                <Grid container alignItems="center" justifyContent="center" spacing={1}>
+                                    
+                                    {/* Time Casa (Escudo e Sigla centralizados, nome abaixo) */}
+                                    <Grid item xs={4} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                        <Box display="flex" alignItems="center" gap={1}>
+                                            <img src={jogo.logo_casa || "/media/escudos-times/default.png"} alt="casa" style={{ width: 40, height: 40, objectFit: 'contain' }} />
+                                            <Typography fontWeight="900" fontSize="18px" color="#1e293b">{jogo.sigla_casa}</Typography>
+                                        </Box>
+                                        <Typography variant="caption" color="#64748b" fontWeight="bold" style={{ marginTop: '4px', textAlign: 'center', lineHeight: 1 }}>{jogo.time_casa}</Typography>
                                     </Grid>
                                     
-                                    <Grid item xs={4} textAlign="center" display="flex" justifyContent="center" alignItems="center" gap={1}>
+                                    {/* Inputs de Placar (Limpos e sem setas) */}
+                                    <Grid item xs={4} display="flex" justifyContent="center" alignItems="center" gap={1}>
                                         <input 
-                                            type="number" min="0" placeholder="0"
+                                            type="text"
+                                            inputMode="numeric"
+                                            pattern="[0-9]*"
                                             value={palpitesPlacares[jogo.id]?.casa ?? ''}
                                             onChange={(e) => handlePlacarChange(jogo.id, 'casa', e.target.value)}
-                                            style={{ width: '45px', height: '40px', textAlign: 'center', fontSize: '18px', fontWeight: 'bold', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                                            style={{ width: '45px', height: '45px', textAlign: 'center', fontSize: '20px', fontWeight: '900', borderRadius: '8px', border: '2px solid #cbd5e1', backgroundColor: '#f8fafc', color: '#1e293b', outline: 'none' }}
                                         />
-                                        <Typography color="#94a3b8" fontWeight="bold">X</Typography>
+                                        <Typography color="#94a3b8" fontWeight="900" fontSize="16px">X</Typography>
                                         <input 
-                                            type="number" min="0" placeholder="0"
+                                            type="text"
+                                            inputMode="numeric"
+                                            pattern="[0-9]*"
                                             value={palpitesPlacares[jogo.id]?.visitante ?? ''}
                                             onChange={(e) => handlePlacarChange(jogo.id, 'visitante', e.target.value)}
-                                            style={{ width: '45px', height: '40px', textAlign: 'center', fontSize: '18px', fontWeight: 'bold', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                                            style={{ width: '45px', height: '45px', textAlign: 'center', fontSize: '20px', fontWeight: '900', borderRadius: '8px', border: '2px solid #cbd5e1', backgroundColor: '#f8fafc', color: '#1e293b', outline: 'none' }}
                                         />
                                     </Grid>
 
-                                    <Grid item xs={4} textAlign="left" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '10px' }}>
-                                        <img src={jogo.logo_visitante || "/media/escudos-times/default.png"} alt="visitante" style={{ width: 35, height: 35, objectFit: 'contain' }} />
-                                        <Typography fontWeight="bold">{jogo.time_visitante}</Typography>
+                                    {/* Time Visitante (Sigla e Escudo centralizados, nome abaixo) */}
+                                    <Grid item xs={4} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                        <Box display="flex" alignItems="center" gap={1}>
+                                            <Typography fontWeight="900" fontSize="18px" color="#1e293b">{jogo.sigla_visitante}</Typography>
+                                            <img src={jogo.logo_visitante || "/media/escudos-times/default.png"} alt="visitante" style={{ width: 40, height: 40, objectFit: 'contain' }} />
+                                        </Box>
+                                        <Typography variant="caption" color="#64748b" fontWeight="bold" style={{ marginTop: '4px', textAlign: 'center', lineHeight: 1 }}>{jogo.time_visitante}</Typography>
                                     </Grid>
+
                                 </Grid>
                             </Box>
                         ))}
 
                         <Box mt={4}>
                             <AppButton 
-                                label={enviandoAposta ? "Gerando Pix..." : "Finalizar e Gerar Pagamento"} 
+                                label={enviandoAposta ? "Gerando Pix..." : `Finalizar e Pagar (R$ ${Number(rodadaAtiva.preco).toFixed(2).replace('.',',')})`} 
                                 disabled={enviandoAposta}
                                 onClick={submeterApostaPlacares} 
-                                style={{ width: '100%', padding: '12px', fontSize: '16px', border: 'none', backgroundColor: '#10b981' }} 
+                                style={{ width: '100%', padding: '14px', fontSize: '18px', border: 'none', backgroundColor: '#10b981', color: 'white' }} 
                             />
                         </Box>
                     </Paper>
                 )}
 
-                {/* ETAPA 2 (MODO CAMPEÃO): SELEÇÃO DA SELECÇÃO DO TIRO LONGO */}
+                {/* ETAPA 2: APOSTA DIRETA (CAMPEÃO) */}
                 {rodadaAtiva && rodadaAtiva.tipo === 'campeao' && (
                     <Paper style={{ padding: '40px 30px', borderRadius: '16px', textAlign: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
                         <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-                            <Typography variant="h5" fontWeight="bold" color="#1e293b">Aposta Directa: Campeão da Copa</Typography>
-                            <Button variant="text" color="secondary" onClick={() => setRodadaAtiva(null)}>Voltar</Button>
+                            <Typography variant="h5" fontWeight="bold" color="#1e293b">Aposta: Campeão da Copa</Typography>
+                            <Button variant="text" color="secondary" onClick={handleVoltar}>Voltar</Button>
                         </Box>
 
                         <Box mb={4} p={3} style={{ background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)', color: 'white', borderRadius: '12px' }}>
@@ -348,7 +340,7 @@ export default function Placar() {
                             <Typography variant="h4" fontWeight="900" my={2}>
                                 {tempoRestante.dias}d : {tempoRestante.horas}h : {tempoRestante.minutos}m : {tempoRestante.segundos}s
                             </Typography>
-                            <Typography variant="caption" color="#94a3b8">O mercado fecha estritamente no dia 11/06 às 15:00h antes do jogo de abertura.</Typography>
+                            <Typography variant="caption" color="#94a3b8">O mercado fecha estritamente no dia 11/06 às 15:00h.</Typography>
                         </Box>
 
                         <Box my={4} maxWidth="400px" margin="0 auto">
@@ -358,11 +350,12 @@ export default function Placar() {
                                 value={selecaoEscolhida}
                                 onChange={(e) => setSelecaoEscolhida(e.target.value)}
                                 fullWidth
+                                variant="outlined"
                             >
                                 {teams.map((team) => (
                                     <MenuItem key={team.id} value={team.nome}>
                                         <Box display="flex" alignItems="center" gap={2}>
-                                            <img src={team.bandeira} alt={team.sigla} style={{ width: '25px', height: '18px', objectFit: 'cover', borderRadius: '2px' }} />
+                                            <img src={team.bandeira || team.logo_url} alt={team.sigla} style={{ width: '25px', height: '18px', objectFit: 'cover', borderRadius: '2px' }} />
                                             <Typography fontWeight="bold">{team.nome} ({team.sigla})</Typography>
                                         </Box>
                                     </MenuItem>
@@ -372,15 +365,14 @@ export default function Placar() {
 
                         <Box mt={4}>
                             <AppButton 
-                                label={enviandoAposta ? "Gerando Pix..." : "Confirmar Seleção e Pagar"} 
+                                label={enviandoAposta ? "Gerando Pix..." : `Confirmar Seleção (R$ ${Number(rodadaAtiva.preco).toFixed(2).replace('.',',')})`} 
                                 disabled={enviandoAposta || tempoRestante.expirado}
                                 onClick={submeterApostaCampeao} 
-                                style={{ width: '100%', padding: '12px', fontSize: '16px', border: 'none', backgroundColor: '#fbbf24', color: '#1e293b' }} 
+                                style={{ width: '100%', padding: '14px', fontSize: '18px', border: 'none', backgroundColor: '#fbbf24', color: '#1e293b' }} 
                             />
                         </Box>
                     </Paper>
                 )}
-
             </Container>
         </div>
     );
