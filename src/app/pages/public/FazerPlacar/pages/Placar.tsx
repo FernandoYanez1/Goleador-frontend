@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useHistory } from 'react-router-dom';
-import { Container, Typography, Paper, Box, Grid, Card, CardContent, CardActions, CircularProgress, MenuItem, TextField, Button } from '@mui/material';
+import { Container, Typography, Paper, Box, Grid, Card, CardContent, CardActions, CircularProgress, MenuItem, TextField, Button, ListSubheader } from '@mui/material';
 import { SportsSoccer, Public, Stars, Timer } from '@mui/icons-material';
 import AppButton from '../../../../../vendors/components/Button';
 
@@ -21,6 +21,23 @@ export default function Placar() {
 
     const [tempoRestante, setTempoRestante] = useState({ dias: 0, horas: 0, minutos: 0, segundos: 0, expirado: false });
 
+    // CSS Injetado para ocultar as "setinhas" de input number
+    useEffect(() => {
+        const style = document.createElement("style");
+        style.innerHTML = `
+            input[type=number]::-webkit-inner-spin-button, 
+            input[type=number]::-webkit-outer-spin-button { 
+                -webkit-appearance: none; 
+                margin: 0; 
+            }
+            input[type=number] {
+                -moz-appearance: textfield;
+            }
+        `;
+        document.head.appendChild(style);
+        return () => { document.head.removeChild(style); };
+    }, []);
+
     useEffect(() => {
         const salvo = localStorage.getItem('usuarioLogado');
         if (!salvo) {
@@ -38,7 +55,7 @@ export default function Placar() {
             setRodadas(abertas);
             setTeams(teamsData);
             
-            // LÓGICA DE SALTO INTELIGENTE: Se só tem 1 aberta, já seleciona ela direto.
+            // LÓGICA DE SALTO INTELIGENTE
             if (abertas.length === 1) {
                 setRodadaAtiva(abertas[0]);
                 if (abertas[0].tipo === 'placares') {
@@ -97,7 +114,6 @@ export default function Placar() {
     };
 
     const handlePlacarChange = (matchId: number, campo: 'casa' | 'visitante', valor: string) => {
-        // Remove tudo que não for número (bloqueia letras e sinais)
         const valorLimpo = valor.replace(/\D/g, ''); 
         
         setPalpitesPlacares({
@@ -181,7 +197,6 @@ export default function Placar() {
         }
     };
 
-    // Botão Voltar: Só exibe se houver MAIS de uma rodada aberta, permitindo voltar ao Lobby
     const handleVoltar = () => {
         if (rodadas.length > 1) {
             setRodadaAtiva(null);
@@ -189,6 +204,21 @@ export default function Placar() {
             history.push('/public');
         }
     };
+
+    // ==========================================
+    // LÓGICA DE FILTRO E ORDENAÇÃO (COPA DO MUNDO)
+    // ==========================================
+    const selecoesCopa = teams.filter(t => t.id >= 19 && t.id <= 66);
+    const idsFavoritos = [27, 51, 55, 47, 63, 59, 35]; // Brasil, França, Argentina, Espanha, Inglaterra, Portugal, Alemanha
+    
+    // Separa os favoritos na ordem exata solicitada
+    const favoritos = idsFavoritos
+        .map(id => selecoesCopa.find(t => t.id === id))
+        .filter(Boolean); // Remove nulos caso algum ID não exista
+
+    // Pega o restante das seleções
+    const outrasSelecoes = selecoesCopa.filter(t => !idsFavoritos.includes(t.id));
+
 
     if (loading) {
         return (
@@ -202,7 +232,7 @@ export default function Placar() {
         <div style={{ backgroundColor: "#f4f6f9", minHeight: "100vh", padding: "40px 20px" }}>
             <Container maxWidth="md">
                 
-                {/* ETAPA 1: LOBBY DE SELEÇÃO (Ocultado automaticamente se só houver 1 rodada) */}
+                {/* ETAPA 1: LOBBY DE SELEÇÃO */}
                 {!rodadaAtiva && (
                     <>
                         <Box textAlign="center" mb={5}>
@@ -265,7 +295,7 @@ export default function Placar() {
                 {rodadaAtiva && rodadaAtiva.tipo === 'placares' && (
                     <Paper style={{ padding: '30px', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
                         <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-                            <Typography variant="h5" fontWeight="bold" color="#1e293b">{rodadaAtiva.nome}</Typography>
+                            <Typography variant="h5" fontWeight="bold" color="#1e293b">Rodada: {rodadaAtiva.nome}</Typography>
                             <Button variant="text" color="secondary" onClick={handleVoltar}>Voltar</Button>
                         </Box>
 
@@ -273,7 +303,6 @@ export default function Placar() {
                             <Box key={jogo.id} mb={3} p={2} style={{ border: '1px solid #e2e8f0', borderRadius: '12px', backgroundColor: '#fff' }}>
                                 <Grid container alignItems="center" justifyContent="center" spacing={1}>
                                     
-                                    {/* Time Casa (Escudo e Sigla centralizados, nome abaixo) */}
                                     <Grid item xs={4} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                                         <Box display="flex" alignItems="center" gap={1}>
                                             <img src={jogo.logo_casa || "/media/escudos-times/default.png"} alt="casa" style={{ width: 40, height: 40, objectFit: 'contain' }} />
@@ -282,7 +311,6 @@ export default function Placar() {
                                         <Typography variant="caption" color="#64748b" fontWeight="bold" style={{ marginTop: '4px', textAlign: 'center', lineHeight: 1 }}>{jogo.time_casa}</Typography>
                                     </Grid>
                                     
-                                    {/* Inputs de Placar (Limpos e sem setas) */}
                                     <Grid item xs={4} display="flex" justifyContent="center" alignItems="center" gap={1}>
                                         <input 
                                             type="text"
@@ -303,7 +331,6 @@ export default function Placar() {
                                         />
                                     </Grid>
 
-                                    {/* Time Visitante (Sigla e Escudo centralizados, nome abaixo) */}
                                     <Grid item xs={4} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                                         <Box display="flex" alignItems="center" gap={1}>
                                             <Typography fontWeight="900" fontSize="18px" color="#1e293b">{jogo.sigla_visitante}</Typography>
@@ -351,11 +378,33 @@ export default function Placar() {
                                 onChange={(e) => setSelecaoEscolhida(e.target.value)}
                                 fullWidth
                                 variant="outlined"
+                                SelectProps={{
+                                    MenuProps: {
+                                        style: { maxHeight: 400 } // Impede que o dropdown fique maior que a tela
+                                    }
+                                }}
                             >
-                                {teams.map((team) => (
+                                {/* LISTA DE FAVORITOS */}
+                                <ListSubheader style={{ backgroundColor: '#fffbeb', color: '#b45309', fontWeight: '900', lineHeight: '36px' }}>
+                                    ⭐ FAVORITOS
+                                </ListSubheader>
+                                {favoritos.map((team: any) => (
                                     <MenuItem key={team.id} value={team.nome}>
                                         <Box display="flex" alignItems="center" gap={2}>
-                                            <img src={team.bandeira || team.logo_url} alt={team.sigla} style={{ width: '25px', height: '18px', objectFit: 'cover', borderRadius: '2px' }} />
+                                            <img src={team.bandeira || team.logo_url} alt={team.sigla} style={{ width: '30px', height: '20px', objectFit: 'cover', borderRadius: '2px', border: '1px solid #e2e8f0' }} />
+                                            <Typography fontWeight="bold">{team.nome} ({team.sigla})</Typography>
+                                        </Box>
+                                    </MenuItem>
+                                ))}
+                                
+                                {/* LISTA DO RESTANTE DAS SELEÇÕES */}
+                                <ListSubheader style={{ backgroundColor: '#f1f5f9', color: '#475569', fontWeight: '900', lineHeight: '36px' }}>
+                                    🌍 OUTRAS SELEÇÕES
+                                </ListSubheader>
+                                {outrasSelecoes.map((team: any) => (
+                                    <MenuItem key={team.id} value={team.nome}>
+                                        <Box display="flex" alignItems="center" gap={2}>
+                                            <img src={team.bandeira || team.logo_url} alt={team.sigla} style={{ width: '30px', height: '20px', objectFit: 'cover', borderRadius: '2px', border: '1px solid #e2e8f0' }} />
                                             <Typography fontWeight="bold">{team.nome} ({team.sigla})</Typography>
                                         </Box>
                                     </MenuItem>
@@ -368,7 +417,7 @@ export default function Placar() {
                                 label={enviandoAposta ? "Gerando Pix..." : `Confirmar Seleção (R$ ${Number(rodadaAtiva.preco).toFixed(2).replace('.',',')})`} 
                                 disabled={enviandoAposta || tempoRestante.expirado}
                                 onClick={submeterApostaCampeao} 
-                                style={{ width: '100%', padding: '14px', fontSize: '18px', border: 'none', backgroundColor: '#fbbf24', color: '#1e293b' }} 
+                                style={{ width: '100%', padding: '14px', fontSize: '18px', border: 'none', backgroundColor: '#fbbf24', color: '#92400e' }} 
                             />
                         </Box>
                     </Paper>
