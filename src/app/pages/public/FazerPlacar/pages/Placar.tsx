@@ -356,92 +356,62 @@ export default function Placar() {
 
                 {/* ETAPA 2: APOSTA DIRETA (CAMPEÃO) */}
                 {rodadaAtiva && rodadaAtiva.tipo === 'campeao' && (
-                    <Paper style={{ padding: '40px 30px', borderRadius: '16px', textAlign: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
-                        <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-                            <Typography variant="h5" fontWeight="bold" color="#1e293b">Aposta: Campeão da Copa</Typography>
-                            <Button variant="text" color="secondary" onClick={handleVoltar}>Voltar</Button>
-                        </Box>
-
-                        <Box 
-  mb={4} 
-  p={3} 
-  style={{ 
-    background: '#0f172a', // Azul muito escuro (quase preto)
-    color: '#ffffff', 
-    borderRadius: '16px',
-    border: '1px solid #334155', // Borda sutil
-    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)'
-  }}
->
-  <Typography variant="caption" style={{ color: '#fbbf24', letterSpacing: '1px', fontWeight: 'bold' }}>
-    CONTAGEM REGRESSIVA PARA O INÍCIO
-  </Typography>
-  
-  <Box display="flex" justifyContent="center" gap={2} mt={2}>
-    {[
-      { label: 'DIAS', value: tempoRestante.dias },
-      { label: 'HRS', value: tempoRestante.horas },
-      { label: 'MIN', value: tempoRestante.minutos },
-      { label: 'SEG', value: tempoRestante.segundos }
-    ].map((item, index) => (
-      <Box key={index} textAlign="center">
-        <Typography variant="h4" fontWeight="900" color="#fbbf24">{item.value}</Typography>
-        <Typography variant="caption" color="#94a3b8" fontWeight="bold">{item.label}</Typography>
-      </Box>
-    ))}
-  </Box>
-</Box>
-
-                        <Box my={4} maxWidth="400px" margin="0 auto">
-                            {/* NOVO SELETOR VISUAL DE SELEÇÕES */}
-<Typography variant="h6" gutterBottom fontWeight="bold" mt={3}>
-  Escolha sua Seleção:
-</Typography>
-
-<Grid container spacing={2} justifyContent="center" mt={2}>
-  {selecoesCopa.map((team: any) => {
-    const isSelected = selecaoEscolhida === team.nome;
-    return (
-      <Grid item xs={6} sm={4} md={3} key={team.id}>
-        <Box 
-          onClick={() => setSelecaoEscolhida(team.nome)}
-          style={{
-            padding: '10px',
-            border: isSelected ? '2px solid #fbbf24' : '1px solid #e2e8f0',
-            borderRadius: '12px',
-            cursor: 'pointer',
-            backgroundColor: isSelected ? '#fffbeb' : '#fff',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            transition: '0.3s'
-          }}
-        >
-          <img 
-            src={team.bandeira || team.logo_url} 
-            alt={team.sigla} 
-            style={{ width: '40px', height: '28px', objectFit: 'cover', borderRadius: '4px', marginBottom: '8px' }} 
-          />
-          <Typography variant="body2" fontWeight={isSelected ? "bold" : "normal"}>
-            {team.nome}
-          </Typography>
+    <Paper style={{ padding: '40px 30px', borderRadius: '16px', textAlign: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
+            <Typography variant="h5" fontWeight="bold" color="#1e293b">Aposta: Campeão da Copa</Typography>
+            <Button variant="text" color="secondary" onClick={handleVoltar}>Voltar</Button>
         </Box>
-      </Grid>
-    );
-  })}
-</Grid>
-                        </Box>
 
-                        <Box mt={4}>
-                            <AppButton 
-                                label={enviandoAposta ? "Gerando Pix..." : `Confirmar Seleção (R$ ${Number(rodadaAtiva.preco).toFixed(2).replace('.',',')})`} 
-                                disabled={enviandoAposta || tempoRestante.expirado}
-                                onClick={submeterApostaCampeao} 
-                                style={{ width: '100%', padding: '14px', fontSize: '18px', border: 'none', backgroundColor: '#fbbf24', color: '#92400e' }} 
-                            />
-                        </Box>
-                    </Paper>
-                )}
+        {/* Countdown Escuro e Elegante */}
+        <Box mb={4} p={3} style={{ backgroundColor: '#0f172a', color: '#ffffff', borderRadius: '12px', border: '1px solid #334155' }}>
+            <Typography variant="caption" style={{ color: '#fbbf24', fontWeight: 'bold' }}>TEMPO PARA O INÍCIO</Typography>
+            <Box display="flex" justifyContent="center" gap={3} mt={2}>
+                {[{l:'DIAS', v:tempoRestante.dias}, {l:'HRS', v:tempoRestante.horas}, {l:'MIN', v:tempoRestante.minutos}].map(i => (
+                    <Box key={i.l}><Typography variant="h4" fontWeight="900" color="#fbbf24">{i.v}</Typography><Typography variant="caption" color="#94a3b8">{i.l}</Typography></Box>
+                ))}
+            </Box>
+        </Box>
+
+        {/* SELEÇÃO DE FAVORITOS COM TARJA */}
+        <Typography variant="h6" fontWeight="bold" mt={3} mb={2} color="#b45309" style={{ backgroundColor: '#fffbeb', padding: '5px', borderRadius: '8px' }}>
+            ⭐ SELEÇÕES FAVORITAS
+        </Typography>
+        <Grid container spacing={2} justifyContent="center" mb={4}>
+            {favoritos.map((team: any) => (
+                <Grid item xs={6} sm={4} md={3} key={team.id}>
+                    <Box onClick={() => setSelecaoEscolhida(team.nome)} style={{ padding: '10px', border: selecaoEscolhida === team.nome ? '2px solid #fbbf24' : '1px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', backgroundColor: selecaoEscolhida === team.nome ? '#fffbeb' : '#fff', textAlign: 'center' }}>
+                        <img src={team.bandeira || team.logo_url} alt={team.sigla} style={{ width: '40px', height: '28px', objectFit: 'cover', borderRadius: '2px', marginBottom: '5px' }} />
+                        <Typography variant="body2" fontWeight={selecaoEscolhida === team.nome ? "bold" : "normal"}>{team.nome}</Typography>
+                    </Box>
+                </Grid>
+            ))}
+        </Grid>
+
+        {/* SELEÇÃO DO RESTANTE COM TARJA */}
+        <Typography variant="h6" fontWeight="bold" mt={3} mb={2} color="#475569" style={{ backgroundColor: '#f1f5f9', padding: '5px', borderRadius: '8px' }}>
+            🌍 OUTRAS SELEÇÕES
+        </Typography>
+        <Grid container spacing={2} justifyContent="center" mb={4}>
+            {outrasSelecoes.map((team: any) => (
+                <Grid item xs={6} sm={4} md={3} key={team.id}>
+                    <Box onClick={() => setSelecaoEscolhida(team.nome)} style={{ padding: '10px', border: selecaoEscolhida === team.nome ? '2px solid #3b82f6' : '1px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', backgroundColor: selecaoEscolhida === team.nome ? '#eff6ff' : '#fff', textAlign: 'center' }}>
+                        <img src={team.bandeira || team.logo_url} alt={team.sigla} style={{ width: '40px', height: '28px', objectFit: 'cover', borderRadius: '2px', marginBottom: '5px' }} />
+                        <Typography variant="body2" fontWeight={selecaoEscolhida === team.nome ? "bold" : "normal"}>{team.nome}</Typography>
+                    </Box>
+                </Grid>
+            ))}
+        </Grid>
+
+        <Box mt={4}>
+            <AppButton 
+                label={enviandoAposta ? "Gerando Pix..." : `Confirmar Aposta (R$ ${Number(rodadaAtiva.preco).toFixed(2).replace('.',',')})`} 
+                disabled={enviandoAposta || tempoRestante.expirado}
+                onClick={submeterApostaCampeao} 
+                style={{ width: '100%', padding: '14px', fontSize: '18px', border: 'none', backgroundColor: '#10b981', color: 'white' }} 
+            />
+        </Box>
+    </Paper>
+)}
             </Container>
         </div>
     );
