@@ -456,19 +456,39 @@ export default function Admin() {
                             
                             {rodadaSelecionada.tipo === 'placares' ? (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                                    <div style={{ display: 'flex', gap: '10px' }}>
-                                        <InputText placeholder="Time Casa" value={novoJogo.time_casa} onChange={(e) => setNovoJogo({...novoJogo, time_casa: e.target.value})} style={{ flex: 1 }} />
-                                        <InputText placeholder="Sigla" maxLength={3} value={novoJogo.sigla_casa} onChange={(e) => setNovoJogo({...novoJogo, sigla_casa: e.target.value.toUpperCase()})} style={{ width: '80px' }} />
-                                    </div>
-                                    <InputText placeholder="URL Logo Casa" value={novoJogo.logo_casa} onChange={(e) => setNovoJogo({...novoJogo, logo_casa: e.target.value})} />
-                                    
-                                    <div style={{ textAlign: 'center', fontWeight: 'bold', color: '#94a3b8' }}>X</div>
+                                    <Dropdown
+    value={novoJogo.time_casa_id}
+    options={teams}
+    optionLabel="nome"
+    optionValue="id"
+    onChange={(e) =>
+        setNovoJogo({
+            ...novoJogo,
+            time_casa_id: e.value
+        })
+    }
+    placeholder="Selecione o time da casa"
+    style={{ width: '100%' }}
+/>
 
-                                    <div style={{ display: 'flex', gap: '10px' }}>
-                                        <InputText placeholder="Time Visitante" value={novoJogo.time_visitante} onChange={(e) => setNovoJogo({...novoJogo, time_visitante: e.target.value})} style={{ flex: 1 }} />
-                                        <InputText placeholder="Sigla" maxLength={3} value={novoJogo.sigla_visitante} onChange={(e) => setNovoJogo({...novoJogo, sigla_visitante: e.target.value.toUpperCase()})} style={{ width: '80px' }} />
-                                    </div>
-                                    <InputText placeholder="URL Logo Visitante" value={novoJogo.logo_visitante} onChange={(e) => setNovoJogo({...novoJogo, logo_visitante: e.target.value})} />
+<div style={{ textAlign: 'center', fontWeight: 'bold', color: '#94a3b8' }}>
+    X
+</div>
+
+<Dropdown
+    value={novoJogo.time_visitante_id}
+    options={teams}
+    optionLabel="nome"
+    optionValue="id"
+    onChange={(e) =>
+        setNovoJogo({
+            ...novoJogo,
+            time_visitante_id: e.value
+        })
+    }
+    placeholder="Selecione o time visitante"
+    style={{ width: '100%' }}
+/>
 
                                     <input type="datetime-local" value={novoJogo.data_hora} onChange={(e) => setNovoJogo({...novoJogo, data_hora: e.target.value})} style={{ padding: '0.75rem', borderRadius: '6px', border: '1px solid #ced4da', width: '100%', fontFamily: 'inherit', fontSize: '1rem', color: '#495057' }} />
                                     <Button label="Salvar Confronto" onClick={handleCadastrarJogo} />

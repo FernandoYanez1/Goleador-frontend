@@ -38,7 +38,19 @@ export default function Placar() {
         ])
         .then(([rodadasData, teamsData]) => {
             // Filtra apenas rodadas que estejam com status 'aberta'
-            const abertas = rodadasData.filter((r: any) => r.status === 'aberta');
+            const abertas = rodadasData
+    .filter(
+        (r: any) =>
+            r.status === 'aberta' ||
+            r.status === 'pausada'
+    )
+    .sort((a: any, b: any) => {
+
+        if (a.fixado_ranking && !b.fixado_ranking) return -1;
+        if (!a.fixado_ranking && b.fixado_ranking) return 1;
+
+        return b.id - a.id;
+    });
             setRodadas(abertas);
             setTeams(teamsData);
             setLoading(false);
@@ -70,6 +82,11 @@ export default function Placar() {
     }, [history, apiUrl]);
 
     const selecionarModoJogo = (rodada: any) => {
+        if (rodada.status === 'pausada') {
+    return alert(
+        '⚠️ As apostas desta rodada estão temporariamente pausadas.'
+    );
+}
         setRodadaAtiva(rodada);
         if (rodada.tipo === 'placares') {
             setLoading(true);
@@ -197,7 +214,37 @@ export default function Placar() {
                                                 <Box mb={2} display="flex" justifyContent="center">
                                                     {eCampeao ? <Stars style={{ fontSize: 50, color: '#fbbf24' }} /> : eCopa ? <Public style={{ fontSize: 50, color: '#3b82f6' }} /> : <SportsSoccer style={{ fontSize: 50, color: '#10b981' }} />}
                                                 </Box>
-                                                <Typography variant="h5" fontWeight="bold" color="#1e293b">{rodada.nome}</Typography>
+                                                <Box>
+
+    <Typography
+        variant="h5"
+        fontWeight="bold"
+        color="#1e293b"
+    >
+        {rodada.nome}
+    </Typography>
+
+    <Typography
+        variant="caption"
+        style={{
+            backgroundColor:
+                rodada.status === 'pausada'
+                    ? '#f59e0b'
+                    : '#10b981',
+            color: 'white',
+            padding: '4px 10px',
+            borderRadius: '999px',
+            fontWeight: 'bold',
+            marginTop: '8px',
+            display: 'inline-block'
+        }}
+    >
+        {rodada.status === 'pausada'
+            ? '⏸️ PAUSADA'
+            : '🟢 ABERTA'}
+    </Typography>
+
+</Box>
                                                 
                                                 <Typography variant="h4" fontWeight="900" color="#10b981" my={2}>
                                                     {Number(rodada.preco).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
@@ -214,8 +261,17 @@ export default function Placar() {
                                             </CardContent>
                                             <CardActions style={{ padding: '20px', paddingTop: 0 }}>
                                                 <AppButton 
-                                                    label={eCampeao && tempoRestante.expirado ? "Inscrições Fechadas" : "Escolher Bilhete"} 
-                                                    disabled={eCampeao && tempoRestante.expirado}
+                                                    label={
+    rodada.status === 'pausada'
+        ? 'Apostas Pausadas'
+        : eCampeao && tempoRestante.expirado
+            ? 'Inscrições Fechadas'
+            : 'Escolher Bilhete'
+}
+                                                    disabled={
+    rodada.status === 'pausada' ||
+    (eCampeao && tempoRestante.expirado)
+}
                                                     onClick={() => selecionarModoJogo(rodada)} 
                                                     style={{ width: '100%', border: 'none', backgroundColor: eCampeao ? '#fbbf24' : '#1e293b' }} 
                                                 />

@@ -20,6 +20,7 @@ const Ranking = () => {
     const history = useHistory();
 
     const [rodadaAtual, setRodadaAtual] = useState<any>(null);
+    const [rodadasRanking, setRodadasRanking] = useState<any[]>([]);
     const [apostasBloqueadas, setApostasBloqueadas] = useState(false);
     const [statusJogos, setStatusJogos] = useState({ finalizados: 0, total: 0 });
     
@@ -58,55 +59,112 @@ const Ranking = () => {
         if (salvo) setUsuarioLogado(JSON.parse(salvo));
 
         fetch(`${apiUrl}/rodadas`)
-            .then(res => res.json())
-            .then(rodadasData => {
-                if (rodadasData.length > 0) {
-                    
-                    let ativa = rodadasData.find((r: any) => r.exibir_no_ranking === true);
-                    
-                    if (!ativa) ativa = rodadasData.find((r: any) => r.status === 'aberta' || r.status === 'pausada');
-                    if (!ativa) {
-                        const finalizadas = rodadasData.filter((r: any) => r.status === 'finalizada');
-                        if (finalizadas.length > 0) {
-                            ativa = finalizadas.sort((a: any, b: any) => b.id - a.id)[0];
-                        }
-                    }
-                    if (!ativa) ativa = rodadasData[0]; 
+    .then(res => res.json())
+    .then(async (rodadasData) => {
 
-                    setRodadaAtual(ativa);
-                    setApostasBloqueadas(ativa.status === 'pausada' || ativa.status === 'finalizada');
+        if (!Array.isArray(rodadasData) || rodadasData.length === 0) {
+            setLoading(false);
+            return;
+        }
 
-                    Promise.all([
-                        fetch(`${apiUrl}/ranking`).then(res => res.json()),
-                        fetch(`${apiUrl}/jogos?rodada_id=${ativa.id}`).then(res => res.json())
-                    ]).then(([rankData, jogosData]) => {
-                        
-                        if (Array.isArray(rankData)) {
-                            const rankDaRodada = rankData.filter((r: any) => r.rodada_id === ativa.id);
-                            rankDaRodada.sort((a, b) => b.pontuacao_total - a.pontuacao_total);
-                            setAprovados(rankDaRodada);
-                        }
-                        
-                        if (Array.isArray(jogosData)) {
-                            const jogosFinalizados = jogosData.filter((j: any) => j.gols_casa !== null && j.gols_visitante !== null).length;
-                            setStatusJogos({ finalizados: jogosFinalizados, total: jogosData.length });
-                        }
-                        
-                        setLoading(false);
-                    }).catch((err) => {
-                        console.error("Erro ao buscar dados:", err);
-                        setLoading(false);
-                    });
-                } else {
-                    setLoading(false);
-                }
-            })
-            .catch((err) => {
-                console.error("Erro ao buscar rodadas:", err);
-                setLoading(false);
-            });
+        const rankingsFixados = rodadasData.filter(
+            (r: any) => r.fixado_ranking === true
+        );
+
+        setRodadasRanking(rankingsFixados);
+
+        let ativa = null;
+
+        if (rankingsFixados.length > 0) {
+            ativa = rankingsFixados[0];
+        }
+
+        if (!ativa) {
+            ativa = rodadasData.find(
+                (r: any) =>
+                    r.status === 'aberta' ||
+                    r.status === 'pausada'
+            );
+        }
+
+        if (!ativa) {
+            const encerradas = rodadasData.filter(
+                (r: any) => r.status === 'encerrada'
+            );
+
+            if (encerradas.length > 0) {
+                ativa = encerradas.sort(
+                    (a: any, b: any) => b.id - a.id
+                )[0];
+            }
+        }
+
+        if (!ativa) ativa = rodadasData[0];
+
+        carregarRankingRodada(ativa);
+
+    })
+    .catch((err) => {
+        console.error("Erro ao buscar rodadas:", err);
+        setLoading(false);
+    });
     }, [apiUrl]);
 
+    const carregarRankingRodada = async (rodada: any) => {
+
+    setRodadaAtual(rodada);
+
+    setApostasBloqueadas(
+        rodada.status === 'pausada' ||
+        rodada.status === 'encerrada'
+    );
+
+    try {
+
+        const [rankRes, jogosRes] = await Promise.all([
+            fetch(`${apiUrl}/ranking`),
+            fetch(`${apiUrl}/jogos?rodada_id=${rodada.id}`)
+        ]);
+
+        const rankData = await rankRes.json();
+        const jogosData = await jogosRes.json();
+
+        if (Array.isArray(rankData)) {
+
+            const rankDaRodada = rankData
+                .filter((r: any) => r.rodada_id === rodada.id)
+                .sort(
+                    (a: any, b: any) =>
+                        b.pontuacao_total - a.pontuacao_total
+                );
+
+            setAprovados(rankDaRodada);
+        }
+
+        if (Array.isArray(jogosData)) {
+
+            const jogosFinalizados = jogosData.filter(
+                (j: any) =>
+                    j.gols_casa !== null &&
+                    j.gols_visitante !== null
+            ).length;
+
+            setStatusJogos({
+                finalizados: jogosFinalizados,
+                total: jogosData.length
+            });
+        }
+
+    } catch (err) {
+
+        console.error(err);
+
+    } finally {
+
+        setLoading(false);
+
+    }
+};
     const totalCartelasCompradas = aprovados.length;
     const valorArrecadadoTotal = totalCartelasCompradas * (rodadaAtual?.preco || VALOR_INSCRICAO);
     const valorPremioTotal = valorArrecadadoTotal * 0.90;
@@ -275,6 +333,41 @@ const Ranking = () => {
         <div style={{ backgroundColor: "#e2e8f0", minHeight: "100vh", padding: "40px 0", position: "relative" }}>
             <Container maxWidth="md">
                 
+                {rodadasRanking.length > 1 && (
+    <Box mb={3}>
+        <select
+            value={rodadaAtual?.id || ''}
+            onChange={(e) => {
+
+                const rodada = rodadasRanking.find(
+                    (r: any) =>
+                        String(r.id) === String(e.target.value)
+                );
+
+                if (rodada) {
+                    setLoading(true);
+                    carregarRankingRodada(rodada);
+                }
+
+            }}
+            style={{
+                width: '100%',
+                padding: '14px',
+                borderRadius: '12px',
+                border: '2px solid #cbd5e1',
+                fontWeight: 'bold',
+                fontSize: '15px',
+                backgroundColor: 'white'
+            }}
+        >
+            {rodadasRanking.map((r: any) => (
+                <option key={r.id} value={r.id}>
+                    🏆 {r.nome}
+                </option>
+            ))}
+        </select>
+    </Box>
+)}
                 <Paper elevation={0} style={{ backgroundColor: "#1e293b", color: "white", padding: "30px", borderRadius: "16px", textAlign: "center", marginBottom: "20px", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.2)" }}>
                     <Typography style={{ color: "#fcd34d", fontWeight: "bold", fontSize: "14px", marginBottom: "15px" }}>
                         RANKING DA RODADA: {rodadaAtual?.nome}
