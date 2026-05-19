@@ -14,6 +14,7 @@ export default function Admin() {
 
     const [rodadas, setRodadas] = useState<any[]>([]);
     const [teams, setTeams] = useState<any[]>([]);
+    const selecoesCopa = teams.filter((t) => t.id >= 19 && t.id <= 66);
     const [cartelas, setCartelas] = useState<any[]>([]);
     const [rodadaSelecionada, setRodadaSelecionada] = useState<any>(null);
     const [verArquivadas, setVerArquivadas] = useState(false); // NOVO: Controle de visualização
@@ -33,6 +34,16 @@ export default function Admin() {
         time_visitante_id: null,
         data_hora: ''
     });
+
+    const favoritasIds = [27, 51, 55, 47, 63, 59, 35];
+
+    const favoritas = favoritasIds
+    .map(id => selecoesCopa.find(t => t.id === id))
+    .filter(Boolean);
+
+    const restantes = selecoesCopa.filter(
+    t => !favoritasIds.includes(t.id)
+    );
 
     const carregarDadosIniciais = () => {
         Promise.all([
@@ -142,15 +153,11 @@ export default function Admin() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                rodada_id: rodadaSelecionada.id,
-                time_casa: timeCasa.nome,
-                time_visitante: timeVisitante.nome,
-                sigla_casa: timeCasa.sigla,
-                sigla_visitante: timeVisitante.sigla,
-                logo_casa: timeCasa.bandeira,
-                logo_visitante: timeVisitante.bandeira,
-                data_hora: novoJogo.data_hora ? new Date(novoJogo.data_hora).toISOString() : null
-            })
+    rodada_id: rodadaSelecionada.id,
+    time_casa_id: novoJogo.time_casa_id,
+    time_visitante_id: novoJogo.time_visitante_id,
+    data_hora: novoJogo.data_hora
+})
         }).then(() => {
             alert("Confronto cadastrado!");
             setNovoJogo({ time_casa_id: null, time_visitante_id: null, data_hora: '' });
@@ -385,6 +392,7 @@ export default function Admin() {
                             <h3 style={{ marginTop: 0 }}>⚽ Adicionar Jogo</h3>
                             
                             {rodadaSelecionada.tipo === 'placares' ? (
+                                
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                                     <Dropdown value={novoJogo.time_casa_id} options={teams} optionLabel="nome" optionValue="id" onChange={(e) => setNovoJogo({ ...novoJogo, time_casa_id: e.value })} placeholder="Selecione o time da casa" style={{ width: '100%' }} filter />
                                     <div style={{ textAlign: 'center', fontWeight: 'bold', color: '#94a3b8' }}>X</div>
