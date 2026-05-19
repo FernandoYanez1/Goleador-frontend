@@ -28,7 +28,7 @@ export default function Brand() {
                 <img className="public-topbar-logo no-cursor" src="/media/landing-page/lambreta-white.png" alt="Lambreta" />
                 <div>
                     <h1>BOLÃO GOLEADOR VIP</h1>
-                    <label>FEITO PARA AMIGOS</label>
+                    <label>FEITO PARA AMIGOS, REUNINDO A GALERA</label>
                 </div>
             </div>
 

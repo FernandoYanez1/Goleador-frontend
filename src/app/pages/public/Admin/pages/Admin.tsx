@@ -5,90 +5,103 @@ import { Dialog } from 'primereact/dialog';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Dropdown } from 'primereact/dropdown';
+import { InputNumber } from 'primereact/inputnumber';
 import { useHistory } from 'react-router-dom';
 
 export default function Admin() {
     const history = useHistory();
     const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
+    // Estados Globais
     const [rodadas, setRodadas] = useState<any[]>([]);
+    const [teams, setTeams] = useState<any[]>([]);
+    const [cartelas, setCartelas] = useState<any[]>([]);
     const [rodadaSelecionada, setRodadaSelecionada] = useState<any>(null);
-    const [novaRodadaNome, setNovaRodadaNome] = useState('');
-
+    
+    // Estados de Jogos
     const [jogos, setJogos] = useState<any[]>([]);
     const [resultados, setResultados] = useState<any>({});
     const [editandoJogos, setEditandoJogos] = useState<number[]>([]);
     
+    // Modais
     const [exibirDialogCartelas, setExibirDialogCartelas] = useState(false);
-    const [cartelas, setCartelas] = useState<any[]>([]);
-    
-    const [novoJogo, setNovoJogo] = useState<{
-        time_casa: string; time_visitante: string;
-        sigla_casa: string; sigla_visitante: string;
-        logo_casa: string; logo_visitante: string;
-        data_hora: string; 
-    }>({
-        time_casa: '', time_visitante: '', sigla_casa: '', sigla_visitante: '',
-        logo_casa: '', logo_visitante: '', data_hora: ''
+    const [exibirDialogTeams, setExibirDialogTeams] = useState(false);
+
+    // Formulários
+    const [novaRodada, setNovaRodada] = useState({ nome: '', preco: 20, tipo: 'placares' });
+    const [novoTeam, setNovoTeam] = useState({ nome: '', sigla: '', bandeira: '' });
+    const [novoJogo, setNovoJogo] = useState<any>({
+        time_casa: '', time_visitante: '', sigla_casa: '', sigla_visitante: '', logo_casa: '', logo_visitante: '', data_hora: ''
     });
 
-    const carregarRodadas = () => {
-        fetch(`${apiUrl}/rodadas`)
-            .then(res => res.json())
-            .then(data => {
-                setRodadas(data);
-                if (data.length > 0 && !rodadaSelecionada) {
-                    const ativa = data.find((r: any) => r.exibir_no_ranking === true) || data.find((r: any) => r.status === 'aberta') || data[0];
-                    setRodadaSelecionada(ativa);
-                }
-            });
-    };
-
-    const carregarJogos = (rodadaId: number) => {
-        fetch(`${apiUrl}/jogos?rodada_id=${rodadaId}`)
-            .then(res => res.json())
-            .then(data => {
-                setJogos(data);
-                const resLocais: any = {};
-                data.forEach((j: any) => {
-                    if (j.gols_casa !== null && j.gols_visitante !== null) {
-                        resLocais[j.id] = { casa: j.gols_casa, visitante: j.gols_visitante };
-                    }
-                });
-                setResultados(resLocais);
-            });
-    };
-
-    const carregarCartelas = () => {
-        fetch(`${apiUrl}/admin/cartelas`)
-            .then(res => res.json())
-            .then(setCartelas)
-            .catch(err => console.error("Erro ao carregar cartelas", err));
-    };
-
-    useEffect(() => { 
-        carregarRodadas(); 
-        carregarCartelas(); 
-    }, []);
-
-    useEffect(() => {
-        if (rodadaSelecionada) carregarJogos(rodadaSelecionada.id);
-    }, [rodadaSelecionada]);
-
-    const handleCriarRodada = () => {
-        if (!novaRodadaNome) return alert("Digite um nome para a rodada!");
-        fetch(`${apiUrl}/rodadas`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nome: novaRodadaNome })
-        }).then(() => {
-            setNovaRodadaNome('');
-            carregarRodadas();
-            alert("Nova rodada criada como RASCUNHO!");
+    const carregarDadosIniciais = () => {
+        Promise.all([
+            fetch(`${apiUrl}/rodadas`).then(res => res.json()),
+            fetch(`${apiUrl}/teams`).then(res => res.json()),
+            fetch(`${apiUrl}/admin/cartelas`).then(res => res.json())
+        ]).then(([rodadasData, teamsData, cartelasData]) => {
+            setRodadas(rodadasData);
+            setTeams(teamsData);
+            setCartelas(cartelasData);
+            
+            if (rodadasData.length > 0 && !rodadaSelecionada) {
+                const ativa = rodadasData.find((r: any) => r.exibir_no_ranking === true) || rodadasData.find((r: any) => r.status === 'aberta') || rodadasData[0];
+                setRodadaSelecionada(ativa);
+            }
         });
     };
 
-    // NOVA FUNÇÃO: FIXAR A RODADA NO RANKING PÚBLICO
+    useEffect(() => { 
+        carregarDadosIniciais(); 
+    }, []);
+
+    useEffect(() => {
+        if (rodadaSelecionada && rodadaSelecionada.tipo === 'placares') {
+            fetch(`${apiUrl}/jogos?rodada_id=${rodadaSelecionada.id}`)
+                .then(res => res.json())
+                .then(data => {
+                    setJogos(data);
+                    const resLocais: any = {};
+                    data.forEach((j: any) => {
+                        if (j.gols_casa !== null && j.gols_visitante !== null) {
+                            resLocais[j.id] = { casa: j.gols_casa, visitante: j.gols_visitante };
+                        }
+                    });
+                    setResultados(resLocais);
+                });
+        }
+    }, [rodadaSelecionada, apiUrl]);
+
+    // --- FUNÇÕES DE RODADAS ---
+    const handleCriarRodada = () => {
+        if (!novaRodada.nome) return alert("Dê um nome à rodada!");
+        fetch(`${apiUrl}/rodadas`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(novaRodada)
+        }).then(() => {
+            setNovaRodada({ nome: '', preco: 20, tipo: 'placares' });
+            carregarDadosIniciais();
+            alert("Rodada criada como RASCUNHO!");
+        });
+    };
+
+    const alterarStatusRodada = (novoStatus: string) => {
+        if (!rodadaSelecionada) return;
+        let msg = novoStatus === 'aberta' ? "Liberar apostas para esta rodada?" : "Encerrar apostas (Ativar Modo Secador)?";
+        
+        if (window.confirm(msg)) {
+            fetch(`${apiUrl}/rodadas/${rodadaSelecionada.id}/status`, { 
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: novoStatus })
+            }).then(() => {
+                alert(`Status atualizado!`);
+                carregarDadosIniciais();
+            });
+        }
+    };
+
     const handleDefinirRodadaRanking = () => {
         if (!rodadaSelecionada) return;
         fetch(`${apiUrl}/admin/definir-ranking`, {
@@ -97,60 +110,57 @@ export default function Admin() {
             body: JSON.stringify({ rodada_id: rodadaSelecionada.id })
         }).then((res) => {
             if (res.ok) {
-                alert(`Sucesso! A rodada "${rodadaSelecionada.nome}" agora é a rodada oficial exibida no Ranking.`);
-                carregarRodadas();
-            } else {
-                alert("Erro ao salvar configuração no servidor.");
+                alert(`Sucesso! "${rodadaSelecionada.nome}" agora é a rodada oficial do Ranking.`);
+                carregarDadosIniciais();
             }
         });
     };
 
-    const alterarStatusRodada = (novoStatus: string) => {
-        if (!rodadaSelecionada) return;
-        
-        let msg = "";
-        if (novoStatus === 'aberta') msg = "Tem certeza que deseja LIBERAR esta rodada para o público apostar?";
-        if (novoStatus === 'finalizada') msg = "Encerrar apostas e BLOQUEAR a rodada? (Ativa o modo secador)";
-        
-        if (window.confirm(msg)) {
-            fetch(`${apiUrl}/rodadas/${rodadaSelecionada.id}/status`, { 
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: novoStatus })
-            }).then(() => {
-                alert(`Status updated com sucesso!`);
-                fetch(`${apiUrl}/rodadas`).then(res => res.json()).then(data => {
-                    setRodadas(data);
-                    setRodadaSelecionada(data.find((r:any) => r.id === rodadaSelecionada.id));
-                });
-            });
+    // --- FUNÇÕES DE SELEÇÕES (TEAMS) ---
+    const handleCadastrarTeam = () => {
+        if (!novoTeam.nome || !novoTeam.sigla || !novoTeam.bandeira) return alert("Preencha todos os campos da seleção!");
+        fetch(`${apiUrl}/teams`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(novoTeam)
+        }).then(() => {
+            setNovoTeam({ nome: '', sigla: '', bandeira: '' });
+            fetch(`${apiUrl}/teams`).then(res => res.json()).then(setTeams);
+            alert("Seleção salva no banco!");
+        });
+    };
+
+    // --- FUNÇÕES DE JOGOS ---
+    const selecionarTimeNoJogo = (lado: 'casa' | 'visitante', timeObj: any) => {
+        if (!timeObj) return;
+        if (lado === 'casa') {
+            setNovoJogo({ ...novoJogo, time_casa: timeObj.nome, sigla_casa: timeObj.sigla, logo_casa: timeObj.bandeira });
+        } else {
+            setNovoJogo({ ...novoJogo, time_visitante: timeObj.nome, sigla_visitante: timeObj.sigla, logo_visitante: timeObj.bandeira });
         }
     };
 
     const handleCadastrarJogo = () => {
-        if (!rodadaSelecionada) return alert("Selecione uma rodada primeiro!");
-        if (!novoJogo.time_casa || !novoJogo.time_visitante) return alert("Preencha os times!");
-        
-        const dados = { 
-            ...novoJogo, 
-            rodada_id: rodadaSelecionada.id,
-            data_hora: novoJogo.data_hora ? new Date(novoJogo.data_hora).toISOString() : null 
-        };
-
+        if (!rodadaSelecionada) return;
         fetch(`${apiUrl}/cadastrar-jogo`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(dados)
+            body: JSON.stringify({ 
+                ...novoJogo, 
+                rodada_id: rodadaSelecionada.id,
+                data_hora: novoJogo.data_hora ? new Date(novoJogo.data_hora).toISOString() : null 
+            })
         }).then(() => {
-            alert("Jogo cadastrado!");
-            carregarJogos(rodadaSelecionada.id);
+            alert("Confronto cadastrado!");
             setNovoJogo({ time_casa: '', time_visitante: '', sigla_casa: '', sigla_visitante: '', logo_casa: '', logo_visitante: '', data_hora: '' });
+            fetch(`${apiUrl}/jogos?rodada_id=${rodadaSelecionada.id}`).then(res => res.json()).then(setJogos);
         });
     };
 
     const handleDeletarJogo = (id: number) => {
-        if(window.confirm("Excluir a partida inteira? Palpites vinculados a ela também sumirão.")) {
-            fetch(`${apiUrl}/deletar-jogo/${id}`, { method: 'DELETE' }).then(() => carregarJogos(rodadaSelecionada.id));
+        if(window.confirm("Excluir a partida? Palpites vinculados a ela também sumirão.")) {
+            fetch(`${apiUrl}/deletar-jogo/${id}`, { method: 'DELETE' })
+                .then(() => fetch(`${apiUrl}/jogos?rodada_id=${rodadaSelecionada?.id}`).then(res => res.json()).then(setJogos));
         }
     };
 
@@ -169,30 +179,28 @@ export default function Admin() {
                 gols_visitante: parseInt(resultado.visitante, 10) 
             })
         }).then(() => {
-            alert("Resultado salvo! Pontos distribuídos paras as cartelas aprovadas.");
+            alert("Resultado salvo! Pontos calculados.");
             setEditandoJogos(editandoJogos.filter(id => id !== matchId));
-            carregarJogos(rodadaSelecionada.id);
+            fetch(`${apiUrl}/jogos?rodada_id=${rodadaSelecionada?.id}`).then(res => res.json()).then(setJogos);
         });
     };
 
     const habilitarEdicao = (jogoId: number) => setEditandoJogos([...editandoJogos, jogoId]);
 
+    // --- FUNÇÕES DE CARTELAS E PAGAMENTOS ---
     const handleTogglePagamento = (cartelaId: number, statusAtual: string) => {
         const novoStatus = statusAtual === 'aprovado' ? 'pendente' : 'aprovado';
         fetch(`${apiUrl}/aprovar-pagamento/${cartelaId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status: novoStatus }) 
-        }).then(() => carregarCartelas());
+        }).then(() => fetch(`${apiUrl}/admin/cartelas`).then(res => res.json()).then(setCartelas));
     };
 
     const handleDeletarCartela = (cartelaId: number) => {
-        if (window.confirm(`Tem certeza que deseja EXCLUIR a Cartela #${cartelaId}? Isso apagará os palpites permanentemente.`)) {
+        if (window.confirm(`Excluir permanentemente a Cartela #${cartelaId}?`)) {
             fetch(`${apiUrl}/deletar-cartela/${cartelaId}`, { method: 'DELETE' })
-                .then(() => {
-                    alert("Cartela excluída com sucesso!");
-                    carregarCartelas();
-                });
+                .then(() => fetch(`${apiUrl}/admin/cartelas`).then(res => res.json()).then(setCartelas));
         }
     };
 
@@ -213,95 +221,72 @@ export default function Admin() {
                     onClick={() => handleTogglePagamento(rowData.id, rowData.status_pagamento)}
                     style={{ padding: '5px 10px', fontSize: '11px', height: '30px' }}
                 />
-                {isMP ? (
-                    <i className="pi pi-bolt" style={{ color: '#3b82f6', fontSize: '1.2rem' }} title="Automático via Mercado Pago"></i>
-                ) : (
-                    <i className="pi pi-user" style={{ color: '#64748b', fontSize: '1.2rem' }} title="Manual / Chave Direta"></i>
-                )}
+                {isMP ? <i className="pi pi-bolt" style={{ color: '#3b82f6', fontSize: '1.2rem' }} title="Mercado Pago"></i> : <i className="pi pi-user" style={{ color: '#64748b', fontSize: '1.2rem' }} title="Manual"></i>}
             </div>
         );
     };
 
     const origemTemplate = (rowData: any) => {
         const isMP = rowData.metodo_pagamento === 'mercadopago';
-        
-        const bgColor = isMP ? '#dbeafe' : '#f1f5f9';
-        const textColor = isMP ? '#2563eb' : '#475569';
-        const label = isMP ? 'MERCADO PAGO' : 'MANUAL';
-
         return (
-            <span style={{ 
-                backgroundColor: bgColor, 
-                color: textColor, 
-                padding: '4px 8px', 
-                borderRadius: '6px', 
-                fontWeight: 'bold', 
-                fontSize: '10px' 
-            }}>
-                {label}
+            <span style={{ backgroundColor: isMP ? '#dbeafe' : '#f1f5f9', color: isMP ? '#2563eb' : '#475569', padding: '4px 8px', borderRadius: '6px', fontWeight: 'bold', fontSize: '10px' }}>
+                {isMP ? 'MERCADO PAGO' : 'MANUAL'}
             </span>
         );
     };
 
-    const VALOR_INSCRICAO = 20;
+    // --- CÁLCULOS DO DASHBOARD FINANCEIRO ---
+    const tiposRodada = [{ label: 'Confrontos (Placares)', value: 'placares' }, { label: 'Tiro Curto (Campeão)', value: 'campeao' }];
     const cartelasDaRodada = cartelas.filter(c => c.rodada_nome === rodadaSelecionada?.nome);
     const cartelasAprovadas = cartelasDaRodada.filter(c => c.status_pagamento === 'aprovado');
     const cartelasPendentes = cartelasDaRodada.filter(c => c.status_pagamento === 'pendente');
     
-    const valorBruto = cartelasAprovadas.length * VALOR_INSCRICAO;
+    const precoRodadaAtual = rodadaSelecionada ? Number(rodadaSelecionada.preco) : 20;
+    const valorBruto = cartelasAprovadas.length * precoRodadaAtual;
     const suaComissao = valorBruto * 0.10;
     const premioTotalGalera = valorBruto * 0.90;
-    const valorPendente = cartelasPendentes.length * VALOR_INSCRICAO;
+    const valorPendente = cartelasPendentes.length * precoRodadaAtual;
 
     return (
         <div style={{ padding: '30px', minHeight: '100vh', backgroundColor: '#f4f6f9', color: '#333' }}>
             <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
                 
+                {/* CABEÇALHO */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', backgroundColor: 'white', padding: '15px 20px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
-                    <Button label="Voltar" icon="pi pi-arrow-left" onClick={() => history.push('/public')} className="p-button-text p-button-secondary" />
-                    <h1 style={{ margin: 0, fontSize: '24px' }}>🛡️ Painel de Administração</h1>
-                    <Button label="Aprovar Bilhete" icon="pi pi-check-square" onClick={() => { carregarCartelas(); setExibirDialogCartelas(true); }} className="p-button-outlined p-button-secondary" />
+                    <Button label="Sair do Admin" icon="pi pi-sign-out" onClick={() => history.push('/public')} className="p-button-text p-button-secondary" />
+                    <h1 style={{ margin: 0, fontSize: '22px' }}>🛡️ Central de Comando Goleador VIP</h1>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <Button label="Países/Seleções" icon="pi pi-flag" onClick={() => setExibirDialogTeams(true)} severity="info" />
+                        <Button label="Aprovar Bilhetes" icon="pi pi-ticket" onClick={() => { fetch(`${apiUrl}/admin/cartelas`).then(res => res.json()).then(setCartelas); setExibirDialogCartelas(true); }} severity="help" />
+                    </div>
                 </div>
 
+                {/* DASHBOARD FINANCEIRO */}
                 <div style={{ display: 'flex', gap: '20px', marginBottom: '30px', flexWrap: 'wrap' }}>
-                    <div style={{ flex: 1, minWidth: '250px', backgroundColor: '#eff6ff', border: '1px solid #3b82f6', padding: '20px', borderRadius: '12px', textAlign: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+                    <div style={{ flex: 1, minWidth: '250px', backgroundColor: '#eff6ff', border: '1px solid #3b82f6', padding: '20px', borderRadius: '12px', textAlign: 'center' }}>
                         <div style={{ color: '#1e40af', fontWeight: 'bold', fontSize: '14px', marginBottom: '5px' }}>🛡️ SEU LUCRO (10%)</div>
-                        <div style={{ color: '#1e3a8a', fontWeight: '900', fontSize: '28px' }}>
-                            {suaComissao.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                        </div>
-                        <div style={{ color: '#3b82f6', fontSize: '13px', marginTop: '5px' }}>Sua parte na rodada {rodadaSelecionada?.nome}</div>
+                        <div style={{ color: '#1e3a8a', fontWeight: '900', fontSize: '28px' }}>{suaComissao.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+                        <div style={{ color: '#3b82f6', fontSize: '13px', marginTop: '5px' }}>Na rodada: {rodadaSelecionada?.nome}</div>
                     </div>
-
-                    <div style={{ flex: 1, minWidth: '250px', backgroundColor: '#ecfdf5', border: '1px solid #10b981', padding: '20px', borderRadius: '12px', textAlign: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+                    <div style={{ flex: 1, minWidth: '250px', backgroundColor: '#ecfdf5', border: '1px solid #10b981', padding: '20px', borderRadius: '12px', textAlign: 'center' }}>
                         <div style={{ color: '#047857', fontWeight: 'bold', fontSize: '14px', marginBottom: '5px' }}>🏆 PRÊMIO LÍQUIDO (90%)</div>
-                        <div style={{ color: '#065f46', fontWeight: '900', fontSize: '28px' }}>
-                            {premioTotalGalera.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                        </div>
-                        <div style={{ color: '#059669', fontSize: '13px', marginTop: '5px' }}>Valor a ser dividido no pódio</div>
+                        <div style={{ color: '#065f46', fontWeight: '900', fontSize: '28px' }}>{premioTotalGalera.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+                        <div style={{ color: '#059669', fontSize: '13px', marginTop: '5px' }}>Valor do pódio</div>
                     </div>
-
-                    <div style={{ flex: 1, minWidth: '250px', backgroundColor: '#fffbeb', border: '1px solid #f59e0b', padding: '20px', borderRadius: '12px', textAlign: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+                    <div style={{ flex: 1, minWidth: '250px', backgroundColor: '#fffbeb', border: '1px solid #f59e0b', padding: '20px', borderRadius: '12px', textAlign: 'center' }}>
                         <div style={{ color: '#b45309', fontWeight: 'bold', fontSize: '14px', marginBottom: '5px' }}>⏳ AGUARDANDO PIX</div>
-                        <div style={{ color: '#d97706', fontWeight: '900', fontSize: '28px' }}>
-                            {valorPendente.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                        </div>
-                        <div style={{ color: '#b45309', fontSize: '13px', marginTop: '5px' }}>{cartelasPendentes.length} bilhetes não pagos</div>
+                        <div style={{ color: '#d97706', fontWeight: '900', fontSize: '28px' }}>{valorPendente.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+                        <div style={{ color: '#b45309', fontSize: '13px', marginTop: '5px' }}>{cartelasPendentes.length} bilhetes pendentes</div>
                     </div>
                 </div>
 
+                {/* BLOCO 1: GESTÃO DE RODADAS */}
                 <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', marginBottom: '30px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
-                    <h3 style={{ margin: '0 0 15px 0', color: '#1e293b' }}>Gestão de Rodadas</h3>
+                    <h3 style={{ margin: '0 0 15px 0' }}>Gestão de Rodadas e Eventos</h3>
                     
-                    <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '20px', marginBottom: '20px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <Dropdown 
-                                value={rodadaSelecionada} 
-                                options={rodadas} 
-                                onChange={(e) => setRodadaSelecionada(e.value)} 
-                                optionLabel="nome" 
-                                placeholder="Selecione uma Rodada" 
-                                style={{ width: '250px' }} 
-                            />
+                            <Dropdown value={rodadaSelecionada} options={rodadas} onChange={(e) => setRodadaSelecionada(e.value)} optionLabel="nome" placeholder="Selecione" style={{ width: '250px' }} />
                             {rodadaSelecionada && (
                                 <span style={{ padding: '5px 10px', borderRadius: '5px', fontSize: '12px', fontWeight: 'bold', 
                                     backgroundColor: rodadaSelecionada.status === 'aberta' ? '#dcfce7' : rodadaSelecionada.status === 'finalizada' ? '#f1f5f9' : '#e2e8f0', 
@@ -316,117 +301,113 @@ export default function Admin() {
                             )}
                         </div>
 
-                        <span style={{ color: '#cbd5e1' }}>|</span>
-
-                        <div style={{ display: 'flex', gap: '10px' }}>
-                            <InputText placeholder="Nome (Ex: Oitavas)" value={novaRodadaNome} onChange={(e) => setNovaRodadaNome(e.target.value)} />
-                            <Button label="Nova Rodada" icon="pi pi-plus" onClick={handleCriarRodada} severity="success" outlined />
-                        </div>
-
                         <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px' }}>
-                            {rodadaSelecionada && (
-                                <Button label="🌟 Fixar no Ranking" icon="pi pi-star" severity="info" onClick={handleDefinirRodadaRanking} title="Define esta rodada como a padrão visível no ranking público" />
-                            )}
-                            {rodadaSelecionada?.status === 'rascunho' && (
-                                <Button label="🟢 Liberar" icon="pi pi-globe" severity="success" onClick={() => alterarStatusRodada('aberta')} />
-                            )}
-                            {rodadaSelecionada?.status === 'aberta' && (
-                                <Button label="🔒 Encerrar" icon="pi pi-lock" severity="danger" onClick={() => alterarStatusRodada('finalizada')} />
-                            )}
-                            {rodadaSelecionada?.status === 'finalizada' && (
-                                <Button label="⏪ Reabrir" icon="pi pi-unlock" severity="warning" outlined onClick={() => alterarStatusRodada('aberta')} />
-                            )}
+                            {rodadaSelecionada && <Button label="🌟 Fixar Ranking" icon="pi pi-star" severity="info" onClick={handleDefinirRodadaRanking} />}
+                            {rodadaSelecionada?.status === 'rascunho' && <Button label="🟢 Liberar" icon="pi pi-globe" severity="success" onClick={() => alterarStatusRodada('aberta')} />}
+                            {rodadaSelecionada?.status === 'aberta' && <Button label="🔒 Encerrar" icon="pi pi-lock" severity="danger" onClick={() => alterarStatusRodada('finalizada')} />}
+                            {rodadaSelecionada?.status === 'finalizada' && <Button label="⏪ Reabrir" icon="pi pi-unlock" severity="warning" outlined onClick={() => alterarStatusRodada('aberta')} />}
                         </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', alignItems: 'flex-end', backgroundColor: '#f8fafc', padding: '15px', borderRadius: '8px' }}>
+                        <div style={{ flex: 1 }}>
+                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>NOME DA NOVA RODADA</label>
+                            <InputText value={novaRodada.nome} onChange={(e) => setNovaRodada({...novaRodada, nome: e.target.value})} placeholder="Ex: Oitavas de Final" style={{ width: '100%' }} />
+                        </div>
+                        <div style={{ width: '130px' }}>
+                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>VALOR (R$)</label>
+                            <InputNumber value={novaRodada.preco} onValueChange={(e) => setNovaRodada({...novaRodada, preco: e.value || 0})} mode="currency" currency="BRL" locale="pt-BR" />
+                        </div>
+                        <div style={{ width: '220px' }}>
+                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>TIPO DE APOSTA</label>
+                            <Dropdown value={novaRodada.tipo} options={tiposRodada} onChange={(e) => setNovaRodada({...novaRodada, tipo: e.value})} style={{ width: '100%' }} />
+                        </div>
+                        <Button label="Criar" icon="pi pi-plus" onClick={handleCriarRodada} severity="success" outlined />
                     </div>
                 </div>
 
+                {/* BLOCO 2: GESTÃO DE JOGOS DA RODADA SELECIONADA */}
                 {rodadaSelecionada && (
-                    <div style={{ display: 'flex', gap: '30px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                    <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
                         
-                        <div style={{ flex: '1 1 400px', backgroundColor: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', opacity: rodadaSelecionada.status === 'finalizada' ? 0.5 : 1, pointerEvents: rodadaSelecionada.status === 'finalizada' ? 'none' : 'auto' }}>
-                            <h2>➕ Adicionar à {rodadaSelecionada.nome}</h2>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                                <div style={{ display: 'flex', gap: '10px' }}>
-                                    <InputText placeholder="Time Casa" value={novoJogo.time_casa} onChange={(e) => setNovoJogo({...novoJogo, time_casa: e.target.value})} style={{ flex: 1 }} />
-                                    <InputText placeholder="Sigla" maxLength={3} value={novoJogo.sigla_casa} onChange={(e) => setNovoJogo({...novoJogo, sigla_casa: e.target.value})} style={{ width: '100px' }} />
-                                </div>
-                                <InputText placeholder="URL Logo Casa" value={novoJogo.logo_casa} onChange={(e) => setNovoJogo({...novoJogo, logo_casa: e.target.value})} />
-                                
-                                <div style={{ textAlign: 'center', fontWeight: 'bold' }}>X</div>
+                        {/* COLUNA ESQUERDA: CADASTRAR JOGO (SÓ APARECE SE FOR TIPO PLACARES) */}
+                        <div style={{ flex: '1 1 400px', backgroundColor: 'white', padding: '25px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', opacity: rodadaSelecionada.status === 'finalizada' ? 0.5 : 1, pointerEvents: rodadaSelecionada.status === 'finalizada' ? 'none' : 'auto' }}>
+                            <h3 style={{ marginTop: 0 }}>⚽ Adicionar Jogo</h3>
+                            
+                            {rodadaSelecionada.tipo === 'placares' ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                                    <Dropdown value={teams.find(t => t.sigla === novoJogo.sigla_casa)} options={teams} optionLabel="nome" filter placeholder="🌍 Time Mandante" onChange={(e) => selecionarTimeNoJogo('casa', e.value)} style={{ width: '100%' }} />
+                                    
+                                    <div style={{ textAlign: 'center', fontWeight: 'bold', color: '#94a3b8' }}>X</div>
 
-                                <div style={{ display: 'flex', gap: '10px' }}>
-                                    <InputText placeholder="Time Visitante" value={novoJogo.time_visitante} onChange={(e) => setNovoJogo({...novoJogo, time_visitante: e.target.value})} style={{ flex: 1 }} />
-                                    <InputText placeholder="Sigla" maxLength={3} value={novoJogo.sigla_visitante} onChange={(e) => setNovoJogo({...novoJogo, sigla_visitante: e.target.value})} style={{ width: '100px' }} />
-                                </div>
-                                <InputText placeholder="URL Logo Visitante" value={novoJogo.logo_visitante} onChange={(e) => setNovoJogo({...novoJogo, logo_visitante: e.target.value})} />
-                                
-                                <input 
-                                    type="datetime-local" 
-                                    value={novoJogo.data_hora} 
-                                    onChange={(e) => setNovoJogo({...novoJogo, data_hora: e.target.value})} 
-                                    style={{ padding: '0.75rem', borderRadius: '6px', border: '1px solid #ced4da', width: '100%', fontFamily: 'inherit', fontSize: '1rem', color: '#495057' }}
-                                />
+                                    <Dropdown value={teams.find(t => t.sigla === novoJogo.sigla_visitante)} options={teams} optionLabel="nome" filter placeholder="🌍 Time Visitante" onChange={(e) => selecionarTimeNoJogo('visitante', e.value)} style={{ width: '100%' }} />
+                                    
+                                    {(novoJogo.sigla_casa || novoJogo.sigla_visitante) && (
+                                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px', backgroundColor: '#f1f5f9', padding: '10px', borderRadius: '8px' }}>
+                                            <div style={{ textAlign: 'center' }}>
+                                                <img src={novoJogo.logo_casa || "/media/escudos-times/default.png"} alt="casa" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
+                                                <div style={{ fontSize: '11px', fontWeight: 'bold' }}>{novoJogo.sigla_casa}</div>
+                                            </div>
+                                            <span>VS</span>
+                                            <div style={{ textAlign: 'center' }}>
+                                                <img src={novoJogo.logo_visitante || "/media/escudos-times/default.png"} alt="visit" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
+                                                <div style={{ fontSize: '11px', fontWeight: 'bold' }}>{novoJogo.sigla_visitante}</div>
+                                            </div>
+                                        </div>
+                                    )}
 
-                                <Button label="Cadastrar Jogo" onClick={handleCadastrarJogo} />
-                            </div>
+                                    <input type="datetime-local" value={novoJogo.data_hora} onChange={(e) => setNovoJogo({...novoJogo, data_hora: e.target.value})} style={{ padding: '0.75rem', borderRadius: '6px', border: '1px solid #ced4da', width: '100%', fontFamily: 'inherit', fontSize: '1rem', color: '#495057' }} />
+                                    <Button label="Salvar Confronto" onClick={handleCadastrarJogo} />
+                                </div>
+                            ) : (
+                                <p style={{ color: '#64748b' }}>Esta rodada é do tipo <strong>Campeão</strong> (Aposta Direta). Não necessita do cadastro de confrontos.</p>
+                            )}
                         </div>
 
+                        {/* COLUNA DIREITA: LISTA DE JOGOS CADASTRADOS */}
                         <div style={{ flex: '1 1 500px' }}>
-                            <h2 style={{ marginTop: 0 }}>📋 Jogos da {rodadaSelecionada.nome}</h2>
-                            {jogos.length === 0 ? <p>Nenhum jogo cadastrado nesta rodada.</p> : null}
+                            {rodadaSelecionada.tipo === 'placares' && jogos.length === 0 && <p>Nenhum jogo cadastrado nesta rodada.</p>}
                             
-                            {jogos.map(jogo => {
+                            {rodadaSelecionada.tipo === 'placares' && jogos.map(jogo => {
                                 const temResultadoFinalizado = jogo.gols_casa !== null && jogo.gols_visitante !== null;
                                 const estaEditando = editandoJogos.includes(jogo.id);
                                 const mostrarFixo = temResultadoFinalizado && !estaEditando;
 
                                 return (
-                                    <div key={jogo.id} style={{ backgroundColor: 'white', marginBottom: '20px', borderRadius: '12px', padding: '20px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
-                                        <div style={{ textAlign: 'center', color: '#64748b', fontWeight: 'bold', marginBottom: '15px' }}>📅 {formatarData(jogo.data_hora)}</div>
+                                    <div key={jogo.id} style={{ backgroundColor: 'white', marginBottom: '15px', borderRadius: '12px', padding: '15px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
+                                        <div style={{ textAlign: 'center', color: '#64748b', fontSize: '12px', fontWeight: 'bold', marginBottom: '10px' }}>📅 {formatarData(jogo.data_hora)}</div>
                                         
-                                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '20px', marginBottom: '25px' }}>
-                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '80px' }}>
-                                                <img src={jogo.logo_casa || "/media/escudos-times/default.png"} alt="logo" style={{ width: '50px', height: '50px', objectFit: 'contain' }} />
-                                                <strong>{jogo.sigla_casa}</strong>
+                                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px', marginBottom: '15px' }}>
+                                            <div style={{ textAlign: 'center', width: '70px' }}>
+                                                <img src={jogo.logo_casa} alt="logo" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
+                                                <div style={{ fontWeight: 'bold', fontSize: '12px' }}>{jogo.sigla_casa}</div>
                                             </div>
 
                                             {mostrarFixo ? (
-                                                <div style={{ fontSize: '32px', fontWeight: '900', color: '#1e293b', display: 'flex', gap: '15px' }}>
-                                                    <span>{jogo.gols_casa}</span>
-                                                    <span style={{ color: '#94a3b8' }}>X</span>
-                                                    <span>{jogo.gols_visitante}</span>
+                                                <div style={{ fontSize: '24px', fontWeight: '900', color: '#1e293b', display: 'flex', gap: '10px' }}>
+                                                    <span>{jogo.gols_casa}</span><span style={{ color: '#94a3b8' }}>X</span><span>{jogo.gols_visitante}</span>
                                                 </div>
                                             ) : (
                                                 <>
-                                                    <input 
-                                                        type="number" min="0" value={resultados[jogo.id]?.casa ?? ""} 
-                                                        onChange={(e) => setResultados({...resultados, [jogo.id]: {...resultados[jogo.id], casa: e.target.value}})} 
-                                                        style={{ width: '60px', height: '50px', textAlign: 'center', fontSize: '24px', fontWeight: 'bold', borderRadius: '8px', border: '2px solid #cbd5e1' }}
-                                                    />
-                                                    <span style={{ fontWeight: 'bold', fontSize: '20px', color: '#94a3b8' }}>X</span>
-                                                    <input 
-                                                        type="number" min="0" value={resultados[jogo.id]?.visitante ?? ""} 
-                                                        onChange={(e) => setResultados({...resultados, [jogo.id]: {...resultados[jogo.id], visitante: e.target.value}})} 
-                                                        style={{ width: '60px', height: '50px', textAlign: 'center', fontSize: '24px', fontWeight: 'bold', borderRadius: '8px', border: '2px solid #cbd5e1' }}
-                                                    />
+                                                    <input type="number" min="0" value={resultados[jogo.id]?.casa ?? ""} onChange={(e) => setResultados({...resultados, [jogo.id]: {...resultados[jogo.id], casa: e.target.value}})} style={{ width: '50px', height: '40px', textAlign: 'center', fontSize: '20px', fontWeight: 'bold', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
+                                                    <span style={{ fontWeight: 'bold', color: '#94a3b8' }}>X</span>
+                                                    <input type="number" min="0" value={resultados[jogo.id]?.visitante ?? ""} onChange={(e) => setResultados({...resultados, [jogo.id]: {...resultados[jogo.id], visitante: e.target.value}})} style={{ width: '50px', height: '40px', textAlign: 'center', fontSize: '20px', fontWeight: 'bold', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
                                                 </>
                                             )}
 
-                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '80px' }}>
-                                                <img src={jogo.logo_visitante || "/media/escudos-times/default.png"} alt="logo" style={{ width: '50px', height: '50px', objectFit: 'contain' }} />
-                                                <strong>{jogo.sigla_visitante}</strong>
+                                            <div style={{ textAlign: 'center', width: '70px' }}>
+                                                <img src={jogo.logo_visitante} alt="logo" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
+                                                <div style={{ fontWeight: 'bold', fontSize: '12px' }}>{jogo.sigla_visitante}</div>
                                             </div>
                                         </div>
 
-                                        <div style={{ display: 'flex', justifyContent: 'center', gap: '15px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
                                             {mostrarFixo ? (
-                                                <>
-                                                    <Button label="Editar Placar" icon="pi pi-pencil" severity="info" onClick={() => habilitarEdicao(jogo.id)} />
-                                                </>
+                                                <Button label="Editar Placar" icon="pi pi-pencil" severity="info" size="small" onClick={() => habilitarEdicao(jogo.id)} />
                                             ) : (
                                                 <>
-                                                    <Button label="Salvar Resultado" icon="pi pi-check" severity="success" onClick={() => handleSalvarResultado(jogo.id)} />
-                                                    {!estaEditando && <Button label="Excluir Jogo" icon="pi pi-trash" severity="danger" outlined onClick={() => handleDeletarJogo(jogo.id)} />}
+                                                    <Button label="Salvar Resultado" icon="pi pi-check" severity="success" size="small" onClick={() => handleSalvarResultado(jogo.id)} />
+                                                    {!estaEditando && <Button icon="pi pi-trash" severity="danger" outlined size="small" onClick={() => handleDeletarJogo(jogo.id)} />}
                                                 </>
                                             )}
                                         </div>
@@ -438,22 +419,37 @@ export default function Admin() {
                 )}
             </div>
 
+            {/* MODAL: CADASTRO DE SELEÇÕES (TEAMS) */}
+            <Dialog header="🚩 Gestão de Países / Seleções" visible={exibirDialogTeams} style={{ width: '450px' }} onHide={() => setExibirDialogTeams(false)}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', paddingTop: '10px' }}>
+                    <InputText placeholder="Nome da Seleção (Ex: Brasil)" value={novoTeam.nome} onChange={(e) => setNovoTeam({...novoTeam, nome: e.target.value})} />
+                    <InputText placeholder="Sigla (Ex: BRA)" maxLength={3} value={novoTeam.sigla} onChange={(e) => setNovoTeam({...novoTeam, sigla: e.target.value.toUpperCase()})} />
+                    <InputText placeholder="URL da Bandeira" value={novoTeam.bandeira} onChange={(e) => setNovoTeam({...novoTeam, bandeira: e.target.value})} />
+                    <Button label="Salvar no Banco" onClick={handleCadastrarTeam} severity="success" />
+                    
+                    <div style={{ height: '1px', backgroundColor: '#e2e8f0', margin: '10px 0' }} />
+                    <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                        <div style={{ fontWeight: 'bold', color: '#64748b', marginBottom: '10px' }}>Seleções já cadastradas:</div>
+                        {teams.map(t => (
+                            <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', padding: '5px 0' }}>
+                                <img src={t.bandeira} alt={t.sigla} style={{ width: '20px', height: '15px', objectFit: 'cover' }} />
+                                <strong>{t.sigla}</strong> - {t.nome}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </Dialog>
+
+            {/* MODAL: BILHETES E PAGAMENTOS */}
             <Dialog header={`Gerenciar Pagamentos - ${rodadaSelecionada?.nome || 'Geral'}`} visible={exibirDialogCartelas} style={{ width: '80vw' }} onHide={() => setExibirDialogCartelas(false)}>
-                <DataTable value={cartelasDaRodada} paginator rows={10} emptyMessage="Nenhuma cartela gerada nesta rodada." sortField="id" sortOrder={-1}>
+                <DataTable value={cartelasDaRodada} paginator rows={10} emptyMessage="Nenhum bilhete nesta rodada." sortField="id" sortOrder={-1}>
                     <Column field="id" header="Nº" sortable body={(r) => <b>#{r.id}</b>} style={{ width: '80px' }} />
                     <Column field="usuario_nome" header="Usuário" sortable />
                     <Column header="Origem" body={origemTemplate} style={{ width: '130px' }} />
                     <Column field="data_criacao" header="Data" body={(r) => formatarData(r.data_criacao)} />
                     <Column header="Status / Ação" body={statusTemplate} />
                     <Column header="Excluir" body={(r) => (
-                        <Button 
-                            icon="pi pi-trash" 
-                            severity="danger" 
-                            outlined 
-                            onClick={() => handleDeletarCartela(r.id)} 
-                            tooltip="Excluir Cartela"
-                            style={{ padding: '5px', width: '35px', height: '35px' }}
-                        />
+                        <Button icon="pi pi-trash" severity="danger" outlined onClick={() => handleDeletarCartela(r.id)} style={{ padding: '5px', width: '35px', height: '35px' }} />
                     )} />
                 </DataTable>
             </Dialog>
