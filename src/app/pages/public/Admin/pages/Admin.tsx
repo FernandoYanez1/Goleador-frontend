@@ -29,8 +29,10 @@ export default function Admin() {
     
     // Restaurei as caixas de texto limpas para você digitar qualquer time!
     const [novoJogo, setNovoJogo] = useState<any>({
-        time_casa: '', time_visitante: '', sigla_casa: '', sigla_visitante: '', logo_casa: '', logo_visitante: '', data_hora: ''
-    });
+    time_casa_id: null,
+    time_visitante_id: null,
+    data_hora: ''
+});
 
     const carregarDadosIniciais = () => {
         Promise.all([
@@ -96,18 +98,21 @@ export default function Admin() {
     };
 
     const handleDefinirRodadaRanking = () => {
-        if (!rodadaSelecionada) return;
-        fetch(`${apiUrl}/admin/definir-ranking`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ rodada_id: rodadaSelecionada.id })
-        }).then((res) => {
-            if (res.ok) {
-                alert(`Sucesso! "${rodadaSelecionada.nome}" agora é a rodada oficial do Ranking.`);
-                carregarDadosIniciais();
-            }
-        });
-    };
+    if (!rodadaSelecionada) return;
+
+    fetch(`${apiUrl}/admin/definir-ranking`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            rodada_id: rodadaSelecionada.id,
+            fixado: !rodadaSelecionada.fixado_ranking
+        })
+    }).then(() => {
+        carregarDadosIniciais();
+    });
+};
 
     const handleCadastrarTeam = () => {
         if (!novoTeam.nome || !novoTeam.sigla || !novoTeam.bandeira) return alert("Preencha todos os campos da seleção!");
@@ -269,30 +274,135 @@ export default function Admin() {
                             <Dropdown value={rodadaSelecionada} options={rodadas} onChange={(e) => setRodadaSelecionada(e.value)} optionLabel="nome" placeholder="Selecione" style={{ width: '250px' }} />
                             {rodadaSelecionada && (
                                 <span style={{ padding: '5px 10px', borderRadius: '5px', fontSize: '12px', fontWeight: 'bold', 
-                                    backgroundColor: rodadaSelecionada.status === 'aberta' ? '#dcfce7' : rodadaSelecionada.status === 'pausada' ? '#fef9c3' : rodadaSelecionada.status === 'finalizada' ? '#f1f5f9' : rodadaSelecionada.status === 'arquivada' ? '#fee2e2' : '#e2e8f0', 
-                                    color: rodadaSelecionada.status === 'aberta' ? '#16a34a' : rodadaSelecionada.status === 'pausada' ? '#b45309' : rodadaSelecionada.status === 'finalizada' ? '#64748b' : rodadaSelecionada.status === 'arquivada' ? '#dc2626' : '#475569' }}>
+                                    backgroundColor: rodadaSelecionada.status === 'aberta' ? '#dcfce7' : rodadaSelecionada.status === 'pausada' ? '#fef9c3' : rodadaSelecionada.status === 'finalizada' ? '#f1f5f9' : rodadaSelecionada.status === 'encerrada' ? '#fee2e2' : '#e2e8f0', 
+                                    color: rodadaSelecionada.status === 'aberta' ? '#16a34a' : rodadaSelecionada.status === 'pausada' ? '#b45309' : rodadaSelecionada.status === 'finalizada' ? '#64748b' : rodadaSelecionada.status === 'encerrada' ? '#dc2626' : '#475569' }}>
                                     {rodadaSelecionada.status.toUpperCase()}
                                 </span>
                             )}
-                            {rodadaSelecionada?.exibir_no_ranking && (
+                            {rodadaSelecionada?.fixado_ranking && (
                                 <span style={{ backgroundColor: '#e0f2fe', color: '#0369a1', padding: '5px 10px', borderRadius: '5px', fontSize: '12px', fontWeight: 'bold' }}>
-                                    🌟 NO RANKING PÚBLICO
+                                    ⭐ RANKING FIXADO
                                 </span>
                             )}
                         </div>
 
                         {/* OS BOTÕES DA ESTEIRA AQUI */}
-                        <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px' }}>
-                            {rodadaSelecionada && <Button label="🌟 Fixar Ranking" icon="pi pi-star" severity="info" onClick={handleDefinirRodadaRanking} />}
-                            
-                            {rodadaSelecionada?.status === 'rascunho' && <Button label="🟢 Abrir Rodada" icon="pi pi-play" severity="success" onClick={() => alterarStatusRodada('aberta')} />}
-                            {rodadaSelecionada?.status === 'aberta' && <Button label="⏸️ Pausar Apostas" icon="pi pi-pause" severity="warning" onClick={() => alterarStatusRodada('pausada')} />}
-                            {rodadaSelecionada?.status === 'pausada' && <Button label="⏪ Reabrir Apostas" icon="pi pi-refresh" severity="success" onClick={() => alterarStatusRodada('aberta')} />}
-                            
-                            {(rodadaSelecionada?.status === 'pausada' || rodadaSelecionada?.status === 'aberta') && (
-                                <Button label="📦 Arquivar Rodada" icon="pi pi-box" severity="danger" onClick={() => { if(window.confirm("Arquivar rodada inteira? Ela sumirá do ranking e dos bilhetes do usuário.")) alterarStatusRodada('arquivada'); }} />
-                            )}
-                        </div>
+                        <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+
+    {rodadaSelecionada && (
+        <Button
+            label={
+                rodadaSelecionada?.fixado_ranking
+                    ? "❌ Desfixar Ranking"
+                    : "⭐ Fixar Ranking"
+            }
+            icon="pi pi-star"
+            severity={
+                rodadaSelecionada?.fixado_ranking
+                    ? "danger"
+                    : "info"
+            }
+            onClick={() => {
+                fetch(`${apiUrl}/admin/definir-ranking`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        rodada_id: rodadaSelecionada.id,
+                        fixado: !rodadaSelecionada.fixado_ranking
+                    })
+                }).then(() => {
+                    carregarDadosIniciais();
+                });
+            }}
+        />
+    )}
+
+    {rodadaSelecionada?.status === 'rascunho' && (
+        <Button
+            label="🟢 Abrir Rodada"
+            icon="pi pi-play"
+            severity="success"
+            onClick={() => alterarStatusRodada('aberta')}
+        />
+    )}
+
+    {rodadaSelecionada?.status === 'aberta' && (
+        <>
+            <Button
+                label="⏸️ Pausar"
+                icon="pi pi-pause"
+                severity="warning"
+                onClick={() => alterarStatusRodada('pausada')}
+            />
+
+            <Button
+                label="🏁 Encerrar"
+                icon="pi pi-stop"
+                severity="danger"
+                onClick={() => {
+                    if (window.confirm("Encerrar rodada?")) {
+                        fetch(`${apiUrl}/rodadas/${rodadaSelecionada.id}/encerrar`, {
+                            method: 'PUT'
+                        }).then(() => {
+                            carregarDadosIniciais();
+                        });
+                    }
+                }}
+            />
+        </>
+    )}
+
+    {rodadaSelecionada?.status === 'pausada' && (
+        <>
+            <Button
+                label="🔓 Reabrir"
+                icon="pi pi-refresh"
+                severity="success"
+                onClick={() => {
+                    fetch(`${apiUrl}/rodadas/${rodadaSelecionada.id}/reabrir`, {
+                        method: 'PUT'
+                    }).then(() => {
+                        carregarDadosIniciais();
+                    });
+                }}
+            />
+
+            <Button
+                label="🏁 Encerrar"
+                icon="pi pi-stop"
+                severity="danger"
+                onClick={() => {
+                    if (window.confirm("Encerrar rodada?")) {
+                        fetch(`${apiUrl}/rodadas/${rodadaSelecionada.id}/encerrar`, {
+                            method: 'PUT'
+                        }).then(() => {
+                            carregarDadosIniciais();
+                        });
+                    }
+                }}
+            />
+        </>
+    )}
+
+    {rodadaSelecionada?.status === 'encerrada' && (
+        <Button
+            label="📦 Arquivar"
+            icon="pi pi-box"
+            severity="secondary"
+            onClick={() => {
+                if (window.confirm("Arquivar rodada?")) {
+                    fetch(`${apiUrl}/rodadas/${rodadaSelecionada.id}/arquivar`, {
+                        method: 'PUT'
+                    }).then(() => {
+                        carregarDadosIniciais();
+                    });
+                }
+            }}
+        />
+    )}
+</div>
                     </div>
 
                     <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', alignItems: 'flex-end', backgroundColor: '#f8fafc', padding: '15px', borderRadius: '8px' }}>
