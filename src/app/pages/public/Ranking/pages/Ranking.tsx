@@ -296,7 +296,6 @@ const Ranking = () => {
                     <Typography variant="subtitle1" style={{ color: "#cbd5e1", marginTop: "10px", lineHeight: "1.4" }}>
                         Disputado por {totalCartelasCompradas} bilhetes validados nesta rodada.
                         <br/>
-                        <span style={{ fontSize: "12px", color: "#64748b" }}>*10% do valor total arrecadado é retido para custos de manutenção da plataforma.</span>
                     </Typography>
                     
                     <Box mt={3} display="flex" justifyContent="center" gap={2} flexWrap="wrap" alignItems="center">
