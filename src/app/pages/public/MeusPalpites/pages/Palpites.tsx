@@ -9,6 +9,7 @@ export default function MeusPalpites() {
   const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
   
   const [cartelas, setCartelas] = useState<any[]>([]);
+  const [teams, setTeams] = useState<any[]>([]); // NOVO: Estado para armazenar as seleções/times
   const [nomeUsuario, setNomeUsuario] = useState("");
   
   const [rodadasAtuais, setRodadasAtuais] = useState<any[]>([]);
@@ -18,7 +19,6 @@ export default function MeusPalpites() {
   const [expandidos, setExpandidos] = useState<Record<number, boolean>>({});
   const [copiadoPixId, setCopiadoPixId] = useState<number | null>(null);
 
-  
   useEffect(() => {
     const usuarioSalvo = localStorage.getItem("usuarioLogado");
     if (!usuarioSalvo) {
@@ -28,35 +28,29 @@ export default function MeusPalpites() {
     const user = JSON.parse(usuarioSalvo);
     setNomeUsuario(user.nome);
 
-    // Busca qual é a rodada atual do sistema
-    fetch(`${apiUrl}/rodadas`)
-        .then(res => res.json())
-        .then(rodadasData => {
-            const abertasOuPausadas = rodadasData.filter(
-    (r: any) =>
-        r.status === 'aberta' ||
-        r.status === 'pausada'
-);
+    // Busca as rodadas, palpites do usuário e a lista de seleções/times simultaneamente
+    Promise.all([
+        fetch(`${apiUrl}/rodadas`).then(res => res.json()),
+        fetch(`${apiUrl}/meus-palpites/${user.id}`).then(res => res.json()),
+        fetch(`${apiUrl}/teams`).then(res => res.json())
+    ])
+    .then(([rodadasData, palpitesData, teamsData]) => {
+        const abertasOuPausadas = rodadasData.filter(
+            (r: any) => r.status === 'aberta' || r.status === 'pausada'
+        );
 
-setRodadasAtuais(abertasOuPausadas);
-
-            // Busca os palpites do usuário
-            fetch(`${apiUrl}/meus-palpites/${user.id}`)
-                .then((res) => res.json())
-                .then((dados) => {
-                    setCartelas(dados);
-                    
-                    // Configura os bilhetes (Atuais começam abertos, antigos começam fechados)
-                    const estadoInicial: Record<number, boolean> = {};
-                    dados.forEach((c: any) => { 
-                        estadoInicial[c.cartela_id] = abertasOuPausadas.some(
-    (r: any) => r.nome === c.rodada_nome
-);
-                    });
-                    setExpandidos(estadoInicial);
-                })
-                .catch((err) => console.error("Erro ao buscar palpites:", err));
+        setRodadasAtuais(abertasOuPausadas);
+        setTeams(teamsData); // Salva os times para podermos puxar as bandeiras
+        setCartelas(palpitesData);
+        
+        // Configura os bilhetes (Atuais começam abertos, antigos começam fechados)
+        const estadoInicial: Record<number, boolean> = {};
+        palpitesData.forEach((c: any) => { 
+            estadoInicial[c.cartela_id] = abertasOuPausadas.some((r: any) => r.nome === c.rodada_nome);
         });
+        setExpandidos(estadoInicial);
+    })
+    .catch((err) => console.error("Erro ao buscar dados:", err));
 
   }, [history, apiUrl]);
 
@@ -86,13 +80,11 @@ setRodadasAtuais(abertasOuPausadas);
 
   const copiarPix = (id: number, codigo: string) => {
     navigator.clipboard.writeText(codigo);
-
     setCopiadoPixId(id);
-
     setTimeout(() => {
         setCopiadoPixId(null);
     }, 3000);
-};
+  };
 
   const renderCartela = (cartela: any) => {
     const isAprovado = cartela.status_pagamento === 'aprovado';
@@ -107,38 +99,26 @@ setRodadasAtuais(abertasOuPausadas);
                 <i className={`pi ${isOpen ? 'pi-chevron-down' : 'pi-chevron-right'}`} style={{ color: "#64748b", fontSize: "1.2rem", fontWeight: "bold" }}></i>
             </div>
             <div>
-                <h3 style={{ margin: 0, color: "#1e293b", fontSize: "20px" }}>Bilhete #{cartela.cartela_id}
-
-<span
-    style={{
-        marginLeft: "10px",
-        fontSize: "11px",
-        backgroundColor:
-            cartela.status_pagamento === 'aprovado'
-                ? '#dcfce7'
-                : '#fef3c7',
-        color:
-            cartela.status_pagamento === 'aprovado'
-                ? '#166534'
-                : '#92400e',
-        padding: '4px 8px',
-        borderRadius: '999px',
-        fontWeight: 'bold',
-        verticalAlign: 'middle'
-    }}
->
-    {cartela.status_pagamento === 'aprovado'
-        ? '✅ PAGO'
-        : '⏳ PENDENTE'}
-</span></h3>
+                <h3 style={{ margin: 0, color: "#1e293b", fontSize: "20px" }}>Bilhete #{cartela.numero_bilhete || cartela.cartela_id}
+                    <span
+                        style={{
+                            marginLeft: "10px",
+                            fontSize: "11px",
+                            backgroundColor: cartela.status_pagamento === 'aprovado' ? '#dcfce7' : '#fef3c7',
+                            color: cartela.status_pagamento === 'aprovado' ? '#166534' : '#92400e',
+                            padding: '4px 8px',
+                            borderRadius: '999px',
+                            fontWeight: 'bold',
+                            verticalAlign: 'middle'
+                        }}
+                    >
+                        {cartela.status_pagamento === 'aprovado' ? '✅ PAGO' : '⏳ PENDENTE'}
+                    </span>
+                </h3>
                 <span style={{ color: "#64748b", fontSize: "14px", fontWeight: "bold" }}>{cartela.rodada_nome}</span>
-                <div style={{
-    fontSize: '12px',
-    color: '#94a3b8',
-    marginTop: '4px'
-}}>
-    Criado em {new Date(cartela.data_criacao).toLocaleString('pt-BR')}
-</div>
+                <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
+                    Criado em {new Date(cartela.data_criacao).toLocaleString('pt-BR')}
+                </div>
             </div>
           </div>
           <div style={{ textAlign: "right" }}>
@@ -150,111 +130,76 @@ setRodadasAtuais(abertasOuPausadas);
         {isOpen && (
             <div>
                {!isAprovado && (
-    <div
-        style={{
-            backgroundColor: "#fffbeb",
-            border: "2px dashed #f59e0b",
-            borderRadius: "12px",
-            padding: "20px",
-            marginBottom: "25px",
-            textAlign: "center"
-        }}
-    >
-        <h4
-            style={{
-                color: "#b45309",
-                margin: "0 0 10px 0",
-                fontSize: "18px"
-            }}
-        >
-            ⏳ Aguardando confirmação do PIX
-        </h4>
+                    <div style={{ backgroundColor: "#fffbeb", border: "2px dashed #f59e0b", borderRadius: "12px", padding: "20px", marginBottom: "25px", textAlign: "center" }}>
+                        <h4 style={{ color: "#b45309", margin: "0 0 10px 0", fontSize: "18px" }}>
+                            ⏳ Aguardando confirmação do PIX
+                        </h4>
+                        <p style={{ color: "#475569", marginBottom: "20px", fontSize: "14px" }}>
+                            Pague o PIX abaixo para validar este bilhete.
+                        </p>
 
-        <p
-            style={{
-                color: "#475569",
-                marginBottom: "20px",
-                fontSize: "14px"
-            }}
-        >
-            Pague o PIX abaixo para validar este bilhete.
-        </p>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "15px" }}>
+                            {cartela.qr_code_base64 && (
+                                <div style={{ backgroundColor: "white", padding: "10px", borderRadius: "12px" }}>
+                                    <img
+                                        src={`data:image/png;base64,${cartela.qr_code_base64}`}
+                                        alt="PIX"
+                                        style={{ width: "180px", height: "180px" }}
+                                    />
+                                </div>
+                            )}
 
-        <div
-            style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: "15px"
-            }}
-        >
-            {cartela.qr_code_base64 && (
-                <div
-                    style={{
-                        backgroundColor: "white",
-                        padding: "10px",
-                        borderRadius: "12px"
-                    }}
-                >
-                    <img
-                        src={`data:image/png;base64,${cartela.qr_code_base64}`}
-                        alt="PIX"
-                        style={{
-                            width: "180px",
-                            height: "180px"
-                        }}
-                    />
-                </div>
-            )}
+                            <AppButton
+                                icon={copiadoPixId === cartela.cartela_id ? <CheckCircle style={{ marginRight: '8px' }} /> : <ContentCopy style={{ marginRight: '8px' }} />}
+                                label={copiadoPixId === cartela.cartela_id ? "PIX Copiado!" : "Copiar código PIX"}
+                                onClick={() => copiarPix(cartela.cartela_id, cartela.pix_copia_cola)}
+                                style={{ width: "100%", maxWidth: "320px", backgroundColor: copiadoPixId === cartela.cartela_id ? "#10b981" : "#3b82f6", border: "none" }}
+                            />
 
-            <AppButton
-                icon={
-                    copiadoPixId === cartela.cartela_id
-                        ? <CheckCircle style={{ marginRight: '8px' }} />
-                        : <ContentCopy style={{ marginRight: '8px' }} />
-                }
-                label={
-                    copiadoPixId === cartela.cartela_id
-                        ? "PIX Copiado!"
-                        : "Copiar código PIX"
-                }
-                onClick={() =>
-                    copiarPix(
-                        cartela.cartela_id,
-                        cartela.pix_copia_cola
-                    )
-                }
-                style={{
-                    width: "100%",
-                    maxWidth: "320px",
-                    backgroundColor:
-                        copiadoPixId === cartela.cartela_id
-                            ? "#10b981"
-                            : "#3b82f6",
-                    border: "none"
-                }}
-            />
-
-            <div
-                style={{
-                    fontSize: "12px",
-                    color: "#64748b",
-                    textAlign: "center",
-                    maxWidth: "350px",
-                    lineHeight: "1.5"
-                }}
-            >
-                Após o pagamento o sistema aprova seu bilhete automaticamente.
-            </div>
-        </div>
-    </div>
-)}
+                            <div style={{ fontSize: "12px", color: "#64748b", textAlign: "center", maxWidth: "350px", lineHeight: "1.5" }}>
+                                Após o pagamento o sistema aprova seu bilhete automaticamente.
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
                 {cartela.palpites.map((p: any, index: number) => {
                     const jogoFinalizado = p.gols_casa !== null && p.gols_visitante !== null;
                     const info = getRegraInfo(p);
 
+                    // ==========================================
+                    // NOVO LAYOUT: APOSTA DE CAMPEÃO
+                    // ==========================================
+                    if (cartela.rodada_tipo === 'campeao') {
+                        // Busca a bandeira correspondente ao nome do país apostado
+                        const timeApostado = teams.find(t => t.nome === p.palpite_texto);
+                        const bandeira = timeApostado?.bandeira || timeApostado?.logo_url || "/media/escudos-times/default.png";
+                        const ganhou = p.pontos_ganhos > 0;
+
+                        return (
+                            <div key={index} style={{ backgroundColor: "#f8fafc", borderRadius: "12px", padding: "20px", border: "1px solid #e2e8f0", display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", boxShadow: "inset 0 2px 4px rgba(0,0,0,0.02)" }}>
+                                <div style={{ fontSize: "12px", fontWeight: "bold", color: "#64748b", letterSpacing: "1px" }}>⭐ APOSTA NO CAMPEÃO</div>
+                                <img src={bandeira} alt={p.palpite_texto} style={{ width: '60px', height: '40px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
+                                <div style={{ fontSize: '24px', fontWeight: '900', color: '#1e293b' }}>{p.palpite_texto}</div>
+                                
+                                <div style={{ marginTop: "10px", display: "flex", alignItems: "center", gap: "10px" }}>
+                                    <div style={{ fontSize: "13px", color: "#64748b", fontWeight: "bold" }}>
+                                        Status: <span style={{ color: ganhou ? "#10b981" : "#f59e0b" }}>{ganhou ? "🏆 Campeão Confirmado!" : "Aguardando Resultado..."}</span>
+                                    </div>
+                                    {ganhou && isAprovado && (
+                                        <div style={{ backgroundColor: "#10b981", color: "white", padding: "4px 10px", borderRadius: "15px", fontWeight: "bold", fontSize: "11px" }}>
+                                            +{p.pontos_ganhos} pts
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    }
+
+                    // ==========================================
+                    // LAYOUT ANTIGO: APOSTA DE PLACARES (CONFRONTOS)
+                    // ==========================================
                     return (
                     <div key={index} style={{ backgroundColor: "#f8fafc", borderRadius: "8px", padding: "15px", border: "1px solid #e2e8f0" }}>
                         <div style={{ textAlign: "center", color: "#64748b", fontSize: "12px", fontWeight: "bold", marginBottom: "10px" }}>
@@ -262,19 +207,21 @@ setRodadasAtuais(abertasOuPausadas);
                         </div>
                         
                         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "15px" }}>
-                        <div style={{ textAlign: 'center', width: '60px' }}>
-                            <img src={p.logo_casa || "/media/escudos-times/default.png"} alt="Casa" style={{ width: '35px', height: '35px', objectFit: 'contain' }} />
-                        </div>
+                            <div style={{ textAlign: 'center', width: '60px' }}>
+                                <img src={p.logo_casa || "/media/escudos-times/default.png"} alt="Casa" style={{ width: '35px', height: '35px', objectFit: 'contain' }} />
+                                <div style={{ fontSize: '13px', fontWeight: 'bold', color: "#1e293b", marginTop: "5px" }}>{p.sigla_casa}</div>
+                            </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <div style={{ width: "35px", height: "35px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "16px", fontWeight: "bold", borderRadius: "6px", border: "2px solid #cbd5e1", backgroundColor: "white", color: "#1e293b" }}>{p.palpite_casa}</div>
-                            <span style={{ fontSize: "16px", fontWeight: "bold", color: '#94a3b8' }}>X</span>
-                            <div style={{ width: "35px", height: "35px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "16px", fontWeight: "bold", borderRadius: "6px", border: "2px solid #cbd5e1", backgroundColor: "white", color: "#1e293b" }}>{p.palpite_visitante}</div>
-                        </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ width: "35px", height: "35px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "16px", fontWeight: "bold", borderRadius: "6px", border: "2px solid #cbd5e1", backgroundColor: "white", color: "#1e293b" }}>{p.palpite_casa}</div>
+                                <span style={{ fontSize: "16px", fontWeight: "bold", color: '#94a3b8' }}>X</span>
+                                <div style={{ width: "35px", height: "35px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "16px", fontWeight: "bold", borderRadius: "6px", border: "2px solid #cbd5e1", backgroundColor: "white", color: "#1e293b" }}>{p.palpite_visitante}</div>
+                            </div>
 
-                        <div style={{ textAlign: 'center', width: '60px' }}>
-                            <img src={p.logo_visitante || "/media/escudos-times/default.png"} alt="Visitante" style={{ width: '35px', height: '35px', objectFit: 'contain' }} />
-                        </div>
+                            <div style={{ textAlign: 'center', width: '60px' }}>
+                                <img src={p.logo_visitante || "/media/escudos-times/default.png"} alt="Visitante" style={{ width: '35px', height: '35px', objectFit: 'contain' }} />
+                                <div style={{ fontSize: '13px', fontWeight: 'bold', color: "#1e293b", marginTop: "5px" }}>{p.sigla_visitante}</div>
+                            </div>
                         </div>
 
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: "1px solid #e2e8f0", paddingTop: "10px", marginTop: "15px" }}>
@@ -284,9 +231,9 @@ setRodadasAtuais(abertasOuPausadas);
                         
                         {jogoFinalizado && isAprovado && (
                             <Tooltip title={info.texto} arrow placement="top">
-                            <div style={{ backgroundColor: info.cor, color: "white", padding: "4px 10px", borderRadius: "15px", fontWeight: "bold", fontSize: "11px", cursor: "help" }}>
-                                +{p.pontos_ganhos} pts
-                            </div>
+                                <div style={{ backgroundColor: info.cor, color: "white", padding: "4px 10px", borderRadius: "15px", fontWeight: "bold", fontSize: "11px", cursor: "help" }}>
+                                    +{p.pontos_ganhos} pts
+                                </div>
                             </Tooltip>
                         )}
                         {jogoFinalizado && !isAprovado && (
@@ -306,13 +253,8 @@ setRodadasAtuais(abertasOuPausadas);
   // Separação Inteligente
   const nomesRodadasAtuais = rodadasAtuais.map(r => r.nome);
 
-const cartelasAtuais = cartelas.filter(c =>
-    nomesRodadasAtuais.includes(c.rodada_nome)
-);
-
-const cartelasAntigas = cartelas.filter(c =>
-    !nomesRodadasAtuais.includes(c.rodada_nome)
-);
+  const cartelasAtuais = cartelas.filter(c => nomesRodadasAtuais.includes(c.rodada_nome));
+  const cartelasAntigas = cartelas.filter(c => !nomesRodadasAtuais.includes(c.rodada_nome));
   
   // Lista de rodadas antigas para o dropdown de histórico
   const nomesRodadasAntigas = Array.from(new Set(cartelasAntigas.map(c => c.rodada_nome))) as string[];
