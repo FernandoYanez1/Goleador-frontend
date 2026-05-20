@@ -335,6 +335,7 @@ const Ranking = () => {
                 
                 {rodadasRanking.length > 1 && (
     <Box mb={3}>
+        
 
 {rodadasRanking.length > 1 && (
     <Box mb={3} display="flex" justifyContent="center">
