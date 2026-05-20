@@ -14,6 +14,7 @@ export default function Admin() {
 
     const [rodadas, setRodadas] = useState<any[]>([]);
     const [teams, setTeams] = useState<any[]>([]);
+    const selecoesCopa = teams.filter((t) => t.id >= 19 && t.id <= 66);
     const [cartelas, setCartelas] = useState<any[]>([]);
     const [rodadaSelecionada, setRodadaSelecionada] = useState<any>(null);
     const [verArquivadas, setVerArquivadas] = useState(false);
@@ -108,6 +109,7 @@ export default function Admin() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 rodada_id: rodadaSelecionada.id,
+                // Lógica corrigida: Inverte o valor atual do banco
                 fixado: !rodadaSelecionada.exibir_no_ranking
             })
         }).then(() => {
@@ -131,9 +133,6 @@ export default function Admin() {
     const handleCadastrarJogo = () => {
         if (!rodadaSelecionada) return;
         if (!novoJogo.time_casa_id || !novoJogo.time_visitante_id) return alert("Selecione os dois times.");
-
-        const timeCasa = teams.find(t => t.id === novoJogo.time_casa_id);
-        const timeVisitante = teams.find(t => t.id === novoJogo.time_visitante_id);
 
         fetch(`${apiUrl}/cadastrar-jogo`, {
             method: 'POST',
@@ -240,19 +239,10 @@ export default function Admin() {
     const precoRodadaAtual = rodadaSelecionada ? Number(rodadaSelecionada.preco) : 20;
     const valorBruto = cartelasAprovadas.length * precoRodadaAtual;
 
-    // NOVO: Template visual para o Status do Bilhete (Tag estilizada)
     const statusBadgeTemplate = (r: any) => {
         const isAprovado = r.status_pagamento === 'aprovado';
         return (
-            <span style={{
-                backgroundColor: isAprovado ? '#dcfce7' : '#fef3c7',
-                color: isAprovado ? '#166534' : '#92400e',
-                padding: '4px 8px',
-                borderRadius: '6px',
-                fontWeight: 'bold',
-                fontSize: '11px',
-                letterSpacing: '0.5px'
-            }}>
+            <span style={{ backgroundColor: isAprovado ? '#dcfce7' : '#fef3c7', color: isAprovado ? '#166534' : '#92400e', padding: '4px 8px', borderRadius: '6px', fontWeight: 'bold', fontSize: '11px', letterSpacing: '0.5px' }}>
                 {r.status_pagamento.toUpperCase()}
             </span>
         );
@@ -384,7 +374,7 @@ export default function Admin() {
                         <div style={{ flex: '1 1 500px' }}>
                             {rodadaSelecionada.tipo === 'placares' && jogos.length > 0 && (
                                 <div style={{ textAlign: 'right', marginBottom: '10px' }}>
-                                    <Button label="💾 Extrair Times da Rodada" severity="warning" onClick={extrairTimesParaBanco} tooltip="Salva os times antigos no banco de seleções para uso futuro" />
+                                    <Button label="💾 Extrair Times da Rodada" severity="warning" size="small" onClick={extrairTimesParaBanco} tooltip="Salva os times antigos no banco de seleções para uso futuro" />
                                 </div>
                             )}
 
@@ -425,11 +415,11 @@ export default function Admin() {
 
                                         <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
                                             {mostrarFixo ? (
-                                                <Button label="✏️ Editar Placar" severity="info" onClick={() => habilitarEdicao(jogo.id)} />
+                                                <Button label="✏️ Editar Placar" severity="info" size="small" onClick={() => habilitarEdicao(jogo.id)} />
                                             ) : (
                                                 <>
-                                                    <Button label="✅ Salvar" severity="success" onClick={() => handleSalvarResultado(jogo.id)} />
-                                                    {!estaEditando && <Button label="🗑️ Excluir" severity="danger" outlined onClick={() => handleDeletarJogo(jogo.id)} />}
+                                                    <Button label="✅ Salvar" severity="success" size="small" onClick={() => handleSalvarResultado(jogo.id)} />
+                                                    {!estaEditando && <Button label="🗑️ Excluir" severity="danger" outlined size="small" onClick={() => handleDeletarJogo(jogo.id)} />}
                                                 </>
                                             )}
                                         </div>
@@ -451,7 +441,6 @@ export default function Admin() {
                 </div>
             </Dialog>
 
-            {/* MODAL DE APROVAÇÃO (CORRIGIDO) */}
             <Dialog header="🎟️ Bilhetes Emitidos" visible={exibirDialogCartelas} style={{ width: '80vw' }} onHide={() => setExibirDialogCartelas(false)}>
                 <DataTable value={cartelasDaRodada} paginator rows={10}>
                     <Column field="numero_bilhete" header="Nº" body={(r) => <b>#{r.numero_bilhete || r.id}</b>} />
