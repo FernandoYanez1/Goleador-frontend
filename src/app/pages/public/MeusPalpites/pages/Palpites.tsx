@@ -16,11 +16,9 @@ export default function MeusPalpites() {
   const [rodadaHistoricoSelecionada, setRodadaHistoricoSelecionada] = useState<string>("");
   
   const [expandidos, setExpandidos] = useState<Record<number, boolean>>({});
-  const [copiadoManualId, setCopiadoManualId] = useState<number | null>(null);
+  const [copiadoPixId, setCopiadoPixId] = useState<number | null>(null);
 
-  // STRING DO PIX MANUAL (CAIXA)
-  const PIX_MANUAL_CODE = "00020126330014br.gov.bcb.pix011104415991173520400005303986540520.005802BR5920FERNANDO PORTO YANEZ6008BRASILIA62070503***6304D6D7";
-
+  
   useEffect(() => {
     const usuarioSalvo = localStorage.getItem("usuarioLogado");
     if (!usuarioSalvo) {
@@ -86,17 +84,19 @@ setRodadasAtuais(abertasOuPausadas);
       setExpandidos(prev => ({ ...prev, [cartelaId]: !prev[cartelaId] }));
   };
 
-  const copiarCodigoManual = (id: number) => {
-    navigator.clipboard.writeText(PIX_MANUAL_CODE);
-    setCopiadoManualId(id);
-    setTimeout(() => setCopiadoManualId(null), 3000);
-  };
+  const copiarPix = (id: number, codigo: string) => {
+    navigator.clipboard.writeText(codigo);
+
+    setCopiadoPixId(id);
+
+    setTimeout(() => {
+        setCopiadoPixId(null);
+    }, 3000);
+};
 
   const renderCartela = (cartela: any) => {
     const isAprovado = cartela.status_pagamento === 'aprovado';
     const isOpen = expandidos[cartela.cartela_id];
-    const mensagemWpp = encodeURIComponent(`Fala Fernando! Segue meu comprovante do bolão. (Meu nome é: ${nomeUsuario} | Cartela #${cartela.cartela_id})`);
-    const linkWhatsapp = `https://wa.me/5561983209025?text=${mensagemWpp}`;
 
     return (
       <div key={cartela.cartela_id} style={{ backgroundColor: "white", borderRadius: "12px", padding: "20px", marginBottom: "30px", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)", borderTop: isAprovado ? "8px solid #10b981" : "8px solid #f59e0b", transition: "all 0.3s ease" }}>
@@ -132,6 +132,13 @@ setRodadasAtuais(abertasOuPausadas);
         : '⏳ PENDENTE'}
 </span></h3>
                 <span style={{ color: "#64748b", fontSize: "14px", fontWeight: "bold" }}>{cartela.rodada_nome}</span>
+                <div style={{
+    fontSize: '12px',
+    color: '#94a3b8',
+    marginTop: '4px'
+}}>
+    Criado em {new Date(cartela.data_criacao).toLocaleString('pt-BR')}
+</div>
             </div>
           </div>
           <div style={{ textAlign: "right" }}>
@@ -142,37 +149,106 @@ setRodadasAtuais(abertasOuPausadas);
 
         {isOpen && (
             <div>
-                {!isAprovado && (
-                <div style={{ backgroundColor: "#fffbeb", border: "2px dashed #f59e0b", borderRadius: "12px", padding: "20px", marginBottom: "25px", textAlign: "center" }}>
-                    <h4 style={{ color: "#b45309", margin: "0 0 10px 0", fontSize: "18px" }}>⚠️ Bilhete Aguardando Pagamento</h4>
-                    <p style={{ color: "#475569", marginBottom: "20px", fontSize: "14px" }}>Envie um Pix de <b>R$ 20,00</b> para validar este bilhete específico.</p>
+               {!isAprovado && (
+    <div
+        style={{
+            backgroundColor: "#fffbeb",
+            border: "2px dashed #f59e0b",
+            borderRadius: "12px",
+            padding: "20px",
+            marginBottom: "25px",
+            textAlign: "center"
+        }}
+    >
+        <h4
+            style={{
+                color: "#b45309",
+                margin: "0 0 10px 0",
+                fontSize: "18px"
+            }}
+        >
+            ⏳ Aguardando confirmação do PIX
+        </h4>
 
-                    <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "15px", alignItems: "center", margin: '15px 0' }}>
-                        <div style={{ backgroundColor: "white", padding: "10px", borderRadius: "10px", boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}>
-                            {/* IMAGEM DO QR CODE LOCAL DA CAIXA */}
-                            <img src="/media/QRCodePIX.jpeg" alt="QR Code PIX Caixa" style={{ width: "150px", height: "150px", objectFit: 'contain' }} />
-                        </div>
-                        <div style={{ backgroundColor: "#fef3c7", padding: "15px", borderRadius: "8px", textAlign: "left" }}>
-                            <div style={{ fontSize: "10px", fontWeight: "bold", color: "#92400e" }}>CHAVE PIX (CPF):</div>
-                            <div style={{ fontSize: "18px", fontWeight: "900", color: "#d97706", marginBottom: "5px" }}>044.159.911-73</div>
-                            <div style={{ fontSize: "14px", fontWeight: "bold", color: "#b45309" }}>Fernando Porto Yañez</div>
-                        </div>
-                    </div>
+        <p
+            style={{
+                color: "#475569",
+                marginBottom: "20px",
+                fontSize: "14px"
+            }}
+        >
+            Pague o PIX abaixo para validar este bilhete.
+        </p>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center', marginTop: "20px" }}>
-                        <AppButton 
-                            icon={copiadoManualId === cartela.cartela_id ? <CheckCircle style={{ marginRight: '8px' }} /> : <ContentCopy style={{ marginRight: '8px' }} />}
-                            label={copiadoManualId === cartela.cartela_id ? "Código Copiado!" : "Copiar Pix Copia e Cola (Caixa)"} 
-                            onClick={() => copiarCodigoManual(cartela.cartela_id)} 
-                            style={{ width: "100%", maxWidth: '300px', backgroundColor: copiadoManualId === cartela.cartela_id ? "#10b981" : "#3b82f6", border: "none" }} 
-                        />
-
-                        <a href={linkWhatsapp} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: "10px", backgroundColor: "#25D366", color: "white", padding: "10px 20px", borderRadius: "8px", textDecoration: "none", fontWeight: "bold", fontSize: "14px", width: '100%', maxWidth: '300px', justifyContent: 'center' }}>
-                            <i className="pi pi-whatsapp"></i> Enviar Comprovante
-                        </a>
-                    </div>
+        <div
+            style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "15px"
+            }}
+        >
+            {cartela.qr_code_base64 && (
+                <div
+                    style={{
+                        backgroundColor: "white",
+                        padding: "10px",
+                        borderRadius: "12px"
+                    }}
+                >
+                    <img
+                        src={`data:image/png;base64,${cartela.qr_code_base64}`}
+                        alt="PIX"
+                        style={{
+                            width: "180px",
+                            height: "180px"
+                        }}
+                    />
                 </div>
-                )}
+            )}
+
+            <AppButton
+                icon={
+                    copiadoPixId === cartela.cartela_id
+                        ? <CheckCircle style={{ marginRight: '8px' }} />
+                        : <ContentCopy style={{ marginRight: '8px' }} />
+                }
+                label={
+                    copiadoPixId === cartela.cartela_id
+                        ? "PIX Copiado!"
+                        : "Copiar código PIX"
+                }
+                onClick={() =>
+                    copiarPix(
+                        cartela.cartela_id,
+                        cartela.pix_copia_cola
+                    )
+                }
+                style={{
+                    width: "100%",
+                    maxWidth: "320px",
+                    backgroundColor:
+                        copiadoPixId === cartela.cartela_id
+                            ? "#10b981"
+                            : "#3b82f6",
+                    border: "none"
+                }}
+            />
+
+            <div
+                style={{
+                    fontSize: "12px",
+                    color: "#64748b",
+                    textAlign: "center",
+                    maxWidth: "350px",
+                    lineHeight: "1.5"
+                }}
+            >
+                Após o pagamento o sistema aprova seu bilhete automaticamente.
+            </div>
+        </div>
+    </div>
+)}
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
                 {cartela.palpites.map((p: any, index: number) => {

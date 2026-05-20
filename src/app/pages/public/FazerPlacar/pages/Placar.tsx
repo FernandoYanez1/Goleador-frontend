@@ -663,6 +663,24 @@ boxShadow: '0 10px 25px rgba(16,185,129,0.3)', color: 'white' }}
                 >
                     COPIAR PIX
                 </Button>
+                <Button
+    fullWidth
+    variant="outlined"
+    onClick={() => {
+        setModalPixAberto(false);
+        history.push('/public/meus-palpites');
+    }}
+    style={{
+        marginTop: '10px',
+        borderRadius: '12px',
+        padding: '12px',
+        fontWeight: 'bold',
+        borderColor: '#10b981',
+        color: '#10b981'
+    }}
+>
+    Já fiz o pagamento
+</Button>
 
                 <Typography
                     variant="body2"
