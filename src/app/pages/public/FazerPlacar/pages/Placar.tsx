@@ -153,9 +153,15 @@ export default function Placar() {
             const dados = await res.json();
             if (res.ok) {
                 history.push({
-                    pathname: '/public/pagamento',
-                    state: { pix_copia_cola: dados.pix_copia_cola, qr_code_base64: dados.qr_code_base64, cartela_id: dados.cartela_id }
-                });
+    pathname: '/public/pagamento',
+    state: {
+        pix_copia_cola: dados.pix_copia_cola,
+        qr_code_base64: dados.qr_code_base64,
+        cartela_id: dados.cartela_id,
+        valor: rodadaAtiva.preco,
+        rodada_nome: rodadaAtiva.nome
+    }
+});
             } else {
                 alert(dados.erro || "Erro ao registar palpites.");
             }
@@ -184,9 +190,15 @@ export default function Placar() {
             const dados = await res.json();
             if (res.ok) {
                 history.push({
-                    pathname: '/public/pagamento',
-                    state: { pix_copia_cola: dados.pix_copia_cola, qr_code_base64: dados.qr_code_base64, cartela_id: dados.cartela_id }
-                });
+    pathname: '/public/pagamento',
+    state: {
+        pix_copia_cola: dados.pix_copia_cola,
+        qr_code_base64: dados.qr_code_base64,
+        cartela_id: dados.cartela_id,
+        valor: rodadaAtiva.preco,
+        rodada_nome: rodadaAtiva.nome
+    }
+});
             } else {
                 alert(dados.erro || "Erro ao processar bilhete.");
             }
@@ -229,8 +241,59 @@ export default function Placar() {
     }
 
     return (
-        <div style={{ backgroundColor: "#f4f6f9", minHeight: "100vh", padding: "40px 20px" }}>
+       <div 
+         style={{ 
+         background: 'linear-gradient(180deg,#f8fafc 0%, #eef2ff 100%)',
+         minHeight: "100vh",
+         padding: "40px 20px"
+    }}
+>
             <Container maxWidth="md">
+    
+    <Box 
+        display="flex" 
+        justifyContent="space-between" 
+        alignItems="center"
+        mb={4}
+        flexWrap="wrap"
+        gap={2}
+    >
+        <Button
+            variant="outlined"
+            onClick={() => history.push('/public')}
+            style={{
+                borderRadius: '12px',
+                padding: '10px 18px',
+                fontWeight: 'bold',
+                borderColor: '#cbd5e1',
+                color: '#1e293b'
+            }}
+        >
+            ← Voltar
+        </Button>
+
+        <Typography
+            variant="h5"
+            fontWeight="900"
+            color="#1e293b"
+        >
+            ⚽ Fazer Aposta
+        </Typography>
+
+        <Button
+            variant="contained"
+            onClick={() => history.push('/public/meus-bilhetes')}
+            style={{
+                borderRadius: '12px',
+                padding: '10px 18px',
+                fontWeight: 'bold',
+                background: 'linear-gradient(135deg,#2563eb,#1d4ed8)',
+                boxShadow: '0 6px 18px rgba(37,99,235,0.25)'
+            }}
+        >
+            🎟️ Meus Bilhetes
+        </Button>
+    </Box>
                 
                 {/* ETAPA 1: LOBBY DE SELEÇÃO */}
                 {!rodadaAtiva && (
@@ -293,14 +356,73 @@ export default function Placar() {
 
                 {/* ETAPA 2: FORMULÁRIO DE PLACARES */}
                 {rodadaAtiva && rodadaAtiva.tipo === 'placares' && (
-                    <Paper style={{ padding: '30px', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
-                        <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-                            <Typography variant="h5" fontWeight="bold" color="#1e293b">Rodada: {rodadaAtiva.nome}</Typography>
-                            <Button variant="text" color="secondary" onClick={handleVoltar}>Voltar</Button>
-                        </Box>
+                    <Paper 
+    style={{ 
+        padding: '30px',
+        borderRadius: '24px',
+        background: '#ffffff',
+        boxShadow: '0 10px 40px rgba(15,23,42,0.08)',
+        border: '1px solid #e2e8f0'
+    }}
+>
+                        <Box
+    display="flex"
+    justifyContent="space-between"
+    alignItems="center"
+    mb={4}
+    flexWrap="wrap"
+    gap={2}
+    style={{
+        background: 'linear-gradient(135deg,#1e293b,#334155)',
+        borderRadius: '18px',
+        padding: '18px 22px'
+    }}
+>
+    <Box>
+        <Typography
+            variant="overline"
+            style={{
+                color: '#94a3b8',
+                fontWeight: 'bold',
+                letterSpacing: 1
+            }}
+        >
+            RODADA ATIVA
+        </Typography>
+
+        <Typography
+            variant="h5"
+            style={{
+                color: '#ffffff',
+                fontWeight: 900
+            }}
+        >
+            {rodadaAtiva.nome}
+        </Typography>
+    </Box>
+
+    <Box
+        style={{
+            background: '#10b981',
+            color: '#fff',
+            padding: '10px 16px',
+            borderRadius: '14px',
+            fontWeight: 'bold',
+            fontSize: '18px',
+            boxShadow: '0 4px 15px rgba(16,185,129,0.25)'
+        }}
+    >
+        {Number(rodadaAtiva.preco).toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL'
+        })}
+    </Box>
+</Box>
 
                         {jogos.map((jogo) => (
-                            <Box key={jogo.id} mb={3} p={2} style={{ border: '1px solid #e2e8f0', borderRadius: '12px', backgroundColor: '#fff' }}>
+                            <Box key={jogo.id} mb={3} p={2} style={{ border: '1px solid #e2e8f0', borderRadius: '12px', background: 'linear-gradient(180deg,#ffffff,#f8fafc)',
+boxShadow: '0 6px 20px rgba(15,23,42,0.06)',
+transition: '0.2s ease' }}>
                                 <Grid container alignItems="center" justifyContent="center" spacing={1}>
                                     
                                     <Grid item xs={4} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
@@ -318,8 +440,20 @@ export default function Placar() {
                                             pattern="[0-9]*"
                                             value={palpitesPlacares[jogo.id]?.casa ?? ''}
                                             onChange={(e) => handlePlacarChange(jogo.id, 'casa', e.target.value)}
-                                            style={{ width: '45px', height: '45px', textAlign: 'center', fontSize: '20px', fontWeight: '900', borderRadius: '8px', border: '2px solid #cbd5e1', backgroundColor: '#f8fafc', color: '#1e293b', outline: 'none' }}
-                                        />
+                                            style={{
+    width: '56px',
+    height: '56px',
+    textAlign: 'center',
+    fontSize: '22px',
+    fontWeight: '900',
+    borderRadius: '14px',
+    border: '2px solid #dbeafe',
+    backgroundColor: '#f8fbff',
+    color: '#1e293b',
+    outline: 'none',
+    boxShadow: '0 2px 10px rgba(37,99,235,0.08)'
+}}
+                                            />
                                         <Typography color="#94a3b8" fontWeight="900" fontSize="16px">X</Typography>
                                         <input 
                                             type="text"
@@ -327,7 +461,19 @@ export default function Placar() {
                                             pattern="[0-9]*"
                                             value={palpitesPlacares[jogo.id]?.visitante ?? ''}
                                             onChange={(e) => handlePlacarChange(jogo.id, 'visitante', e.target.value)}
-                                            style={{ width: '45px', height: '45px', textAlign: 'center', fontSize: '20px', fontWeight: '900', borderRadius: '8px', border: '2px solid #cbd5e1', backgroundColor: '#f8fafc', color: '#1e293b', outline: 'none' }}
+                                            style={{
+    width: '56px',
+    height: '56px',
+    textAlign: 'center',
+    fontSize: '22px',
+    fontWeight: '900',
+    borderRadius: '14px',
+    border: '2px solid #dbeafe',
+    backgroundColor: '#f8fbff',
+    color: '#1e293b',
+    outline: 'none',
+    boxShadow: '0 2px 10px rgba(37,99,235,0.08)'
+}}
                                         />
                                     </Grid>
 
@@ -407,7 +553,10 @@ export default function Placar() {
                 label={enviandoAposta ? "Gerando Pix..." : `Confirmar Aposta (R$ ${Number(rodadaAtiva.preco).toFixed(2).replace('.',',')})`} 
                 disabled={enviandoAposta || tempoRestante.expirado}
                 onClick={submeterApostaCampeao} 
-                style={{ width: '100%', padding: '14px', fontSize: '18px', border: 'none', backgroundColor: '#10b981', color: 'white' }} 
+                style={{ width: '100%', padding: '14px', fontSize: '18px', border: 'none', background: 'linear-gradient(135deg,#10b981,#059669)',
+borderRadius: '16px',
+fontWeight: '900',
+boxShadow: '0 10px 25px rgba(16,185,129,0.3)', color: 'white' }} 
             />
         </Box>
     </Paper>
