@@ -335,23 +335,21 @@ const Ranking = () => {
                 
                 {rodadasRanking.length > 1 && (
     <Box mb={3}>
+
+{rodadasRanking.length > 1 && (
+    <Box mb={3} display="flex" justifyContent="center">
         <select
             value={rodadaAtual?.id || ''}
             onChange={(e) => {
-
-                const rodada = rodadasRanking.find(
-                    (r: any) =>
-                        String(r.id) === String(e.target.value)
-                );
-
+                const rodada = rodadasRanking.find((r: any) => String(r.id) === String(e.target.value));
                 if (rodada) {
                     setLoading(true);
                     carregarRankingRodada(rodada);
                 }
-
             }}
             style={{
                 width: '100%',
+                maxWidth: '400px',
                 padding: '14px',
                 borderRadius: '12px',
                 border: '2px solid #cbd5e1',
@@ -366,6 +364,8 @@ const Ranking = () => {
                 </option>
             ))}
         </select>
+    </Box>
+)}
     </Box>
 )}
                 <Paper elevation={0} style={{ backgroundColor: "#1e293b", color: "white", padding: "30px", borderRadius: "16px", textAlign: "center", marginBottom: "20px", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.2)" }}>

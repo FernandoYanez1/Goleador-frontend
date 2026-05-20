@@ -17,7 +17,7 @@ export default function Admin() {
     const selecoesCopa = teams.filter((t) => t.id >= 19 && t.id <= 66);
     const [cartelas, setCartelas] = useState<any[]>([]);
     const [rodadaSelecionada, setRodadaSelecionada] = useState<any>(null);
-    const [verArquivadas, setVerArquivadas] = useState(false); // NOVO: Controle de visualização
+    const [verArquivadas, setVerArquivadas] = useState(false);
     
     const [jogos, setJogos] = useState<any[]>([]);
     const [resultados, setResultados] = useState<any>({});
@@ -36,14 +36,8 @@ export default function Admin() {
     });
 
     const favoritasIds = [27, 51, 55, 47, 63, 59, 35];
-
-    const favoritas = favoritasIds
-    .map(id => selecoesCopa.find(t => t.id === id))
-    .filter(Boolean);
-
-    const restantes = selecoesCopa.filter(
-    t => !favoritasIds.includes(t.id)
-    );
+    const favoritas = favoritasIds.map(id => selecoesCopa.find(t => t.id === id)).filter(Boolean);
+    const restantes = selecoesCopa.filter(t => !favoritasIds.includes(t.id));
 
     const carregarDadosIniciais = () => {
         Promise.all([
@@ -86,7 +80,6 @@ export default function Admin() {
         }
     }, [rodadaSelecionada, apiUrl]);
 
-    // --- FUNÇÕES DE RODADAS ---
     const handleCriarRodada = () => {
         if (!novaRodada.nome) return alert("Dê um nome à rodada!");
         fetch(`${apiUrl}/rodadas`, {
@@ -108,7 +101,7 @@ export default function Admin() {
             body: JSON.stringify({ status: novoStatus })
         }).then(() => {
             alert(`Status da rodada atualizado para: ${novoStatus.toUpperCase()}`);
-            if (novoStatus === 'arquivada') setRodadaSelecionada(null); // Limpa a tela ao arquivar
+            if (novoStatus === 'arquivada') setRodadaSelecionada(null);
             carregarDadosIniciais();
         });
     };
@@ -127,7 +120,6 @@ export default function Admin() {
         });
     };
 
-    // --- FUNÇÕES DE TIMES E JOGOS ---
     const handleCadastrarTeam = () => {
         if (!novoTeam.nome || !novoTeam.sigla || !novoTeam.bandeira) return alert("Preencha todos os campos da seleção!");
         fetch(`${apiUrl}/teams`, {
@@ -145,7 +137,6 @@ export default function Admin() {
         if (!rodadaSelecionada) return;
         if (!novoJogo.time_casa_id || !novoJogo.time_visitante_id) return alert("Selecione os dois times.");
 
-        // Recupera os dados completos dos times baseados no ID selecionado no Dropdown
         const timeCasa = teams.find(t => t.id === novoJogo.time_casa_id);
         const timeVisitante = teams.find(t => t.id === novoJogo.time_visitante_id);
 
@@ -153,11 +144,11 @@ export default function Admin() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-    rodada_id: rodadaSelecionada.id,
-    time_casa_id: novoJogo.time_casa_id,
-    time_visitante_id: novoJogo.time_visitante_id,
-    data_hora: novoJogo.data_hora
-})
+                rodada_id: rodadaSelecionada.id,
+                time_casa_id: novoJogo.time_casa_id,
+                time_visitante_id: novoJogo.time_visitante_id,
+                data_hora: novoJogo.data_hora ? new Date(novoJogo.data_hora).toISOString() : null
+            })
         }).then(() => {
             alert("Confronto cadastrado!");
             setNovoJogo({ time_casa_id: null, time_visitante_id: null, data_hora: '' });
@@ -165,12 +156,11 @@ export default function Admin() {
         });
     };
 
-    // CONVERSOR MÁGICO: Transforma os jogos antigos em times no banco
     const extrairTimesParaBanco = async () => {
         if (!window.confirm("Isso vai ler todos os times cadastrados nesta rodada e salvá-los no Banco de Dados de Seleções/Times. Deseja continuar?")) return;
         
         let cadastrados = 0;
-        const timesAtuaisNoBanco = [...teams]; // Cópia local para não inserir duplicado no loop
+        const timesAtuaisNoBanco = [...teams]; 
         
         for (let jogo of jogos) {
             const tCasa = { nome: jogo.time_casa, sigla: jogo.sigla_casa, bandeira: jogo.logo_casa };
@@ -185,7 +175,7 @@ export default function Admin() {
                             body: JSON.stringify(t)
                         });
                         cadastrados++;
-                        timesAtuaisNoBanco.push(t); // Adiciona na memória pra não repetir
+                        timesAtuaisNoBanco.push(t); 
                     } catch (e) { console.error("Erro ao salvar time:", e); }
                 }
             }
@@ -224,7 +214,7 @@ export default function Admin() {
 
     const habilitarEdicao = (jogoId: number) => setEditandoJogos([...editandoJogos, jogoId]);
 
-    // --- FUNÇÕES DE PAGAMENTO ---
+    // --- FUNÇÕES DE PAGAMENTO (RESTAURADO) ---
     const handleTogglePagamento = (cartelaId: number, statusAtual: string) => {
         const novoStatus = statusAtual === 'aprovado' ? 'pendente' : 'aprovado';
         fetch(`${apiUrl}/aprovar-pagamento/${cartelaId}`, {
@@ -247,32 +237,6 @@ export default function Admin() {
         return isNaN(data.getTime()) ? d : data.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     };
 
-    const statusTemplate = (rowData: any) => {
-        const isMP = rowData.metodo_pagamento === 'mercadopago';
-        return (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Button 
-                    label={rowData.status_pagamento === 'aprovado' ? "Aprovado" : "Pendente"} 
-                    icon={rowData.status_pagamento === 'aprovado' ? "pi pi-check" : "pi pi-clock"} 
-                    severity={rowData.status_pagamento === 'aprovado' ? "success" : "warning"}
-                    onClick={() => handleTogglePagamento(rowData.id, rowData.status_pagamento)}
-                    style={{ padding: '5px 10px', fontSize: '11px', height: '30px' }}
-                />
-                {isMP ? <i className="pi pi-bolt" style={{ color: '#3b82f6', fontSize: '1.2rem' }} title="Mercado Pago"></i> : <i className="pi pi-user" style={{ color: '#64748b', fontSize: '1.2rem' }} title="Manual"></i>}
-            </div>
-        );
-    };
-
-    const origemTemplate = (rowData: any) => {
-        const isMP = rowData.metodo_pagamento === 'mercadopago';
-        return (
-            <span style={{ backgroundColor: isMP ? '#dbeafe' : '#f1f5f9', color: isMP ? '#2563eb' : '#475569', padding: '4px 8px', borderRadius: '6px', fontWeight: 'bold', fontSize: '10px' }}>
-                {isMP ? 'MERCADO PAGO' : 'MANUAL'}
-            </span>
-        );
-    };
-
-    // Cálculos e Filtros de Exibição
     const rodadasVisiveis = verArquivadas ? rodadas.filter(r => r.status === 'arquivada') : rodadas.filter(r => r.status !== 'arquivada');
     const tiposRodada = [{ label: 'Confrontos (Placares)', value: 'placares' }, { label: 'Tiro Curto (Campeão)', value: 'campeao' }];
     const cartelasDaRodada = cartelas.filter(c => c.rodada_nome === rodadaSelecionada?.nome);
@@ -292,7 +256,7 @@ export default function Admin() {
                     <h1 style={{ margin: 0, fontSize: '22px' }}>🛡️ Central de Comando Goleador VIP</h1>
                     <div style={{ display: 'flex', gap: '10px' }}>
                         <Button label={verArquivadas ? "Voltar para Ativas" : "Ver Arquivadas"} icon={verArquivadas ? "pi pi-arrow-left" : "pi pi-folder"} severity={verArquivadas ? "success" : "secondary"} outlined onClick={() => { setVerArquivadas(!verArquivadas); setRodadaSelecionada(null); }} />
-                        <Button label="Países/Seleções" icon="pi pi-flag" onClick={() => setExibirDialogTeams(true)} severity="info" />
+                        <Button label="Cadastrar Times" icon="pi pi-flag" onClick={() => setExibirDialogTeams(true)} severity="info" />
                         <Button label="Aprovar Bilhetes" icon="pi pi-ticket" onClick={() => { fetch(`${apiUrl}/admin/cartelas`).then(res => res.json()).then(setCartelas); setExibirDialogCartelas(true); }} severity="help" />
                     </div>
                 </div>
@@ -337,7 +301,7 @@ export default function Admin() {
                             )}
                         </div>
 
-                        {/* OS BOTÕES DA ESTEIRA AQUI */}
+                        {/* OS BOTÕES DA ESTEIRA */}
                         <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                             {rodadaSelecionada && rodadaSelecionada.status !== 'arquivada' && (
                                 <Button label={rodadaSelecionada?.exibir_no_ranking ? "❌ Desfixar Ranking" : "⭐ Fixar Ranking"} icon="pi pi-star" severity={rodadaSelecionada?.exibir_no_ranking ? "danger" : "info"} onClick={handleDefinirRodadaRanking} />
@@ -386,13 +350,9 @@ export default function Admin() {
                 {/* BLOCO 2: GESTÃO DE JOGOS DA RODADA SELECIONADA */}
                 {rodadaSelecionada && (
                     <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                        
-                        {/* COLUNA ESQUERDA: CADASTRAR JOGO */}
                         <div style={{ flex: '1 1 400px', backgroundColor: 'white', padding: '25px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', opacity: rodadaSelecionada.status === 'arquivada' ? 0.5 : 1, pointerEvents: rodadaSelecionada.status === 'arquivada' ? 'none' : 'auto' }}>
                             <h3 style={{ marginTop: 0 }}>⚽ Adicionar Jogo</h3>
-                            
                             {rodadaSelecionada.tipo === 'placares' ? (
-                                
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                                     <Dropdown value={novoJogo.time_casa_id} options={teams} optionLabel="nome" optionValue="id" onChange={(e) => setNovoJogo({ ...novoJogo, time_casa_id: e.value })} placeholder="Selecione o time da casa" style={{ width: '100%' }} filter />
                                     <div style={{ textAlign: 'center', fontWeight: 'bold', color: '#94a3b8' }}>X</div>
@@ -405,7 +365,6 @@ export default function Admin() {
                             )}
                         </div>
 
-                        {/* COLUNA DIREITA: LISTA DE JOGOS */}
                         <div style={{ flex: '1 1 500px' }}>
                             {rodadaSelecionada.tipo === 'placares' && jogos.length > 0 && (
                                 <div style={{ textAlign: 'right', marginBottom: '10px' }}>
@@ -476,11 +435,23 @@ export default function Admin() {
                 </div>
             </Dialog>
 
-            <Dialog header="🎟️ Bilhetes Emitidos" visible={exibirDialogCartelas} style={{ width: '70vw' }} onHide={() => setExibirDialogCartelas(false)}>
+            <Dialog header="🎟️ Bilhetes Emitidos" visible={exibirDialogCartelas} style={{ width: '80vw' }} onHide={() => setExibirDialogCartelas(false)}>
                 <DataTable value={cartelasDaRodada} paginator rows={10}>
                     <Column field="numero_bilhete" header="Nº" body={(r) => <b>#{r.numero_bilhete || r.id}</b>} />
                     <Column field="usuario_nome" header="Usuário" />
-                    <Column field="status_pagamento" header="Status" body={(r) => <span style={{color: r.status_pagamento==='aprovado'?'green':'orange'}}>{r.status_pagamento.toUpperCase()}</span>} />
+                    <Column field="status_pagamento" header="Status" body={(r) => <span style={{color: r.status_pagamento==='aprovado'?'green':'orange', fontWeight: 'bold'}}>{r.status_pagamento.toUpperCase()}</span>} />
+                    <Column header="Ações" body={(r) => (
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                            <Button 
+                                label={r.status_pagamento === 'aprovado' ? "Pendente" : "Aprovar"} 
+                                icon={r.status_pagamento === 'aprovado' ? "pi pi-clock" : "pi pi-check"} 
+                                severity={r.status_pagamento === 'aprovado' ? "warning" : "success"}
+                                onClick={() => handleTogglePagamento(r.id, r.status_pagamento)}
+                                style={{ padding: '5px 10px', fontSize: '11px', height: '30px' }}
+                            />
+                            <Button icon="pi pi-trash" severity="danger" onClick={() => handleDeletarCartela(r.id)} style={{ padding: '5px', width: '30px', height: '30px' }} />
+                        </div>
+                    )} />
                 </DataTable>
             </Dialog>
         </div>
