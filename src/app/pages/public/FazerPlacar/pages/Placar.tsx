@@ -3,6 +3,13 @@ import { useHistory } from 'react-router-dom';
 import { Container, Typography, Paper, Box, Grid, Card, CardContent, CardActions, CircularProgress, MenuItem, TextField, Button, ListSubheader } from '@mui/material';
 import { SportsSoccer, Public, Stars, Timer } from '@mui/icons-material';
 import AppButton from '../../../../../vendors/components/Button';
+import {
+    Dialog,
+    DialogContent,
+    DialogTitle,
+    IconButton
+} from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 
 export default function Placar() {
     const history = useHistory();
@@ -18,6 +25,9 @@ export default function Placar() {
     const [palpitesPlacares, setPalpitesPlacares] = useState<any>({});
     const [selecaoEscolhida, setSelecaoEscolhida] = useState<string>('');
     const [enviandoAposta, setEnviandoAposta] = useState(false);
+
+    const [modalPixAberto, setModalPixAberto] = useState(false);
+    const [pixData, setPixData] = useState<any>(null);
 
     const [tempoRestante, setTempoRestante] = useState({ dias: 0, horas: 0, minutos: 0, segundos: 0, expirado: false });
 
@@ -153,16 +163,15 @@ export default function Placar() {
             const dados = await res.json();
             console.log("Dados do Backend:", dados);
             if (res.ok) {
-                history.push({
-    pathname: '/public/pagamento',
-    state: {
-        pix_copia_cola: dados.pix_copia_cola,
-        qr_code_base64: dados.qr_code_base64,
-        cartela_id: dados.cartela_id,
-        valor: rodadaAtiva.preco,
-        rodada_nome: rodadaAtiva.nome
-    }
+                setPixData({
+    pix_copia_cola: dados.pix_copia_cola,
+    qr_code_base64: dados.qr_code_base64,
+    cartela_id: dados.cartela_id,
+    valor: rodadaAtiva.preco,
+    rodada_nome: rodadaAtiva.nome
 });
+
+setModalPixAberto(true);
             } else {
                 alert(dados.erro || "Erro ao registar palpites.");
             }
@@ -190,16 +199,15 @@ export default function Placar() {
             });
             const dados = await res.json();
             if (res.ok) {
-                history.push({
-    pathname: '/public/pagamento',
-    state: {
-        pix_copia_cola: dados.pix_copia_cola,
-        qr_code_base64: dados.qr_code_base64,
-        cartela_id: dados.cartela_id,
-        valor: rodadaAtiva.preco,
-        rodada_nome: rodadaAtiva.nome
-    }
+                setPixData({
+    pix_copia_cola: dados.pix_copia_cola,
+    qr_code_base64: dados.qr_code_base64,
+    cartela_id: dados.cartela_id,
+    valor: rodadaAtiva.preco,
+    rodada_nome: rodadaAtiva.nome
 });
+
+setModalPixAberto(true);
             } else {
                 alert(dados.erro || "Erro ao processar bilhete.");
             }
@@ -575,6 +583,109 @@ boxShadow: '0 10px 25px rgba(16,185,129,0.3)', color: 'white' }}
         </Box>
     </Paper>
 )}
+<Dialog
+    open={modalPixAberto}
+    onClose={() => setModalPixAberto(false)}
+    maxWidth="xs"
+    fullWidth
+>
+    <DialogTitle
+        style={{
+            fontWeight: 900,
+            textAlign: 'center',
+            color: '#1e293b'
+        }}
+    >
+        Pagamento via PIX
+
+        <IconButton
+            onClick={() => setModalPixAberto(false)}
+            style={{
+                position: 'absolute',
+                right: 10,
+                top: 10
+            }}
+        >
+            <CloseIcon />
+        </IconButton>
+    </DialogTitle>
+
+    <DialogContent>
+        {pixData && (
+            <Box textAlign="center">
+
+                <Typography
+                    variant="body2"
+                    color="#64748b"
+                    mb={2}
+                >
+                    Escaneie o QRCode abaixo para finalizar sua aposta
+                </Typography>
+
+                <img
+                    src={`data:image/png;base64,${pixData.qr_code_base64}`}
+                    alt="QR Code PIX"
+                    style={{
+                        width: '220px',
+                        maxWidth: '100%',
+                        borderRadius: '12px',
+                        marginBottom: '20px'
+                    }}
+                />
+
+                <TextField
+                    fullWidth
+                    multiline
+                    value={pixData.pix_copia_cola}
+                    variant="outlined"
+                    label="PIX Copia e Cola"
+                />
+
+                <Button
+                    fullWidth
+                    variant="contained"
+                    onClick={() => {
+                        navigator.clipboard.writeText(
+                            pixData.pix_copia_cola
+                        );
+
+                        alert('PIX copiado!');
+                    }}
+                    style={{
+                        marginTop: '15px',
+                        background:
+                            'linear-gradient(135deg,#10b981,#059669)',
+                        color: '#fff',
+                        fontWeight: 'bold',
+                        borderRadius: '12px',
+                        padding: '12px'
+                    }}
+                >
+                    COPIAR PIX
+                </Button>
+
+                <Typography
+                    variant="body2"
+                    mt={2}
+                    color="#64748b"
+                >
+                    Valor:
+                    <strong>
+                        {' '}
+                        {Number(pixData.valor).toLocaleString(
+                            'pt-BR',
+                            {
+                                style: 'currency',
+                                currency: 'BRL'
+                            }
+                        )}
+                    </strong>
+                </Typography>
+
+            </Box>
+        )}
+    </DialogContent>
+</Dialog>
             </Container>
         </div>
     );
