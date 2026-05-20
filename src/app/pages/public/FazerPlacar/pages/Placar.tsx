@@ -494,7 +494,10 @@ transition: '0.2s ease' }}>
                                 label={enviandoAposta ? "Gerando Pix..." : `Finalizar e Pagar (R$ ${Number(rodadaAtiva.preco).toFixed(2).replace('.',',')})`} 
                                 disabled={enviandoAposta}
                                 onClick={submeterApostaPlacares} 
-                                style={{ width: '100%', padding: '14px', fontSize: '18px', border: 'none', backgroundColor: '#10b981', color: 'white' }} 
+                                style={{ width: '100%', padding: '14px', fontSize: '18px', border: 'none', background: 'linear-gradient(135deg,#10b981,#059669)',
+borderRadius: '14px',
+fontWeight: '900',
+boxShadow: '0 10px 20px rgba(16,185,129,0.3)', color: 'white' }} 
                             />
                         </Box>
                     </Paper>
