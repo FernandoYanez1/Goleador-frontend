@@ -151,6 +151,7 @@ export default function Placar() {
                 })
             });
             const dados = await res.json();
+            console.log("Dados do Backend:", dados);
             if (res.ok) {
                 history.push({
     pathname: '/public/pagamento',
