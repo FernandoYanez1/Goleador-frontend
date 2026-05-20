@@ -282,7 +282,7 @@ export default function Placar() {
 
         <Button
             variant="contained"
-            onClick={() => history.push('/public/meus-bilhetes')}
+            onClick={() => history.push('/public/meus-palpites')}
             style={{
                 borderRadius: '12px',
                 padding: '10px 18px',
@@ -315,7 +315,17 @@ export default function Placar() {
                                                 <Box mb={2} display="flex" justifyContent="center">
                                                     {eCampeao ? <Stars style={{ fontSize: 50, color: '#fbbf24' }} /> : eCopa ? <Public style={{ fontSize: 50, color: '#3b82f6' }} /> : <SportsSoccer style={{ fontSize: 50, color: '#10b981' }} />}
                                                 </Box>
-                                                <Typography variant="h5" fontWeight="bold">{rodada.nome}</Typography>
+                                                <Typography
+    variant="h5"
+    fontWeight="900"
+    style={{
+        color: '#ffffff',
+        marginTop: '10px',
+        lineHeight: 1.2
+    }}
+>
+    {rodada.nome}
+</Typography>
                                                 
                                                 <Typography variant="h4" fontWeight="900" color="#10b981" my={2}>
                                                     {Number(rodada.preco).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
