@@ -14,7 +14,6 @@ export default function Admin() {
 
     const [rodadas, setRodadas] = useState<any[]>([]);
     const [teams, setTeams] = useState<any[]>([]);
-    const selecoesCopa = teams.filter((t) => t.id >= 19 && t.id <= 66);
     const [cartelas, setCartelas] = useState<any[]>([]);
     const [rodadaSelecionada, setRodadaSelecionada] = useState<any>(null);
     const [verArquivadas, setVerArquivadas] = useState(false);
@@ -34,10 +33,6 @@ export default function Admin() {
         time_visitante_id: null,
         data_hora: ''
     });
-
-    const favoritasIds = [27, 51, 55, 47, 63, 59, 35];
-    const favoritas = favoritasIds.map(id => selecoesCopa.find(t => t.id === id)).filter(Boolean);
-    const restantes = selecoesCopa.filter(t => !favoritasIds.includes(t.id));
 
     const carregarDadosIniciais = () => {
         Promise.all([
@@ -214,7 +209,6 @@ export default function Admin() {
 
     const habilitarEdicao = (jogoId: number) => setEditandoJogos([...editandoJogos, jogoId]);
 
-    // --- FUNÇÕES DE PAGAMENTO (RESTAURADO) ---
     const handleTogglePagamento = (cartelaId: number, statusAtual: string) => {
         const novoStatus = statusAtual === 'aprovado' ? 'pendente' : 'aprovado';
         fetch(`${apiUrl}/aprovar-pagamento/${cartelaId}`, {
@@ -246,18 +240,36 @@ export default function Admin() {
     const precoRodadaAtual = rodadaSelecionada ? Number(rodadaSelecionada.preco) : 20;
     const valorBruto = cartelasAprovadas.length * precoRodadaAtual;
 
+    // NOVO: Template visual para o Status do Bilhete (Tag estilizada)
+    const statusBadgeTemplate = (r: any) => {
+        const isAprovado = r.status_pagamento === 'aprovado';
+        return (
+            <span style={{
+                backgroundColor: isAprovado ? '#dcfce7' : '#fef3c7',
+                color: isAprovado ? '#166534' : '#92400e',
+                padding: '4px 8px',
+                borderRadius: '6px',
+                fontWeight: 'bold',
+                fontSize: '11px',
+                letterSpacing: '0.5px'
+            }}>
+                {r.status_pagamento.toUpperCase()}
+            </span>
+        );
+    };
+
     return (
         <div style={{ padding: '30px', minHeight: '100vh', backgroundColor: '#f4f6f9', color: '#333' }}>
             <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
                 
                 {/* CABEÇALHO */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', backgroundColor: 'white', padding: '15px 20px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
-                    <Button label="Sair do Admin" icon="pi pi-sign-out" onClick={() => history.push('/public')} className="p-button-text p-button-secondary" />
+                    <Button label="🚪 Sair do Admin" onClick={() => history.push('/public')} className="p-button-text p-button-secondary" />
                     <h1 style={{ margin: 0, fontSize: '22px' }}>🛡️ Central de Comando Goleador VIP</h1>
                     <div style={{ display: 'flex', gap: '10px' }}>
-                        <Button label={verArquivadas ? "Voltar para Ativas" : "Ver Arquivadas"} icon={verArquivadas ? "pi pi-arrow-left" : "pi pi-folder"} severity={verArquivadas ? "success" : "secondary"} outlined onClick={() => { setVerArquivadas(!verArquivadas); setRodadaSelecionada(null); }} />
-                        <Button label="Cadastrar Times" icon="pi pi-flag" onClick={() => setExibirDialogTeams(true)} severity="info" />
-                        <Button label="Aprovar Bilhetes" icon="pi pi-ticket" onClick={() => { fetch(`${apiUrl}/admin/cartelas`).then(res => res.json()).then(setCartelas); setExibirDialogCartelas(true); }} severity="help" />
+                        <Button label={verArquivadas ? "⬅️ Voltar para Ativas" : "🗄️ Ver Arquivadas"} severity={verArquivadas ? "success" : "secondary"} outlined onClick={() => { setVerArquivadas(!verArquivadas); setRodadaSelecionada(null); }} />
+                        <Button label="🚩 Cadastrar Times" onClick={() => setExibirDialogTeams(true)} severity="info" />
+                        <Button label="🎟️ Aprovar Bilhetes" onClick={() => { fetch(`${apiUrl}/admin/cartelas`).then(res => res.json()).then(setCartelas); setExibirDialogCartelas(true); }} severity="help" />
                     </div>
                 </div>
 
@@ -301,29 +313,29 @@ export default function Admin() {
                             )}
                         </div>
 
-                        {/* OS BOTÕES DA ESTEIRA */}
+                        {/* OS BOTÕES DA ESTEIRA AQUI */}
                         <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                             {rodadaSelecionada && rodadaSelecionada.status !== 'arquivada' && (
-                                <Button label={rodadaSelecionada?.exibir_no_ranking ? "❌ Desfixar Ranking" : "⭐ Fixar Ranking"} icon="pi pi-star" severity={rodadaSelecionada?.exibir_no_ranking ? "danger" : "info"} onClick={handleDefinirRodadaRanking} />
+                                <Button label={rodadaSelecionada?.exibir_no_ranking ? "❌ Desfixar Ranking" : "⭐ Fixar Ranking"} severity={rodadaSelecionada?.exibir_no_ranking ? "danger" : "info"} onClick={handleDefinirRodadaRanking} />
                             )}
-                            {rodadaSelecionada?.status === 'rascunho' && <Button label="🟢 Abrir Rodada" icon="pi pi-play" severity="success" onClick={() => alterarStatusRodada('aberta')} />}
+                            {rodadaSelecionada?.status === 'rascunho' && <Button label="🟢 Abrir Rodada" severity="success" onClick={() => alterarStatusRodada('aberta')} />}
                             {rodadaSelecionada?.status === 'aberta' && (
                                 <>
-                                    <Button label="⏸️ Pausar" icon="pi pi-pause" severity="warning" onClick={() => alterarStatusRodada('pausada')} />
-                                    <Button label="🏁 Encerrar" icon="pi pi-stop" severity="danger" onClick={() => { if (window.confirm("Encerrar rodada?")) alterarStatusRodada('finalizada'); }} />
+                                    <Button label="⏸️ Pausar" severity="warning" onClick={() => alterarStatusRodada('pausada')} />
+                                    <Button label="🏁 Encerrar" severity="danger" onClick={() => { if (window.confirm("Encerrar rodada?")) alterarStatusRodada('finalizada'); }} />
                                 </>
                             )}
                             {rodadaSelecionada?.status === 'pausada' && (
                                 <>
-                                    <Button label="🔓 Reabrir" icon="pi pi-refresh" severity="success" onClick={() => alterarStatusRodada('aberta')} />
-                                    <Button label="🏁 Encerrar" icon="pi pi-stop" severity="danger" onClick={() => { if (window.confirm("Encerrar rodada?")) alterarStatusRodada('finalizada'); }} />
+                                    <Button label="🔓 Reabrir" severity="success" onClick={() => alterarStatusRodada('aberta')} />
+                                    <Button label="🏁 Encerrar" severity="danger" onClick={() => { if (window.confirm("Encerrar rodada?")) alterarStatusRodada('finalizada'); }} />
                                 </>
                             )}
                             {rodadaSelecionada?.status === 'finalizada' && (
-                                <Button label="📦 Arquivar" icon="pi pi-box" severity="secondary" onClick={() => { if (window.confirm("Arquivar rodada? Ela sumirá do ranking e dos bilhetes do usuário.")) alterarStatusRodada('arquivada'); }} />
+                                <Button label="📦 Arquivar" severity="secondary" onClick={() => { if (window.confirm("Arquivar rodada? Ela sumirá do ranking e dos bilhetes do usuário.")) alterarStatusRodada('arquivada'); }} />
                             )}
                             {rodadaSelecionada?.status === 'arquivada' && (
-                                <Button label="⏪ Restaurar" icon="pi pi-undo" severity="success" onClick={() => { if (window.confirm("Restaurar rodada para o público?")) alterarStatusRodada('finalizada'); }} />
+                                <Button label="⏪ Restaurar" severity="success" onClick={() => { if (window.confirm("Restaurar rodada para o público?")) alterarStatusRodada('finalizada'); }} />
                             )}
                         </div>
                     </div>
@@ -342,7 +354,7 @@ export default function Admin() {
                                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>TIPO DE APOSTA</label>
                                 <Dropdown value={novaRodada.tipo} options={tiposRodada} onChange={(e) => setNovaRodada({...novaRodada, tipo: e.value})} style={{ width: '100%' }} />
                             </div>
-                            <Button label="Criar" icon="pi pi-plus" onClick={handleCriarRodada} severity="success" outlined />
+                            <Button label="➕ Criar" onClick={handleCriarRodada} severity="success" outlined />
                         </div>
                     )}
                 </div>
@@ -350,25 +362,29 @@ export default function Admin() {
                 {/* BLOCO 2: GESTÃO DE JOGOS DA RODADA SELECIONADA */}
                 {rodadaSelecionada && (
                     <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                        
+                        {/* COLUNA ESQUERDA: CADASTRAR JOGO */}
                         <div style={{ flex: '1 1 400px', backgroundColor: 'white', padding: '25px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', opacity: rodadaSelecionada.status === 'arquivada' ? 0.5 : 1, pointerEvents: rodadaSelecionada.status === 'arquivada' ? 'none' : 'auto' }}>
                             <h3 style={{ marginTop: 0 }}>⚽ Adicionar Jogo</h3>
+                            
                             {rodadaSelecionada.tipo === 'placares' ? (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                                     <Dropdown value={novoJogo.time_casa_id} options={teams} optionLabel="nome" optionValue="id" onChange={(e) => setNovoJogo({ ...novoJogo, time_casa_id: e.value })} placeholder="Selecione o time da casa" style={{ width: '100%' }} filter />
                                     <div style={{ textAlign: 'center', fontWeight: 'bold', color: '#94a3b8' }}>X</div>
                                     <Dropdown value={novoJogo.time_visitante_id} options={teams} optionLabel="nome" optionValue="id" onChange={(e) => setNovoJogo({ ...novoJogo, time_visitante_id: e.value })} placeholder="Selecione o time visitante" style={{ width: '100%' }} filter />
                                     <input type="datetime-local" value={novoJogo.data_hora} onChange={(e) => setNovoJogo({...novoJogo, data_hora: e.target.value})} style={{ padding: '0.75rem', borderRadius: '6px', border: '1px solid #ced4da', width: '100%', fontFamily: 'inherit', fontSize: '1rem', color: '#495057' }} />
-                                    <Button label="Salvar Confronto" onClick={handleCadastrarJogo} />
+                                    <Button label="💾 Salvar Confronto" onClick={handleCadastrarJogo} />
                                 </div>
                             ) : (
                                 <p style={{ color: '#64748b' }}>Esta rodada é do tipo <strong>Campeão</strong> (Aposta Direta). Não necessita do cadastro de confrontos.</p>
                             )}
                         </div>
 
+                        {/* COLUNA DIREITA: LISTA DE JOGOS */}
                         <div style={{ flex: '1 1 500px' }}>
                             {rodadaSelecionada.tipo === 'placares' && jogos.length > 0 && (
                                 <div style={{ textAlign: 'right', marginBottom: '10px' }}>
-                                    <Button label="Extrair Times da Rodada" icon="pi pi-database" severity="warning" size="small" onClick={extrairTimesParaBanco} tooltip="Salva os times antigos no banco de seleções para uso futuro" />
+                                    <Button label="💾 Extrair Times da Rodada" severity="warning" onClick={extrairTimesParaBanco} tooltip="Salva os times antigos no banco de seleções para uso futuro" />
                                 </div>
                             )}
 
@@ -409,11 +425,11 @@ export default function Admin() {
 
                                         <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
                                             {mostrarFixo ? (
-                                                <Button label="Editar Placar" icon="pi pi-pencil" severity="info" size="small" onClick={() => habilitarEdicao(jogo.id)} />
+                                                <Button label="✏️ Editar Placar" severity="info" onClick={() => habilitarEdicao(jogo.id)} />
                                             ) : (
                                                 <>
-                                                    <Button label="Salvar" icon="pi pi-check" severity="success" size="small" onClick={() => handleSalvarResultado(jogo.id)} />
-                                                    {!estaEditando && <Button icon="pi pi-trash" severity="danger" outlined size="small" onClick={() => handleDeletarJogo(jogo.id)} />}
+                                                    <Button label="✅ Salvar" severity="success" onClick={() => handleSalvarResultado(jogo.id)} />
+                                                    {!estaEditando && <Button label="🗑️ Excluir" severity="danger" outlined onClick={() => handleDeletarJogo(jogo.id)} />}
                                                 </>
                                             )}
                                         </div>
@@ -431,25 +447,31 @@ export default function Admin() {
                     <InputText placeholder="Nome do Time/País" value={novoTeam.nome} onChange={(e) => setNovoTeam({...novoTeam, nome: e.target.value})} />
                     <InputText placeholder="Sigla (3 Letras)" maxLength={3} value={novoTeam.sigla} onChange={(e) => setNovoTeam({...novoTeam, sigla: e.target.value.toUpperCase()})} />
                     <InputText placeholder="URL da Bandeira/Escudo" value={novoTeam.bandeira} onChange={(e) => setNovoTeam({...novoTeam, bandeira: e.target.value})} />
-                    <Button label="Salvar no Banco" onClick={handleCadastrarTeam} severity="success" />
+                    <Button label="💾 Salvar no Banco" onClick={handleCadastrarTeam} severity="success" />
                 </div>
             </Dialog>
 
+            {/* MODAL DE APROVAÇÃO (CORRIGIDO) */}
             <Dialog header="🎟️ Bilhetes Emitidos" visible={exibirDialogCartelas} style={{ width: '80vw' }} onHide={() => setExibirDialogCartelas(false)}>
                 <DataTable value={cartelasDaRodada} paginator rows={10}>
                     <Column field="numero_bilhete" header="Nº" body={(r) => <b>#{r.numero_bilhete || r.id}</b>} />
                     <Column field="usuario_nome" header="Usuário" />
-                    <Column field="status_pagamento" header="Status" body={(r) => <span style={{color: r.status_pagamento==='aprovado'?'green':'orange', fontWeight: 'bold'}}>{r.status_pagamento.toUpperCase()}</span>} />
+                    <Column field="rodada_nome" header="Rodada" />
+                    <Column field="status_pagamento" header="Status" body={statusBadgeTemplate} />
                     <Column header="Ações" body={(r) => (
                         <div style={{ display: 'flex', gap: '8px' }}>
                             <Button 
-                                label={r.status_pagamento === 'aprovado' ? "Pendente" : "Aprovar"} 
-                                icon={r.status_pagamento === 'aprovado' ? "pi pi-clock" : "pi pi-check"} 
+                                label={r.status_pagamento === 'aprovado' ? "Tornar Pendente" : "Aprovar"} 
                                 severity={r.status_pagamento === 'aprovado' ? "warning" : "success"}
                                 onClick={() => handleTogglePagamento(r.id, r.status_pagamento)}
-                                style={{ padding: '5px 10px', fontSize: '11px', height: '30px' }}
+                                style={{ padding: '5px 10px', fontSize: '11px' }}
                             />
-                            <Button icon="pi pi-trash" severity="danger" onClick={() => handleDeletarCartela(r.id)} style={{ padding: '5px', width: '30px', height: '30px' }} />
+                            <Button 
+                                label="🗑️ Excluir" 
+                                severity="danger" 
+                                onClick={() => handleDeletarCartela(r.id)} 
+                                style={{ padding: '5px 10px', fontSize: '11px' }} 
+                            />
                         </div>
                     )} />
                 </DataTable>
