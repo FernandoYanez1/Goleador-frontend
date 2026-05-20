@@ -67,14 +67,29 @@ const Ranking = () => {
                     return;
                 }
 
-                // Lógica corrigida: Encontra todas as rodadas fixadas
-                const rankingsFixados = rodadasData.filter((r: any) => r.exibir_no_ranking === true);
+                // =================================================================
+                // LÓGICA DE ORDENAÇÃO PELO BANCO (ordem_ranking)
+                // =================================================================
+                const rankingsFixados = rodadasData
+                    .filter((r: any) => r.exibir_no_ranking === true)
+                    .sort((a: any, b: any) => {
+                        const ordemA = a.ordem_ranking != null ? Number(a.ordem_ranking) : 999;
+                        const ordemB = b.ordem_ranking != null ? Number(b.ordem_ranking) : 999;
+                        
+                        // Ordem crescente: Menores números (0, 1, 2) vêm primeiro
+                        if (ordemA !== ordemB) {
+                            return ordemA - ordemB;
+                        }
+                        // Se empatar na ordem, desempata pelo ID (mais recente primeiro)
+                        return b.id - a.id;
+                    });
+
                 setRodadasRanking(rankingsFixados);
 
                 let ativa = null;
 
                 if (rankingsFixados.length > 0) {
-                    ativa = rankingsFixados[0]; // Se tiver 1 ou mais fixadas, seleciona a primeira por padrão
+                    ativa = rankingsFixados[0]; // Agora o [0] é o que tem a menor 'ordem_ranking'
                 } else {
                     // Fallbacks caso não tenha nenhuma fixada
                     ativa = rodadasData.find((r: any) => r.status === 'aberta' || r.status === 'pausada');
@@ -100,40 +115,60 @@ const Ranking = () => {
     }, [apiUrl]);
 
     const carregarRankingRodada = async (rodada: any) => {
-        setRodadaAtual(rodada);
-        setApostasBloqueadas(rodada.status === 'pausada' || rodada.status === 'encerrada');
-        setLoading(true);
 
-        try {
-            const [rankRes, jogosRes] = await Promise.all([
-                fetch(`${apiUrl}/ranking`),
-                fetch(`${apiUrl}/jogos?rodada_id=${rodada.id}`)
-            ]);
+    setRodadaAtual(rodada);
 
-            const rankData = await rankRes.json();
-            const jogosData = await jogosRes.json();
+    setApostasBloqueadas(
+        rodada.status === 'pausada' ||
+        rodada.status === 'encerrada'
+    );
 
-            if (Array.isArray(rankData)) {
-                const rankDaRodada = rankData
-                    .filter((r: any) => r.rodada_id === rodada.id)
-                    .sort((a: any, b: any) => b.pontuacao_total - a.pontuacao_total);
-                setAprovados(rankDaRodada);
-            }
+    try {
 
-            if (Array.isArray(jogosData)) {
-                const jogosFinalizados = jogosData.filter((j: any) => j.gols_casa !== null && j.gols_visitante !== null).length;
-                setStatusJogos({
-                    finalizados: jogosFinalizados,
-                    total: jogosData.length
-                });
-            }
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
+        const [rankRes, jogosRes] = await Promise.all([
+            fetch(`${apiUrl}/ranking`),
+            fetch(`${apiUrl}/jogos?rodada_id=${rodada.id}`)
+        ]);
+
+        const rankData = await rankRes.json();
+        const jogosData = await jogosRes.json();
+
+        if (Array.isArray(rankData)) {
+
+            const rankDaRodada = rankData
+                .filter((r: any) => r.rodada_id === rodada.id)
+                .sort(
+                    (a: any, b: any) =>
+                        b.pontuacao_total - a.pontuacao_total
+                );
+
+            setAprovados(rankDaRodada);
         }
-    };
 
+        if (Array.isArray(jogosData)) {
+
+            const jogosFinalizados = jogosData.filter(
+                (j: any) =>
+                    j.gols_casa !== null &&
+                    j.gols_visitante !== null
+            ).length;
+
+            setStatusJogos({
+                finalizados: jogosFinalizados,
+                total: jogosData.length
+            });
+        }
+
+    } catch (err) {
+
+        console.error(err);
+
+    } finally {
+
+        setLoading(false);
+
+    }
+};
     const totalCartelasCompradas = aprovados.length;
     const valorArrecadadoTotal = totalCartelasCompradas * (rodadaAtual?.preco || VALOR_INSCRICAO);
     const valorPremioTotal = valorArrecadadoTotal * 0.90;
@@ -302,7 +337,6 @@ const Ranking = () => {
         <div style={{ backgroundColor: "#e2e8f0", minHeight: "100vh", padding: "40px 0", position: "relative" }}>
             <Container maxWidth="md">
                 
-                {/* Lógica Corrigida: Só exibe Dropdown se houver MAIS DE 1 rodada fixada */}
                 {rodadasRanking.length > 1 && (
                     <Box mb={3} display="flex" justifyContent="center">
                         <select
