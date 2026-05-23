@@ -414,7 +414,7 @@ const Ranking = () => {
                     </Box>
                 </Paper>
 
-                {mostrarBannerPremio && (
+               {/*  {mostrarBannerPremio && (
                     <Box mb={4} style={{
                         position: 'relative',
                         background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
@@ -436,13 +436,13 @@ const Ranking = () => {
                             <div style={{ backgroundColor: '#ffffff', borderRadius: '50%', width: '50px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
                                 <Checkroom style={{ fontSize: '30px', color: '#059669' }} /> 
                             </div>
-                          {/*   <div>
+                            <div>
                                 <Typography variant="h6" style={{ color: '#ffffff', margin: 0, fontWeight: 'bold' }}>👕 Sorteio Especial: Oitavas da Copa!</Typography>
                                 <Typography variant="body2" style={{ color: '#fffbeb', margin: '4px 0 0 0' }}>O 1º lugar isolado leva uma Camisa Oficial da Seleção! (Em caso de empate, R$300 divididos).</Typography>
-                            </div> */}
+                            </div>
                         </div>
                     </Box>
-                )}
+                )} */}
 
                 {mostrarBannerWpp && (
                     <Box mb={4} style={{
