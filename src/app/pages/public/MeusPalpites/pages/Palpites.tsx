@@ -165,30 +165,31 @@ export default function MeusPalpites() {
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
                 {cartela.palpites.map((p: any, index: number) => {
-                    const jogoFinalizado = p.gols_casa !== null && p.gols_visitante !== null;
-                    const info = getRegraInfo(p);
 
-                    // ==========================================
+                    // ==============================================================
                     // NOVO LAYOUT: APOSTA DE CAMPEÃO
-                    // ==========================================
-                    if (cartela.rodada_tipo === 'campeao') {
-                        // Busca a bandeira correspondente ao nome do país apostado
+                    // Identifica pelo tipo da rodada ou pela presença do palpite_texto
+                    // ==============================================================
+                    if (cartela.rodada_tipo === 'campeao' || p.palpite_texto) {
                         const timeApostado = teams.find(t => t.nome === p.palpite_texto);
                         const bandeira = timeApostado?.bandeira || timeApostado?.logo_url || "/media/escudos-times/default.png";
                         const ganhou = p.pontos_ganhos > 0;
+                        const encerrada = cartela.rodada_status === 'encerrada' || cartela.rodada_status === 'finalizada';
 
                         return (
                             <div key={index} style={{ backgroundColor: "#f8fafc", borderRadius: "12px", padding: "20px", border: "1px solid #e2e8f0", display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", boxShadow: "inset 0 2px 4px rgba(0,0,0,0.02)" }}>
-                                <div style={{ fontSize: "12px", fontWeight: "bold", color: "#64748b", letterSpacing: "1px" }}>⭐ APOSTA NO CAMPEÃO</div>
-                                <img src={bandeira} alt={p.palpite_texto} style={{ width: '60px', height: '40px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #cbd5e1' }} />
-                                <div style={{ fontSize: '24px', fontWeight: '900', color: '#1e293b' }}>{p.palpite_texto}</div>
+                                <div style={{ fontSize: "12px", fontWeight: "bold", color: "#64748b", letterSpacing: "1px" }}>⭐ MEU PALPITE PARA CAMPEÃO ⭐</div>
+                                <img src={bandeira} alt={p.palpite_texto} style={{ width: '80px', height: '55px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #cbd5e1', marginTop: '10px' }} />
+                                <div style={{ fontSize: '24px', fontWeight: '900', color: '#1e293b', textAlign: 'center' }}>{p.palpite_texto}</div>
                                 
-                                <div style={{ marginTop: "10px", display: "flex", alignItems: "center", gap: "10px" }}>
-                                    <div style={{ fontSize: "13px", color: "#64748b", fontWeight: "bold" }}>
-                                        Status: <span style={{ color: ganhou ? "#10b981" : "#f59e0b" }}>{ganhou ? "🏆 Campeão Confirmado!" : "Aguardando Resultado..."}</span>
+                                <div style={{ marginTop: "15px", display: "flex", alignItems: "center", flexWrap: "wrap", justifyContent: "center", gap: "10px", backgroundColor: "white", padding: "8px 16px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                                    <div style={{ fontSize: "13px", color: "#475569", fontWeight: "bold", textAlign: "center" }}>
+                                        Status Oficial: <span style={{ color: ganhou ? "#10b981" : (encerrada ? "#ef4444" : "#f59e0b") }}>
+                                            {ganhou ? "🏆 É CAMPEÃO!" : (encerrada ? "❌ Eliminado" : "Aguardando Resultado...")}
+                                        </span>
                                     </div>
                                     {ganhou && isAprovado && (
-                                        <div style={{ backgroundColor: "#10b981", color: "white", padding: "4px 10px", borderRadius: "15px", fontWeight: "bold", fontSize: "11px" }}>
+                                        <div style={{ backgroundColor: "#10b981", color: "white", padding: "4px 10px", borderRadius: "15px", fontWeight: "bold", fontSize: "12px" }}>
                                             +{p.pontos_ganhos} pts
                                         </div>
                                     )}
@@ -197,9 +198,12 @@ export default function MeusPalpites() {
                         );
                     }
 
-                    // ==========================================
-                    // LAYOUT ANTIGO: APOSTA DE PLACARES (CONFRONTOS)
-                    // ==========================================
+                    // ==============================================================
+                    // LAYOUT PADRÃO: APOSTA DE PLACARES (JOGOS)
+                    // ==============================================================
+                    const jogoFinalizado = p.gols_casa !== null && p.gols_visitante !== null;
+                    const info = getRegraInfo(p);
+
                     return (
                     <div key={index} style={{ backgroundColor: "#f8fafc", borderRadius: "8px", padding: "15px", border: "1px solid #e2e8f0" }}>
                         <div style={{ textAlign: "center", color: "#64748b", fontSize: "12px", fontWeight: "bold", marginBottom: "10px" }}>
@@ -207,21 +211,19 @@ export default function MeusPalpites() {
                         </div>
                         
                         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "15px" }}>
-                            <div style={{ textAlign: 'center', width: '60px' }}>
-                                <img src={p.logo_casa || "/media/escudos-times/default.png"} alt="Casa" style={{ width: '35px', height: '35px', objectFit: 'contain' }} />
-                                <div style={{ fontSize: '13px', fontWeight: 'bold', color: "#1e293b", marginTop: "5px" }}>{p.sigla_casa}</div>
-                            </div>
+                        <div style={{ textAlign: 'center', width: '60px' }}>
+                            <img src={p.logo_casa || "/media/escudos-times/default.png"} alt="Casa" style={{ width: '35px', height: '35px', objectFit: 'contain' }} />
+                        </div>
 
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <div style={{ width: "35px", height: "35px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "16px", fontWeight: "bold", borderRadius: "6px", border: "2px solid #cbd5e1", backgroundColor: "white", color: "#1e293b" }}>{p.palpite_casa}</div>
-                                <span style={{ fontSize: "16px", fontWeight: "bold", color: '#94a3b8' }}>X</span>
-                                <div style={{ width: "35px", height: "35px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "16px", fontWeight: "bold", borderRadius: "6px", border: "2px solid #cbd5e1", backgroundColor: "white", color: "#1e293b" }}>{p.palpite_visitante}</div>
-                            </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ width: "35px", height: "35px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "16px", fontWeight: "bold", borderRadius: "6px", border: "2px solid #cbd5e1", backgroundColor: "white", color: "#1e293b" }}>{p.palpite_casa}</div>
+                            <span style={{ fontSize: "16px", fontWeight: "bold", color: '#94a3b8' }}>X</span>
+                            <div style={{ width: "35px", height: "35px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "16px", fontWeight: "bold", borderRadius: "6px", border: "2px solid #cbd5e1", backgroundColor: "white", color: "#1e293b" }}>{p.palpite_visitante}</div>
+                        </div>
 
-                            <div style={{ textAlign: 'center', width: '60px' }}>
-                                <img src={p.logo_visitante || "/media/escudos-times/default.png"} alt="Visitante" style={{ width: '35px', height: '35px', objectFit: 'contain' }} />
-                                <div style={{ fontSize: '13px', fontWeight: 'bold', color: "#1e293b", marginTop: "5px" }}>{p.sigla_visitante}</div>
-                            </div>
+                        <div style={{ textAlign: 'center', width: '60px' }}>
+                            <img src={p.logo_visitante || "/media/escudos-times/default.png"} alt="Visitante" style={{ width: '35px', height: '35px', objectFit: 'contain' }} />
+                        </div>
                         </div>
 
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: "1px solid #e2e8f0", paddingTop: "10px", marginTop: "15px" }}>
@@ -231,9 +233,9 @@ export default function MeusPalpites() {
                         
                         {jogoFinalizado && isAprovado && (
                             <Tooltip title={info.texto} arrow placement="top">
-                                <div style={{ backgroundColor: info.cor, color: "white", padding: "4px 10px", borderRadius: "15px", fontWeight: "bold", fontSize: "11px", cursor: "help" }}>
-                                    +{p.pontos_ganhos} pts
-                                </div>
+                            <div style={{ backgroundColor: info.cor, color: "white", padding: "4px 10px", borderRadius: "15px", fontWeight: "bold", fontSize: "11px", cursor: "help" }}>
+                                +{p.pontos_ganhos} pts
+                            </div>
                             </Tooltip>
                         )}
                         {jogoFinalizado && !isAprovado && (
@@ -253,8 +255,13 @@ export default function MeusPalpites() {
   // Separação Inteligente
   const nomesRodadasAtuais = rodadasAtuais.map(r => r.nome);
 
-  const cartelasAtuais = cartelas.filter(c => nomesRodadasAtuais.includes(c.rodada_nome));
-  const cartelasAntigas = cartelas.filter(c => !nomesRodadasAtuais.includes(c.rodada_nome));
+  const cartelasAtuais = cartelas.filter(c =>
+    nomesRodadasAtuais.includes(c.rodada_nome)
+  );
+
+  const cartelasAntigas = cartelas.filter(c =>
+    !nomesRodadasAtuais.includes(c.rodada_nome)
+  );
   
   // Lista de rodadas antigas para o dropdown de histórico
   const nomesRodadasAntigas = Array.from(new Set(cartelasAntigas.map(c => c.rodada_nome))) as string[];
@@ -320,7 +327,7 @@ export default function MeusPalpites() {
                 <select 
                     value={rodadaHistoricoSelecionada} 
                     onChange={(e) => setRodadaHistoricoSelecionada(e.target.value)}
-                    style={{ padding: "10px 15px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "16px", fontWeight: "bold", color: "#1e293b", backgroundColor: "white", cursor: "pointer" }}
+                    style={{ padding: "10px 15px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "16px", fontWeight: "bold", color: "#1e293b", backgroundColor: "white", cursor: "pointer", maxWidth: "100%" }}
                 >
                     {nomesRodadasAntigas.map(nome => <option key={nome} value={nome}>{nome}</option>)}
                 </select>
