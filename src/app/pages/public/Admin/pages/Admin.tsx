@@ -10,6 +10,7 @@ import { useHistory } from 'react-router-dom';
 
 export default function Admin() {
     const history = useHistory();
+    const isMobile = window.innerWidth < 768;
     const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
 
     const [rodadas, setRodadas] = useState<any[]>([]);
@@ -267,22 +268,101 @@ export default function Admin() {
     };
 
     return (
-        <div style={{ padding: '30px', minHeight: '100vh', backgroundColor: '#f4f6f9', color: '#333' }}>
+        <div
+    style={{
+        padding: isMobile ? '15px' : '30px',
+        minHeight: '100vh',
+        backgroundColor: '#f4f6f9',
+        color: '#333'
+    }}
+>
             <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
                 
                 {/* CABEÇALHO */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', backgroundColor: 'white', padding: '15px 20px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
-                    <Button label="🚪 Sair do Admin" onClick={() => history.push('/public')} className="p-button-text p-button-secondary" />
-                    <h1 style={{ margin: 0, fontSize: '22px' }}>🛡️ Painel Admin</h1>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                        <Button label={verArquivadas ? "⬅️ Voltar para Ativas" : "🗄️ Arquivadas"} severity={verArquivadas ? "success" : "secondary"} outlined onClick={() => { setVerArquivadas(!verArquivadas); setRodadaSelecionada(null); }} />
-                        <Button label="🚩 Cadastrar" onClick={() => setExibirDialogTeams(true)} severity="info" />
-                        <Button label="🎟️ Bilhetes" onClick={() => { fetch(`${apiUrl}/admin/cartelas`).then(res => res.json()).then(setCartelas); setExibirDialogCartelas(true); }} severity="help" />
-                    </div>
-                </div>
+                <div
+    style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: isMobile ? 'stretch' : 'center',
+        flexDirection: isMobile ? 'column' : 'row',
+        gap: '15px',
+        marginBottom: '30px',
+        backgroundColor: 'white',
+        padding: isMobile ? '15px' : '20px',
+        borderRadius: '12px',
+        boxShadow: '0 4px 10px rgba(0,0,0,0.05)'
+    }}
+>
+    <Button
+        label="🚪 Sair do Admin"
+        onClick={() => history.push('/public')}
+        className="p-button-text p-button-secondary"
+        style={{ width: isMobile ? '100%' : 'auto' }}
+    />
+
+    <h1
+        style={{
+            margin: 0,
+            fontSize: isMobile ? '20px' : '22px',
+            textAlign: 'center'
+        }}
+    >
+        🛡️ Painel Admin
+    </h1>
+
+    <div
+        style={{
+            display: 'flex',
+            gap: '10px',
+            flexWrap: 'wrap',
+            width: isMobile ? '100%' : 'auto'
+        }}
+    >
+        <Button
+            label={verArquivadas ? "⬅️ Voltar para Ativas" : "🗄️ Arquivadas"}
+            severity={verArquivadas ? "success" : "secondary"}
+            outlined
+            onClick={() => {
+                setVerArquivadas(!verArquivadas);
+                setRodadaSelecionada(null);
+            }}
+            style={{ flex: 1 }}
+        />
+
+        <Button
+            label="🚩 Cadastrar"
+            onClick={() => setExibirDialogTeams(true)}
+            severity="info"
+            style={{ flex: 1 }}
+        />
+
+        <Button
+            label="🎟️ Bilhetes"
+            onClick={() => {
+                fetch(`${apiUrl}/admin/cartelas`)
+                    .then(res => res.json())
+                    .then(setCartelas);
+
+                setExibirDialogCartelas(true);
+            }}
+            severity="help"
+            style={{ flex: 1 }}
+        />
+    </div>
+</div>
 
                 {/* DASHBOARD FINANCEIRO */}
-                <div style={{ display: 'flex', gap: '20px', marginBottom: '30px', flexWrap: 'wrap' }}>
+                <div
+    style={{
+        display: 'grid',
+        gridTemplateColumns:
+            isMobile
+                ? '1fr'
+                : 'repeat(auto-fit, minmax(250px, 1fr))',
+        gap: '20px',
+        marginBottom: '30px'
+    }}
+>
                     <div style={{ flex: 1, minWidth: '250px', backgroundColor: '#eff6ff', border: '1px solid #3b82f6', padding: '20px', borderRadius: '12px', textAlign: 'center' }}>
                         <div style={{ color: '#1e40af', fontWeight: 'bold', fontSize: '14px', marginBottom: '5px' }}>🛡️ SEU LUCRO (10%)</div>
                         <div style={{ color: '#1e3a8a', fontWeight: '900', fontSize: '28px' }}>{(valorBruto * 0.10).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
@@ -304,7 +384,18 @@ export default function Admin() {
                 <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', marginBottom: '30px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', borderTop: verArquivadas ? '4px solid #475569' : 'none' }}>
                     <h3 style={{ margin: '0 0 15px 0' }}>{verArquivadas ? "🗄️ Arquivo de Rodadas Antigas" : "Gestão de Rodadas e Eventos"}</h3>
                     
-                    <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '20px', marginBottom: '20px' }}>
+                    <div
+    style={{
+        display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
+        gap: '20px',
+        flexWrap: 'wrap',
+        alignItems: isMobile? 'stretch' : 'center',
+        borderBottom: '1px solid #e2e8f0',
+        paddingBottom: '20px',
+        marginBottom: '20px'
+    }}
+>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <Dropdown value={rodadaSelecionada} options={rodadasVisiveis} onChange={(e) => setRodadaSelecionada(e.value)} optionLabel="nome" placeholder="Selecione" style={{ width: '250px' }} />
                             {rodadaSelecionada && (
@@ -322,7 +413,15 @@ export default function Admin() {
                         </div>
 
                         {/* OS BOTÕES DA ESTEIRA AQUI */}
-                        <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                        <div
+    style={{
+        marginLeft: isMobile ? 0 : 'auto',
+        display: 'flex',
+        gap: '10px',
+        flexWrap: 'wrap',
+        width: isMobile ? '100%' : 'auto'
+    }}
+>
                             {rodadaSelecionada && rodadaSelecionada.status !== 'arquivada' && (
                                 <Button label={rodadaSelecionada?.exibir_no_ranking ? "❌ Desfixar Ranking" : "⭐ Fixar Ranking"} severity={rodadaSelecionada?.exibir_no_ranking ? "danger" : "info"} onClick={handleDefinirRodadaRanking} />
                             )}
@@ -349,7 +448,20 @@ export default function Admin() {
                     </div>
 
                     {!verArquivadas && (
-                        <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', alignItems: 'flex-end', backgroundColor: '#f8fafc', padding: '15px', borderRadius: '8px' }}>
+                       <div
+    style={{
+        display: 'grid',
+        gridTemplateColumns:
+            isMobile
+                ? '1fr'
+                : '1fr 130px 220px auto',
+        gap: '15px',
+        alignItems: 'flex-end',
+        backgroundColor: '#f8fafc',
+        padding: '15px',
+        borderRadius: '8px'
+    }}
+>
                             <div style={{ flex: 1 }}>
                                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>NOME DA NOVA RODADA</label>
                                 <InputText value={novaRodada.nome} onChange={(e) => setNovaRodada({...novaRodada, nome: e.target.value})} placeholder="Ex: Oitavas de Final" style={{ width: '100%' }} />
@@ -369,7 +481,15 @@ export default function Admin() {
 
                 {/* BLOCO 2: GESTÃO DE JOGOS DA RODADA SELECIONADA */}
                 {rodadaSelecionada && (
-                    <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                    <div
+    style={{
+        display: 'grid',
+        gridTemplateColumns:
+            window.innerWidth < 1024 ? '1fr' : '400px 1fr',
+        gap: '20px',
+        alignItems: 'flex-start'
+    }}
+>
                         
                         {/* COLUNA ESQUERDA: CADASTRAR JOGO OU DEFINIR CAMPEÃO */}
                         <div style={{ flex: '1 1 400px', backgroundColor: 'white', padding: '25px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', opacity: rodadaSelecionada.status === 'arquivada' ? 0.5 : 1, pointerEvents: rodadaSelecionada.status === 'arquivada' ? 'none' : 'auto' }}>
@@ -429,7 +549,16 @@ export default function Admin() {
                                         <div key={jogo.id} style={{ backgroundColor: 'white', marginBottom: '15px', borderRadius: '12px', padding: '15px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
                                             <div style={{ textAlign: 'center', color: '#64748b', fontSize: '12px', fontWeight: 'bold', marginBottom: '10px' }}>📅 {formatarData(jogo.data_hora)}</div>
                                             
-                                            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px', marginBottom: '15px' }}>
+                                            <div
+    style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: isMobile ? '8px' : '15px',
+        marginBottom: '15px',
+        flexWrap: 'wrap'
+    }}
+>
                                                 <div style={{ textAlign: 'center', width: '70px' }}>
                                                     <img src={jogo.logo_casa || "/media/escudos-times/default.png"} alt="logo" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
                                                     <div style={{ fontWeight: 'bold', fontSize: '12px' }}>{jogo.sigla_casa}</div>
@@ -441,9 +570,13 @@ export default function Admin() {
                                                     </div>
                                                 ) : (
                                                     <>
-                                                        <input type="number" min="0" value={resultados[jogo.id]?.casa ?? ""} onChange={(e) => setResultados({...resultados, [jogo.id]: {...resultados[jogo.id], casa: e.target.value}})} style={{ width: '50px', height: '40px', textAlign: 'center', fontSize: '20px', fontWeight: 'bold', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
+                                                        <input type="number" min="0" value={resultados[jogo.id]?.casa ?? ""} onChange={(e) => setResultados({...resultados, [jogo.id]: {...resultados[jogo.id], casa: e.target.value}})} style={{
+    width: isMobile ? '42px' : '50px',
+    height: '40px', textAlign: 'center', fontSize: '20px', fontWeight: 'bold', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
                                                         <span style={{ fontWeight: 'bold', color: '#94a3b8' }}>X</span>
-                                                        <input type="number" min="0" value={resultados[jogo.id]?.visitante ?? ""} onChange={(e) => setResultados({...resultados, [jogo.id]: {...resultados[jogo.id], visitante: e.target.value}})} style={{ width: '50px', height: '40px', textAlign: 'center', fontSize: '20px', fontWeight: 'bold', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
+                                                        <input type="number" min="0" value={resultados[jogo.id]?.visitante ?? ""} onChange={(e) => setResultados({...resultados, [jogo.id]: {...resultados[jogo.id], visitante: e.target.value}})} style={{
+    width: isMobile ? '42px' : '50px',
+    height: '40px', textAlign: 'center', fontSize: '20px', fontWeight: 'bold', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
                                                     </>
                                                 )}
 
@@ -453,7 +586,14 @@ export default function Admin() {
                                                 </div>
                                             </div>
 
-                                            <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
+                                            <div
+    style={{
+        display: 'flex',
+        justifyContent: 'center',
+        gap: '10px',
+        flexWrap: 'wrap'
+    }}
+>
                                                 {mostrarFixo ? (
                                                     <Button label="✏️ Editar Placar" severity="info" size="small" onClick={() => habilitarEdicao(jogo.id)} />
                                                 ) : (
@@ -473,7 +613,7 @@ export default function Admin() {
             </div>
 
             {/* MODAIS ADICIONAIS */}
-            <Dialog header="🚩 Cadastrar Time/Seleção" visible={exibirDialogTeams} style={{ width: '400px' }} onHide={() => setExibirDialogTeams(false)}>
+            <Dialog header="🚩 Cadastrar Time/Seleção" visible={exibirDialogTeams} style={{ width: isMobile ? '95vw' : '400px' }} onHide={() => setExibirDialogTeams(false)}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingTop: '10px' }}>
                     <InputText placeholder="Nome do Time/País" value={novoTeam.nome} onChange={(e) => setNovoTeam({...novoTeam, nome: e.target.value})} />
                     <InputText placeholder="Sigla (3 Letras)" maxLength={3} value={novoTeam.sigla} onChange={(e) => setNovoTeam({...novoTeam, sigla: e.target.value.toUpperCase()})} />
@@ -482,8 +622,14 @@ export default function Admin() {
                 </div>
             </Dialog>
 
-            <Dialog header="🎟️ Bilhetes Emitidos" visible={exibirDialogCartelas} style={{ width: '80vw' }} onHide={() => setExibirDialogCartelas(false)}>
-                <DataTable value={cartelasDaRodada} paginator rows={10}>
+            <Dialog header="🎟️ Bilhetes Emitidos" visible={exibirDialogCartelas} style={{ width: isMobile ? '98vw' : '80vw' }} onHide={() => setExibirDialogCartelas(false)}>
+                <DataTable
+    value={cartelasDaRodada}
+    paginator
+    rows={10}
+    responsiveLayout="scroll"
+    scrollable
+>
                     <Column field="numero_bilhete" header="Nº" body={(r) => <b>#{r.numero_bilhete || r.id}</b>} />
                     <Column field="usuario_nome" header="Usuário" />
                     <Column field="rodada_nome" header="Rodada" />
