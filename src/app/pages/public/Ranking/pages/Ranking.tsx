@@ -135,6 +135,7 @@ const Ranking = () => {
         const palpite = auditoriaCompleta.find((a: any) => a.cartela_id === cartela_id);
         if (!palpite || !palpite.palpite_texto) return null;
 
+        // Regra Especial de Ocultação: Se estiver liberado para aposta, NINGUÉM pode ver a seleção alheia
         if (!apostasBloqueadas) {
             return (
                 <Box display="flex" alignItems="center" gap={1} mt={0.5}>
@@ -144,6 +145,7 @@ const Ranking = () => {
             );
         }
 
+        // Se bloqueou (apostas fechadas) ou já encerrou, revela o palpite
         const team = teams.find((t: any) => t.nome === palpite.palpite_texto);
         return (
             <Box display="flex" alignItems="center" gap={1} mt={0.5} style={{ backgroundColor: '#f1f5f9', padding: '4px 8px', borderRadius: '6px', width: 'fit-content' }}>
@@ -156,7 +158,13 @@ const Ranking = () => {
     const totalCartelasCompradas = aprovados.length;
     const valorArrecadadoTotal = totalCartelasCompradas * (rodadaAtual?.preco || VALOR_INSCRICAO);
     const valorPremioTotal = valorArrecadadoTotal * 0.90;
-    const mostrarPodio = statusJogos.finalizados > 0 || rodadaAtual?.tipo === 'campeao';
+
+    const isCampeao = rodadaAtual?.tipo === 'campeao';
+    
+    // Regra Pódio: Se for placares (jogos > 0). Se for campeão (só mostra se alguém tiver pontuado > 0)
+    const mostrarPodio = isCampeao 
+        ? aprovados.some(p => p.pontuacao_total > 0) 
+        : statusJogos.finalizados > 0;
 
     const pontuacoesUnicas = aprovados.map(p => Number(p.pontuacao_total)).filter((valor, indice, array) => array.indexOf(valor) === indice).sort((a, b) => b - a); 
     const score1 = pontuacoesUnicas[0]; 
@@ -178,16 +186,20 @@ const Ranking = () => {
         restoRanking = [...aprovados]; 
     }
 
-    const premio1PorPessoa = (valorPremioTotal * 0.60) / (ganhadores1.length || 1);
+    // Aposta de Campeão não tem 1º, 2º e 3º. Quem acerta o campeão, ganha (ou divide) o pote TOTAL dos 90%!
+    const premio1PorPessoa = isCampeao 
+        ? valorPremioTotal / (ganhadores1.length || 1) 
+        : (valorPremioTotal * 0.60) / (ganhadores1.length || 1);
+    
     const premio2PorPessoa = (valorPremioTotal * 0.30) / (ganhadores2.length || 1);
     const premio3PorPessoa = (valorPremioTotal * 0.10) / (ganhadores3.length || 1);
 
     let textoStatusRodada = "Aguardando Resultados ⏳";
     let corStatusRodada = "#64748b"; 
     
-    if (rodadaAtual?.tipo === 'campeao') {
-        textoStatusRodada = apostasBloqueadas ? "🔒 Apostas Encerradas" : "🟢 Mercado Aberto";
-        corStatusRodada = apostasBloqueadas ? "#ef4444" : "#10b981";
+    if (isCampeao) {
+        if (mostrarPodio) { textoStatusRodada = "✅ CAMPEÃO DEFINIDO!"; corStatusRodada = "#10b981"; }
+        else { textoStatusRodada = apostasBloqueadas ? "🔒 Apostas Encerradas" : "🟢 Mercado Aberto"; corStatusRodada = apostasBloqueadas ? "#ef4444" : "#10b981"; }
     } else if (statusJogos.total > 0) {
         if (statusJogos.finalizados === statusJogos.total) { textoStatusRodada = "✅ RANKING FINAL (Concluído)"; corStatusRodada = "#10b981"; } 
         else if (statusJogos.finalizados > 0) { textoStatusRodada = `🔄 PARCIAL (${statusJogos.finalizados}/${statusJogos.total} jogos)`; corStatusRodada = "#3b82f6"; }
@@ -311,7 +323,7 @@ const Ranking = () => {
                 <Box mb={5}>
                     {mostrarPodio && ganhadores1.length > 0 && (
                         <Paper style={{ padding: "20px", borderRadius: "12px", backgroundColor: "#fffbeb", borderLeft: "6px solid #fbbf24", marginBottom: "15px" }}>
-                            <Typography variant="subtitle2" style={{ color: "#b45309", fontWeight: "bold", marginBottom: "10px", display: "flex", alignItems: "center", gap: "5px" }}><EmojiEvents style={{ color: "#fbbf24" }} /> 1º Lugar (60%) </Typography>
+                            <Typography variant="subtitle2" style={{ color: "#b45309", fontWeight: "bold", marginBottom: "10px", display: "flex", alignItems: "center", gap: "5px" }}><EmojiEvents style={{ color: "#fbbf24" }} /> {isCampeao ? "Ganhadores do Pote Total" : "1º Lugar (60%)"} </Typography>
                             {ganhadores1.map(g => (
                                 <div key={g.cartela_id} onClick={() => abrirSecador(g)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", borderBottom: "1px dashed #fcd34d", paddingBottom: "10px", cursor: "pointer" }}>
                                     <div>
@@ -329,7 +341,7 @@ const Ranking = () => {
                         </Paper>
                     )}
 
-                    {mostrarPodio && ganhadores2.length > 0 && (
+                    {mostrarPodio && !isCampeao && ganhadores2.length > 0 && (
                         <Paper style={{ padding: "20px", borderRadius: "12px", backgroundColor: "#f1f5f9", borderLeft: "6px solid #94a3b8", marginBottom: "15px" }}>
                             <Typography variant="subtitle2" style={{ color: "#475569", fontWeight: "bold", marginBottom: "10px", display: "flex", alignItems: "center", gap: "5px" }}><MilitaryTech style={{ color: "#94a3b8" }} /> 2º Lugar (30%)</Typography>
                             {ganhadores2.map(g => (
@@ -349,7 +361,7 @@ const Ranking = () => {
                         </Paper>
                     )}
 
-                    {mostrarPodio && ganhadores3.length > 0 && (
+                    {mostrarPodio && !isCampeao && ganhadores3.length > 0 && (
                         <Paper style={{ padding: "20px", borderRadius: "12px", backgroundColor: "#fef2f2", borderLeft: "6px solid #b45309", marginBottom: "15px" }}>
                             <Typography variant="subtitle2" style={{ color: "#9a3412", fontWeight: "bold", marginBottom: "10px", display: "flex", alignItems: "center", gap: "5px" }}><MilitaryTech style={{ color: "#b45309" }} /> 3º Lugar (10%)</Typography>
                             {ganhadores3.map(g => (
@@ -377,7 +389,7 @@ const Ranking = () => {
                                 <React.Fragment key={index}>
                                     <ListItem onClick={() => abrirSecador(participant)} style={{ padding: "15px", cursor: "pointer" }}>
                                         <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
-                                            <Typography style={{ fontWeight: "900", color: "#94a3b8", width: "40px" }}>{mostrarPodio ? `#${index + 4}` : "-"}</Typography>
+                                            <Typography style={{ fontWeight: "900", color: "#94a3b8", width: "40px" }}>{mostrarPodio && !isCampeao ? `#${index + 4}` : "-"}</Typography>
                                             <div style={{ flex: 1 }}>
                                                 <Typography style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: "bold", color: "#334155" }}>
                                                     {participant.nome || participant.usuario_nome} 
