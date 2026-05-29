@@ -27,6 +27,12 @@ export default function Admin() {
     const [exibirDialogCartelas, setExibirDialogCartelas] = useState(false);
     const [exibirDialogTeams, setExibirDialogTeams] = useState(false);
 
+    // NOVO: Estados para o Modal de Visualizar Palpites
+    const [exibirDialogPalpites, setExibirDialogPalpites] = useState(false);
+    const [palpitesDaCartela, setPalpitesDaCartela] = useState<any[]>([]);
+    const [cartelaVisualizando, setCartelaVisualizando] = useState<any>(null);
+    const [carregandoPalpites, setCarregandoPalpites] = useState(false);
+
     const [novaRodada, setNovaRodada] = useState({ nome: '', preco: 20, tipo: 'placares' });
     const [novoTeam, setNovoTeam] = useState({ nome: '', sigla: '', bandeira: '' });
     
@@ -36,7 +42,6 @@ export default function Admin() {
         data_hora: ''
     });
 
-    // NOVO: Estado para armazenar o campeão escolhido no Admin
     const [campeaoEscolhido, setCampeaoEscolhido] = useState<any>(null);
 
     const carregarDadosIniciais = () => {
@@ -153,7 +158,6 @@ export default function Admin() {
         });
     };
 
-    // NOVO: Função para enviar o campeão escolhido para a API
     const handleDefinirCampeao = () => {
         if (!campeaoEscolhido) return alert("Selecione a seleção que venceu o campeonato!");
         if (!window.confirm(`Você tem certeza que a seleção '${campeaoEscolhido.nome}' foi a campeã? Isso irá pontuar todos os bilhetes de quem acertou.`)) return;
@@ -243,6 +247,28 @@ export default function Admin() {
         }
     };
 
+    // NOVO: Função para buscar e exibir os palpites de um bilhete
+    const handleVerPalpites = async (cartela: any) => {
+        setCartelaVisualizando(cartela);
+        setCarregandoPalpites(true);
+        setExibirDialogPalpites(true);
+
+        try {
+            const res = await fetch(`${apiUrl}/auditoria`);
+            const data = await res.json();
+            
+            const palpitesDesteBilhete = data.filter((p: any) => 
+                p.cartela_id === cartela.id || p.id_cartela === cartela.id
+            );
+            
+            setPalpitesDaCartela(palpitesDesteBilhete);
+        } catch (err) {
+            alert("Erro ao buscar detalhes do bilhete.");
+        } finally {
+            setCarregandoPalpites(false);
+        }
+    };
+
     const formatarData = (d: string) => {
         if (!d) return '';
         const data = new Date(d);
@@ -268,140 +294,48 @@ export default function Admin() {
     };
 
     return (
-        <div
-    style={{
-        padding: isMobile ? '15px' : '30px',
-        minHeight: '100vh',
-        backgroundColor: '#f4f6f9',
-        color: '#333'
-    }}
->
+        <div style={{ padding: isMobile ? '15px' : '30px', minHeight: '100vh', backgroundColor: '#f4f6f9', color: '#333' }}>
             <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
                 
-                {/* CABEÇALHO */}
-                <div
-    style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: isMobile ? 'stretch' : 'center',
-        flexDirection: isMobile ? 'column' : 'row',
-        gap: '15px',
-        marginBottom: '30px',
-        backgroundColor: 'white',
-        padding: isMobile ? '15px' : '20px',
-        borderRadius: '12px',
-        boxShadow: '0 4px 10px rgba(0,0,0,0.05)'
-    }}
->
-    <Button
-        label="🚪 Sair do Admin"
-        onClick={() => history.push('/public')}
-        className="p-button-text p-button-secondary"
-        style={{ width: isMobile ? '100%' : 'auto' }}
-    />
+                {/* CABEÇALHO RESPONSIVO */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'center', flexDirection: isMobile ? 'column' : 'row', gap: '15px', marginBottom: '30px', backgroundColor: 'white', padding: isMobile ? '15px' : '20px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
+                    <Button label="🚪 Sair do Admin" onClick={() => history.push('/public')} className="p-button-text p-button-secondary" style={{ width: isMobile ? '100%' : 'auto' }} />
+                    <h1 style={{ margin: 0, fontSize: isMobile ? '20px' : '22px', textAlign: 'center' }}>🛡️ Painel Admin</h1>
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', width: isMobile ? '100%' : 'auto' }}>
+                        <Button label={verArquivadas ? "⬅️ Ativas" : "🗄️ Arquivadas"} severity={verArquivadas ? "success" : "secondary"} outlined onClick={() => { setVerArquivadas(!verArquivadas); setRodadaSelecionada(null); }} style={{ flex: 1 }} />
+                        <Button label="🚩 Times" onClick={() => setExibirDialogTeams(true)} severity="info" style={{ flex: 1 }} />
+                        <Button label="🎟️ Bilhetes" onClick={() => { fetch(`${apiUrl}/admin/cartelas`).then(res => res.json()).then(setCartelas); setExibirDialogCartelas(true); }} severity="help" style={{ flex: 1 }} />
+                    </div>
+                </div>
 
-    <h1
-        style={{
-            margin: 0,
-            fontSize: isMobile ? '20px' : '22px',
-            textAlign: 'center'
-        }}
-    >
-        🛡️ Painel Admin
-    </h1>
-
-    <div
-        style={{
-            display: 'flex',
-            gap: '10px',
-            flexWrap: 'wrap',
-            width: isMobile ? '100%' : 'auto'
-        }}
-    >
-        <Button
-            label={verArquivadas ? "⬅️ Voltar para Ativas" : "🗄️ Arquivadas"}
-            severity={verArquivadas ? "success" : "secondary"}
-            outlined
-            onClick={() => {
-                setVerArquivadas(!verArquivadas);
-                setRodadaSelecionada(null);
-            }}
-            style={{ flex: 1 }}
-        />
-
-        <Button
-            label="🚩 Cadastrar"
-            onClick={() => setExibirDialogTeams(true)}
-            severity="info"
-            style={{ flex: 1 }}
-        />
-
-        <Button
-            label="🎟️ Bilhetes"
-            onClick={() => {
-                fetch(`${apiUrl}/admin/cartelas`)
-                    .then(res => res.json())
-                    .then(setCartelas);
-
-                setExibirDialogCartelas(true);
-            }}
-            severity="help"
-            style={{ flex: 1 }}
-        />
-    </div>
-</div>
-
-                {/* DASHBOARD FINANCEIRO */}
-                <div
-    style={{
-        display: 'grid',
-        gridTemplateColumns:
-            isMobile
-                ? '1fr'
-                : 'repeat(auto-fit, minmax(250px, 1fr))',
-        gap: '20px',
-        marginBottom: '30px'
-    }}
->
-                    <div style={{ flex: 1, minWidth: '250px', backgroundColor: '#eff6ff', border: '1px solid #3b82f6', padding: '20px', borderRadius: '12px', textAlign: 'center' }}>
+                {/* DASHBOARD FINANCEIRO RESPONSIVO */}
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+                    <div style={{ backgroundColor: '#eff6ff', border: '1px solid #3b82f6', padding: '20px', borderRadius: '12px', textAlign: 'center' }}>
                         <div style={{ color: '#1e40af', fontWeight: 'bold', fontSize: '14px', marginBottom: '5px' }}>🛡️ SEU LUCRO (10%)</div>
                         <div style={{ color: '#1e3a8a', fontWeight: '900', fontSize: '28px' }}>{(valorBruto * 0.10).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
                         <div style={{ color: '#3b82f6', fontSize: '13px', marginTop: '5px' }}>Na rodada: {rodadaSelecionada?.nome || "---"}</div>
                     </div>
-                    <div style={{ flex: 1, minWidth: '250px', backgroundColor: '#ecfdf5', border: '1px solid #10b981', padding: '20px', borderRadius: '12px', textAlign: 'center' }}>
+                    <div style={{ backgroundColor: '#ecfdf5', border: '1px solid #10b981', padding: '20px', borderRadius: '12px', textAlign: 'center' }}>
                         <div style={{ color: '#047857', fontWeight: 'bold', fontSize: '14px', marginBottom: '5px' }}>🏆 PRÊMIO (90%)</div>
                         <div style={{ color: '#065f46', fontWeight: '900', fontSize: '28px' }}>{(valorBruto * 0.90).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
                         <div style={{ color: '#059669', fontSize: '13px', marginTop: '5px' }}>Valor do pódio</div>
                     </div>
-                    <div style={{ flex: 1, minWidth: '250px', backgroundColor: '#fffbeb', border: '1px solid #f59e0b', padding: '20px', borderRadius: '12px', textAlign: 'center' }}>
+                    <div style={{ backgroundColor: '#fffbeb', border: '1px solid #f59e0b', padding: '20px', borderRadius: '12px', textAlign: 'center' }}>
                         <div style={{ color: '#b45309', fontWeight: 'bold', fontSize: '14px', marginBottom: '5px' }}>⏳ AGUARDANDO PIX</div>
                         <div style={{ color: '#d97706', fontWeight: '900', fontSize: '28px' }}>{(cartelasPendentes.length * precoRodadaAtual).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
                         <div style={{ color: '#b45309', fontSize: '13px', marginTop: '5px' }}>{cartelasPendentes.length} bilhetes pendentes</div>
                     </div>
                 </div>
 
-                {/* BLOCO 1: GESTÃO DE RODADAS E BOTÕES ESTEIRA */}
+                {/* BLOCO 1: GESTÃO DE RODADAS */}
                 <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', marginBottom: '30px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', borderTop: verArquivadas ? '4px solid #475569' : 'none' }}>
                     <h3 style={{ margin: '0 0 15px 0' }}>{verArquivadas ? "🗄️ Arquivo de Rodadas Antigas" : "Gestão de Rodadas e Eventos"}</h3>
                     
-                    <div
-    style={{
-        display: 'flex',
-        flexDirection: isMobile ? 'column' : 'row',
-        gap: '20px',
-        flexWrap: 'wrap',
-        alignItems: isMobile? 'stretch' : 'center',
-        borderBottom: '1px solid #e2e8f0',
-        paddingBottom: '20px',
-        marginBottom: '20px'
-    }}
->
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <Dropdown value={rodadaSelecionada} options={rodadasVisiveis} onChange={(e) => setRodadaSelecionada(e.value)} optionLabel="nome" placeholder="Selecione" style={{ width: '250px' }} />
+                    <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '20px', flexWrap: 'wrap', alignItems: isMobile ? 'stretch' : 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '20px', marginBottom: '20px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                            <Dropdown value={rodadaSelecionada} options={rodadasVisiveis} onChange={(e) => setRodadaSelecionada(e.value)} optionLabel="nome" placeholder="Selecione" style={{ width: isMobile ? '100%' : '250px' }} />
                             {rodadaSelecionada && (
-                                <span style={{ padding: '5px 10px', borderRadius: '5px', fontSize: '12px', fontWeight: 'bold', 
-                                    backgroundColor: rodadaSelecionada.status === 'aberta' ? '#dcfce7' : rodadaSelecionada.status === 'pausada' ? '#fef9c3' : rodadaSelecionada.status === 'finalizada' ? '#f1f5f9' : rodadaSelecionada.status === 'arquivada' ? '#fee2e2' : '#e2e8f0', 
-                                    color: rodadaSelecionada.status === 'aberta' ? '#16a34a' : rodadaSelecionada.status === 'pausada' ? '#b45309' : rodadaSelecionada.status === 'finalizada' ? '#64748b' : rodadaSelecionada.status === 'arquivada' ? '#dc2626' : '#475569' }}>
+                                <span style={{ padding: '5px 10px', borderRadius: '5px', fontSize: '12px', fontWeight: 'bold', backgroundColor: rodadaSelecionada.status === 'aberta' ? '#dcfce7' : rodadaSelecionada.status === 'pausada' ? '#fef9c3' : rodadaSelecionada.status === 'finalizada' ? '#f1f5f9' : rodadaSelecionada.status === 'arquivada' ? '#fee2e2' : '#e2e8f0', color: rodadaSelecionada.status === 'aberta' ? '#16a34a' : rodadaSelecionada.status === 'pausada' ? '#b45309' : rodadaSelecionada.status === 'finalizada' ? '#64748b' : rodadaSelecionada.status === 'arquivada' ? '#dc2626' : '#475569' }}>
                                     {rodadaSelecionada.status.toUpperCase()}
                                 </span>
                             )}
@@ -412,133 +346,86 @@ export default function Admin() {
                             )}
                         </div>
 
-                        {/* OS BOTÕES DA ESTEIRA AQUI */}
-                        <div
-    style={{
-        marginLeft: isMobile ? 0 : 'auto',
-        display: 'flex',
-        gap: '10px',
-        flexWrap: 'wrap',
-        width: isMobile ? '100%' : 'auto'
-    }}
->
+                        <div style={{ marginLeft: isMobile ? 0 : 'auto', display: 'flex', gap: '10px', flexWrap: 'wrap', width: isMobile ? '100%' : 'auto' }}>
                             {rodadaSelecionada && rodadaSelecionada.status !== 'arquivada' && (
-                                <Button label={rodadaSelecionada?.exibir_no_ranking ? "❌ Desfixar Ranking" : "⭐ Fixar Ranking"} severity={rodadaSelecionada?.exibir_no_ranking ? "danger" : "info"} onClick={handleDefinirRodadaRanking} />
+                                <Button label={rodadaSelecionada?.exibir_no_ranking ? "❌ Desfixar" : "⭐ Fixar"} severity={rodadaSelecionada?.exibir_no_ranking ? "danger" : "info"} onClick={handleDefinirRodadaRanking} style={{ flex: isMobile ? 1 : 'none' }} />
                             )}
-                            {rodadaSelecionada?.status === 'rascunho' && <Button label="🟢 Abrir Rodada" severity="success" onClick={() => alterarStatusRodada('aberta')} />}
+                            {rodadaSelecionada?.status === 'rascunho' && <Button label="🟢 Abrir" severity="success" onClick={() => alterarStatusRodada('aberta')} style={{ flex: isMobile ? 1 : 'none' }} />}
                             {rodadaSelecionada?.status === 'aberta' && (
                                 <>
-                                    <Button label="⏸️ Pausar" severity="warning" onClick={() => alterarStatusRodada('pausada')} />
-                                    <Button label="🏁 Encerrar" severity="danger" onClick={() => { if (window.confirm("Encerrar rodada?")) alterarStatusRodada('finalizada'); }} />
+                                    <Button label="⏸️ Pausar" severity="warning" onClick={() => alterarStatusRodada('pausada')} style={{ flex: isMobile ? 1 : 'none' }} />
+                                    <Button label="🏁 Encerrar" severity="danger" onClick={() => { if (window.confirm("Encerrar rodada?")) alterarStatusRodada('finalizada'); }} style={{ flex: isMobile ? 1 : 'none' }} />
                                 </>
                             )}
                             {rodadaSelecionada?.status === 'pausada' && (
                                 <>
-                                    <Button label="🔓 Reabrir" severity="success" onClick={() => alterarStatusRodada('aberta')} />
-                                    <Button label="🏁 Encerrar" severity="danger" onClick={() => { if (window.confirm("Encerrar rodada?")) alterarStatusRodada('finalizada'); }} />
+                                    <Button label="🔓 Reabrir" severity="success" onClick={() => alterarStatusRodada('aberta')} style={{ flex: isMobile ? 1 : 'none' }} />
+                                    <Button label="🏁 Encerrar" severity="danger" onClick={() => { if (window.confirm("Encerrar rodada?")) alterarStatusRodada('finalizada'); }} style={{ flex: isMobile ? 1 : 'none' }} />
                                 </>
                             )}
                             {rodadaSelecionada?.status === 'finalizada' && (
-                                <Button label="📦 Arquivar" severity="secondary" onClick={() => { if (window.confirm("Arquivar rodada? Ela sumirá do ranking e dos bilhetes do usuário.")) alterarStatusRodada('arquivada'); }} />
-                            )}
-                            {rodadaSelecionada?.status === 'arquivada' && (
-                                <Button label="⏪ Restaurar" severity="success" onClick={() => { if (window.confirm("Restaurar rodada para o público?")) alterarStatusRodada('finalizada'); }} />
+                                <Button label="📦 Arquivar" severity="secondary" onClick={() => { if (window.confirm("Arquivar rodada?")) alterarStatusRodada('arquivada'); }} style={{ flex: isMobile ? 1 : 'none' }} />
                             )}
                         </div>
                     </div>
 
                     {!verArquivadas && (
-                       <div
-    style={{
-        display: 'grid',
-        gridTemplateColumns:
-            isMobile
-                ? '1fr'
-                : '1fr 130px 220px auto',
-        gap: '15px',
-        alignItems: 'flex-end',
-        backgroundColor: '#f8fafc',
-        padding: '15px',
-        borderRadius: '8px'
-    }}
->
-                            <div style={{ flex: 1 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 130px 220px auto', gap: '15px', alignItems: 'flex-end', backgroundColor: '#f8fafc', padding: '15px', borderRadius: '8px' }}>
+                            <div style={{ width: '100%' }}>
                                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>NOME DA NOVA RODADA</label>
-                                <InputText value={novaRodada.nome} onChange={(e) => setNovaRodada({...novaRodada, nome: e.target.value})} placeholder="Ex: Oitavas de Final" style={{ width: '100%' }} />
+                                <InputText value={novaRodada.nome} onChange={(e) => setNovaRodada({...novaRodada, nome: e.target.value})} placeholder="Ex: Oitavas" style={{ width: '100%' }} />
                             </div>
-                            <div style={{ width: '130px' }}>
+                            <div style={{ width: '100%' }}>
                                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>VALOR (R$)</label>
-                                <InputNumber value={novaRodada.preco} onValueChange={(e) => setNovaRodada({...novaRodada, preco: e.value || 0})} mode="currency" currency="BRL" locale="pt-BR" />
+                                <InputNumber value={novaRodada.preco} onValueChange={(e) => setNovaRodada({...novaRodada, preco: e.value || 0})} mode="currency" currency="BRL" locale="pt-BR" style={{ width: '100%' }} />
                             </div>
-                            <div style={{ width: '220px' }}>
+                            <div style={{ width: '100%' }}>
                                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>TIPO DE APOSTA</label>
                                 <Dropdown value={novaRodada.tipo} options={tiposRodada} onChange={(e) => setNovaRodada({...novaRodada, tipo: e.value})} style={{ width: '100%' }} />
                             </div>
-                            <Button label="➕ Criar" onClick={handleCriarRodada} severity="success" outlined />
+                            <Button label="➕ Criar" onClick={handleCriarRodada} severity="success" outlined style={{ width: '100%' }} />
                         </div>
                     )}
                 </div>
 
-                {/* BLOCO 2: GESTÃO DE JOGOS DA RODADA SELECIONADA */}
+                {/* BLOCO 2: GESTÃO DE JOGOS */}
                 {rodadaSelecionada && (
-                    <div
-    style={{
-        display: 'grid',
-        gridTemplateColumns:
-            window.innerWidth < 1024 ? '1fr' : '400px 1fr',
-        gap: '20px',
-        alignItems: 'flex-start'
-    }}
->
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '400px 1fr', gap: '20px', alignItems: 'flex-start' }}>
                         
                         {/* COLUNA ESQUERDA: CADASTRAR JOGO OU DEFINIR CAMPEÃO */}
-                        <div style={{ flex: '1 1 400px', backgroundColor: 'white', padding: '25px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', opacity: rodadaSelecionada.status === 'arquivada' ? 0.5 : 1, pointerEvents: rodadaSelecionada.status === 'arquivada' ? 'none' : 'auto' }}>
-                            
+                        <div style={{ backgroundColor: 'white', padding: '25px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
                             {rodadaSelecionada.tipo === 'placares' ? (
                                 <>
                                     <h3 style={{ marginTop: 0 }}>⚽ Adicionar Jogo</h3>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                                        <Dropdown value={novoJogo.time_casa_id} options={teams} optionLabel="nome" optionValue="id" onChange={(e) => setNovoJogo({ ...novoJogo, time_casa_id: e.value })} placeholder="Selecione o time da casa" style={{ width: '100%' }} filter />
+                                        <Dropdown value={novoJogo.time_casa_id} options={teams} optionLabel="nome" optionValue="id" onChange={(e) => setNovoJogo({ ...novoJogo, time_casa_id: e.value })} placeholder="Time da casa" style={{ width: '100%' }} filter />
                                         <div style={{ textAlign: 'center', fontWeight: 'bold', color: '#94a3b8' }}>X</div>
-                                        <Dropdown value={novoJogo.time_visitante_id} options={teams} optionLabel="nome" optionValue="id" onChange={(e) => setNovoJogo({ ...novoJogo, time_visitante_id: e.value })} placeholder="Selecione o time visitante" style={{ width: '100%' }} filter />
-                                        <input type="datetime-local" value={novoJogo.data_hora} onChange={(e) => setNovoJogo({...novoJogo, data_hora: e.target.value})} style={{ padding: '0.75rem', borderRadius: '6px', border: '1px solid #ced4da', width: '100%', fontFamily: 'inherit', fontSize: '1rem', color: '#495057' }} />
+                                        <Dropdown value={novoJogo.time_visitante_id} options={teams} optionLabel="nome" optionValue="id" onChange={(e) => setNovoJogo({ ...novoJogo, time_visitante_id: e.value })} placeholder="Time visitante" style={{ width: '100%' }} filter />
+                                        <input type="datetime-local" value={novoJogo.data_hora} onChange={(e) => setNovoJogo({...novoJogo, data_hora: e.target.value})} style={{ padding: '0.75rem', borderRadius: '6px', border: '1px solid #ced4da', width: '100%', fontFamily: 'inherit' }} />
                                         <Button label="💾 Salvar Confronto" onClick={handleCadastrarJogo} />
                                     </div>
                                 </>
                             ) : (
                                 <>
                                     <h3 style={{ marginTop: 0 }}>🏆 Definir Campeão</h3>
-                                    <p style={{ color: '#64748b', fontSize: '13px' }}>Selecione a seleção que venceu o torneio para pontuar todos os bilhetes que acertaram o vencedor.</p>
+                                    <p style={{ color: '#64748b', fontSize: '13px' }}>Selecione a seleção que venceu para pontuar os bilhetes.</p>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                                        <Dropdown 
-                                            value={campeaoEscolhido} 
-                                            options={teams} 
-                                            optionLabel="nome" 
-                                            onChange={(e) => setCampeaoEscolhido(e.value)} 
-                                            placeholder="Selecione a Seleção Vencedora" 
-                                            style={{ width: '100%' }} 
-                                            filter 
-                                        />
-                                        <Button 
-                                            label="👑 Confirmar Campeão Oficial" 
-                                            severity="success" 
-                                            onClick={handleDefinirCampeao} 
-                                        />
+                                        <Dropdown value={campeaoEscolhido} options={teams} optionLabel="nome" onChange={(e) => setCampeaoEscolhido(e.value)} placeholder="Seleção Vencedora" style={{ width: '100%' }} filter />
+                                        <Button label="👑 Confirmar Campeão" severity="success" onClick={handleDefinirCampeao} />
                                     </div>
                                 </>
                             )}
                         </div>
 
-                        {/* COLUNA DIREITA: LISTA DE JOGOS (Só aparece se for placares) */}
+                        {/* COLUNA DIREITA: LISTA DE JOGOS */}
                         {rodadaSelecionada.tipo === 'placares' && (
-                            <div style={{ flex: '1 1 500px' }}>
+                            <div>
                                 {jogos.length > 0 && (
                                     <div style={{ textAlign: 'right', marginBottom: '10px' }}>
-                                        <Button label="💾 Extrair Times da Rodada" severity="warning" size="small" onClick={extrairTimesParaBanco} tooltip="Salva os times antigos no banco de seleções para uso futuro" />
+                                        <Button label="💾 Extrair Times" severity="warning" size="small" onClick={extrairTimesParaBanco} />
                                     </div>
                                 )}
-
-                                {jogos.length === 0 && <p>Nenhum jogo cadastrado nesta rodada.</p>}
+                                {jogos.length === 0 && <p>Nenhum jogo cadastrado.</p>}
                                 
                                 {jogos.map(jogo => {
                                     const temResultadoFinalizado = jogo.gols_casa !== null && jogo.gols_visitante !== null;
@@ -548,17 +435,7 @@ export default function Admin() {
                                     return (
                                         <div key={jogo.id} style={{ backgroundColor: 'white', marginBottom: '15px', borderRadius: '12px', padding: '15px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
                                             <div style={{ textAlign: 'center', color: '#64748b', fontSize: '12px', fontWeight: 'bold', marginBottom: '10px' }}>📅 {formatarData(jogo.data_hora)}</div>
-                                            
-                                            <div
-    style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: isMobile ? '8px' : '15px',
-        marginBottom: '15px',
-        flexWrap: 'wrap'
-    }}
->
+                                            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: isMobile ? '8px' : '15px', marginBottom: '15px', flexWrap: 'wrap' }}>
                                                 <div style={{ textAlign: 'center', width: '70px' }}>
                                                     <img src={jogo.logo_casa || "/media/escudos-times/default.png"} alt="logo" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
                                                     <div style={{ fontWeight: 'bold', fontSize: '12px' }}>{jogo.sigla_casa}</div>
@@ -569,15 +446,11 @@ export default function Admin() {
                                                         <span>{jogo.gols_casa}</span><span style={{ color: '#94a3b8' }}>X</span><span>{jogo.gols_visitante}</span>
                                                     </div>
                                                 ) : (
-                                                    <>
-                                                        <input type="number" min="0" value={resultados[jogo.id]?.casa ?? ""} onChange={(e) => setResultados({...resultados, [jogo.id]: {...resultados[jogo.id], casa: e.target.value}})} style={{
-    width: isMobile ? '42px' : '50px',
-    height: '40px', textAlign: 'center', fontSize: '20px', fontWeight: 'bold', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                        <input type="number" min="0" value={resultados[jogo.id]?.casa ?? ""} onChange={(e) => setResultados({...resultados, [jogo.id]: {...resultados[jogo.id], casa: e.target.value}})} style={{ width: isMobile ? '40px' : '50px', height: '40px', textAlign: 'center', fontSize: '20px', fontWeight: 'bold', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
                                                         <span style={{ fontWeight: 'bold', color: '#94a3b8' }}>X</span>
-                                                        <input type="number" min="0" value={resultados[jogo.id]?.visitante ?? ""} onChange={(e) => setResultados({...resultados, [jogo.id]: {...resultados[jogo.id], visitante: e.target.value}})} style={{
-    width: isMobile ? '42px' : '50px',
-    height: '40px', textAlign: 'center', fontSize: '20px', fontWeight: 'bold', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
-                                                    </>
+                                                        <input type="number" min="0" value={resultados[jogo.id]?.visitante ?? ""} onChange={(e) => setResultados({...resultados, [jogo.id]: {...resultados[jogo.id], visitante: e.target.value}})} style={{ width: isMobile ? '40px' : '50px', height: '40px', textAlign: 'center', fontSize: '20px', fontWeight: 'bold', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
+                                                    </div>
                                                 )}
 
                                                 <div style={{ textAlign: 'center', width: '70px' }}>
@@ -586,14 +459,7 @@ export default function Admin() {
                                                 </div>
                                             </div>
 
-                                            <div
-    style={{
-        display: 'flex',
-        justifyContent: 'center',
-        gap: '10px',
-        flexWrap: 'wrap'
-    }}
->
+                                            <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
                                                 {mostrarFixo ? (
                                                     <Button label="✏️ Editar Placar" severity="info" size="small" onClick={() => habilitarEdicao(jogo.id)} />
                                                 ) : (
@@ -612,7 +478,7 @@ export default function Admin() {
                 )}
             </div>
 
-            {/* MODAIS ADICIONAIS */}
+            {/* MODAL DE CADASTRAR TIMES */}
             <Dialog header="🚩 Cadastrar Time/Seleção" visible={exibirDialogTeams} style={{ width: isMobile ? '95vw' : '400px' }} onHide={() => setExibirDialogTeams(false)}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingTop: '10px' }}>
                     <InputText placeholder="Nome do Time/País" value={novoTeam.nome} onChange={(e) => setNovoTeam({...novoTeam, nome: e.target.value})} />
@@ -622,36 +488,81 @@ export default function Admin() {
                 </div>
             </Dialog>
 
+            {/* MODAL DE BILHETES EMITIDOS */}
             <Dialog header="🎟️ Bilhetes Emitidos" visible={exibirDialogCartelas} style={{ width: isMobile ? '98vw' : '80vw' }} onHide={() => setExibirDialogCartelas(false)}>
-                <DataTable
-    value={cartelasDaRodada}
-    paginator
-    rows={10}
-    responsiveLayout="scroll"
-    scrollable
->
+                <DataTable value={cartelasDaRodada} paginator rows={10} responsiveLayout="scroll" scrollable emptyMessage="Nenhum bilhete encontrado.">
                     <Column field="numero_bilhete" header="Nº" body={(r) => <b>#{r.numero_bilhete || r.id}</b>} />
                     <Column field="usuario_nome" header="Usuário" />
                     <Column field="rodada_nome" header="Rodada" />
                     <Column field="status_pagamento" header="Status" body={statusBadgeTemplate} />
                     <Column header="Ações" body={(r) => (
-                        <div style={{ display: 'flex', gap: '8px' }}>
+                        <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
                             <Button 
-                                label={r.status_pagamento === 'aprovado' ? "Tornar Pendente" : "Aprovar"} 
-                                severity={r.status_pagamento === 'aprovado' ? "warning" : "success"}
-                                onClick={() => handleTogglePagamento(r.id, r.status_pagamento)}
-                                style={{ padding: '5px 10px', fontSize: '11px' }}
+                                icon="pi pi-eye" 
+                                tooltip="Ver Palpites" 
+                                tooltipOptions={{ position: 'top' }}
+                                severity="info" 
+                                onClick={() => handleVerPalpites(r)} 
+                                style={{ padding: '5px', width: '35px', height: '35px' }} 
                             />
                             <Button 
-                                label="🗑️ Excluir" 
+                                label={r.status_pagamento === 'aprovado' ? "" : "Aprovar"} 
+                                icon={r.status_pagamento === 'aprovado' ? "pi pi-undo" : ""}
+                                tooltip={r.status_pagamento === 'aprovado' ? "Tornar Pendente" : ""}
+                                severity={r.status_pagamento === 'aprovado' ? "warning" : "success"}
+                                onClick={() => handleTogglePagamento(r.id, r.status_pagamento)}
+                                style={{ padding: '5px 10px', fontSize: '11px', height: '35px' }}
+                            />
+                            <Button 
+                                icon="pi pi-trash" 
+                                tooltip="Excluir Bilhete"
                                 severity="danger" 
                                 onClick={() => handleDeletarCartela(r.id)} 
-                                style={{ padding: '5px 10px', fontSize: '11px' }} 
+                                style={{ padding: '5px', width: '35px', height: '35px' }} 
                             />
                         </div>
                     )} />
                 </DataTable>
             </Dialog>
+
+            {/* NOVO: MODAL DE VISUALIZAR PALPITES DA PESSOA */}
+            <Dialog 
+                header={`🔍 Palpites do Bilhete #${cartelaVisualizando?.numero_bilhete || cartelaVisualizando?.id}`} 
+                visible={exibirDialogPalpites} 
+                style={{ width: isMobile ? '95vw' : '450px' }} 
+                onHide={() => setExibirDialogPalpites(false)}
+            >
+                {carregandoPalpites ? (
+                    <div style={{ textAlign: 'center', padding: '20px' }}><i className="pi pi-spin pi-spinner" style={{ fontSize: '2rem' }}></i></div>
+                ) : palpitesDaCartela.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '20px', color: '#64748b' }}>Nenhum palpite registrado neste bilhete.</div>
+                ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div style={{ marginBottom: '10px', fontSize: '14px', color: '#1e293b' }}>
+                            Apostador(a): <strong>{cartelaVisualizando?.usuario_nome}</strong>
+                        </div>
+                        {palpitesDaCartela.map((p, i) => (
+                            <div key={i} style={{ backgroundColor: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                {p.palpite_texto ? (
+                                    <div style={{ textAlign: 'center' }}>
+                                        <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 'bold', marginBottom: '5px' }}>APOSTA NO CAMPEÃO</div>
+                                        <div style={{ fontSize: '20px', fontWeight: '900', color: '#1e293b' }}>{p.palpite_texto}</div>
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div style={{ fontWeight: 'bold', fontSize: '13px', width: '40%', textAlign: 'right' }}>{p.time_casa}</div>
+                                        <div style={{ backgroundColor: 'white', padding: '6px 12px', borderRadius: '6px', border: '2px solid #cbd5e1', fontWeight: '900', fontSize: '16px', color: '#0f172a' }}>
+                                            {p.palpite_casa} <span style={{ color: '#94a3b8', margin: '0 4px' }}>x</span> {p.palpite_visitante}
+                                        </div>
+                                        <div style={{ fontWeight: 'bold', fontSize: '13px', width: '40%', textAlign: 'left' }}>{p.time_visitante}</div>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </Dialog>
+
         </div>
     );
 }
