@@ -496,32 +496,37 @@ export default function Admin() {
                     <Column field="rodada_nome" header="Rodada" />
                     <Column field="status_pagamento" header="Status" body={statusBadgeTemplate} />
                     <Column header="Ações" body={(r) => (
-                        <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
-                            <Button 
-                                icon="pi pi-eye" 
-                                tooltip="Ver Palpites" 
-                                tooltipOptions={{ position: 'top' }}
-                                severity="info" 
-                                onClick={() => handleVerPalpites(r)} 
-                                style={{ padding: '5px', width: '35px', height: '35px' }} 
-                            />
-                            <Button 
-                                label={r.status_pagamento === 'aprovado' ? "" : "Aprovar"} 
-                                icon={r.status_pagamento === 'aprovado' ? "pi pi-undo" : ""}
-                                tooltip={r.status_pagamento === 'aprovado' ? "Tornar Pendente" : ""}
-                                severity={r.status_pagamento === 'aprovado' ? "warning" : "success"}
-                                onClick={() => handleTogglePagamento(r.id, r.status_pagamento)}
-                                style={{ padding: '5px 10px', fontSize: '11px', height: '35px' }}
-                            />
-                            <Button 
-                                icon="pi pi-trash" 
-                                tooltip="Excluir Bilhete"
-                                severity="danger" 
-                                onClick={() => handleDeletarCartela(r.id)} 
-                                style={{ padding: '5px', width: '35px', height: '35px' }} 
-                            />
-                        </div>
-                    )} />
+    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        
+        {/* Botão de Ver Palpites */}
+        <Button 
+            label="🎯" 
+            tooltip="Ver Palpites" 
+            tooltipOptions={{ position: 'top' }}
+            severity="info" 
+            onClick={() => handleVerPalpites(r)} 
+            style={{ padding: '0', width: '35px', height: '35px', fontSize: '16px' }} 
+        />
+        
+        {/* Botão de Aprovar / Tornar Pendente */}
+        <Button 
+            label={r.status_pagamento === 'aprovado' ? "↩️ Pendente" : "✅ Aprovar"} 
+            severity={r.status_pagamento === 'aprovado' ? "warning" : "success"}
+            onClick={() => handleTogglePagamento(r.id, r.status_pagamento)}
+            style={{ padding: '5px 10px', fontSize: '12px', height: '35px', fontWeight: 'bold' }}
+        />
+        
+        {/* Botão de Excluir */}
+        <Button 
+            label="🗑️" 
+            tooltip="Excluir Bilhete"
+            severity="danger" 
+            onClick={() => handleDeletarCartela(r.id)} 
+            style={{ padding: '0', width: '35px', height: '35px', fontSize: '16px' }} 
+        />
+        
+    </div>
+)} />
                 </DataTable>
             </Dialog>
 
