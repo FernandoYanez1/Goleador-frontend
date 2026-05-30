@@ -23,10 +23,8 @@ export default function Placar() {
     const [modalPixAberto, setModalPixAberto] = useState(false);
     const [pixData, setPixData] = useState<any>(null);
 
-    // NOVO: Estado que guarda os cronômetros de TODAS as rodadas simultaneamente
     const [timers, setTimers] = useState<Record<number, { alvo: number | null, restante: any }>>({});
 
-    // CSS Injetado para ocultar as "setinhas" de input number e ajustar responsivo
     useEffect(() => {
         const style = document.createElement("style");
         style.innerHTML = `
@@ -40,7 +38,6 @@ export default function Placar() {
         return () => { document.head.removeChild(style); };
     }, []);
 
-    // 1. CARREGAR DADOS E CALCULAR DATA ALVO DE CADA RODADA
     useEffect(() => {
         const salvo = localStorage.getItem('usuarioLogado');
         if (!salvo) { history.push('/public/login'); return; }
@@ -54,12 +51,11 @@ export default function Placar() {
             setRodadas(abertas);
             setTeams(teamsData);
             
-            // Define o Alvo (Data Final) para cada rodada
             const initialTimers: any = {};
             
             await Promise.all(abertas.map(async (r: any) => {
                 if (r.tipo === 'campeao') {
-                    // Data fixa da Copa do Mundo (Mude se precisar)
+                    // TODO: Altere a data alvo da Copa ou de outros eventos de tiro curto aqui
                     initialTimers[r.id] = { alvo: new Date('2026-06-11T15:00:00').getTime(), restante: null };
                 } else if (r.tipo === 'placares') {
                     try {
@@ -69,7 +65,7 @@ export default function Placar() {
                             const validDates = data.map((j: any) => new Date(j.data_hora).getTime()).filter((n: any) => !isNaN(n));
                             if (validDates.length > 0) {
                                 const primeiroJogo = Math.min(...validDates);
-                                initialTimers[r.id] = { alvo: primeiroJogo - (30 * 60000), restante: null }; // 30 min antes do primeiro jogo
+                                initialTimers[r.id] = { alvo: primeiroJogo - (30 * 60000), restante: null }; 
                             }
                         }
                     } catch (e) { console.error(e); }
@@ -86,7 +82,6 @@ export default function Placar() {
         });
     }, [history, apiUrl]);
 
-    // 2. ATUALIZAR TODOS OS CRONÔMETROS POR SEGUNDO
     useEffect(() => {
         const intervalo = setInterval(() => {
             const agora = new Date().getTime();
@@ -199,7 +194,6 @@ export default function Placar() {
         return isNaN(d.getTime()) ? dataStr : d.toLocaleString("pt-BR", { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     };
 
-    // LÓGICA DE FILTRO E ORDENAÇÃO (COPA DO MUNDO)
     const selecoesCopa = teams.filter(t => t.id >= 19 && t.id <= 66);
     const idsFavoritos = [27, 51, 55, 47, 63, 59, 35];
     const favoritos = idsFavoritos.map(id => selecoesCopa.find(t => t.id === id)).filter(Boolean);
@@ -225,54 +219,56 @@ export default function Placar() {
                             <Typography variant="body1" color="#64748b" mt={1}>Temos múltiplas rodadas abertas. Selecione qual deseja participar.</Typography>
                         </Box>
 
-                        <Grid container spacing={3} justifyContent="center">
+                        <Grid container spacing={3} justifyContent="center" alignItems="stretch">
                             {rodadas.map((rodada) => {
                                 const eCampeao = rodada.tipo === 'campeao';
                                 const eCopa = rodada.nome.toLowerCase().includes('copa');
                                 const tRestante = timers[rodada.id]?.restante;
                                 
-                                // Lógica de cores do Timer no Card
-                                let tBg = 'rgba(255, 255, 255, 0.05)';
-                                let tColor = '#94a3b8';
-                                let tBorder = '1px solid rgba(255, 255, 255, 0.1)';
+                                // Lógica de Urgência no Card
+                                let corTimerBg = 'rgba(255, 255, 255, 0.05)';
+                                let corTimerTxt = '#cbd5e1';
+                                let corTimerBorder = 'rgba(255, 255, 255, 0.1)';
 
                                 if (tRestante) {
                                     if (tRestante.expirado) {
-                                        // Encerrado (Cinza Escuro / Vermelho)
-                                        tBg = 'rgba(239, 68, 68, 0.15)'; tColor = '#ef4444'; tBorder = '1px solid rgba(239, 68, 68, 0.4)';
-                                    } else if (tRestante.dias === 0) {
-                                        // Menos de 24h (Vermelho de Urgência)
-                                        tBg = 'rgba(239, 68, 68, 0.15)'; tColor = '#ef4444'; tBorder = '1px solid rgba(239, 68, 68, 0.4)';
-                                    } else if (tRestante.dias > 0) {
-                                        // 1 dia ou mais (Amarelado de Atenção)
-                                        tBg = 'rgba(245, 158, 11, 0.15)'; tColor = '#fbbf24'; tBorder = '1px solid rgba(245, 158, 11, 0.4)';
+                                        corTimerBg = 'rgba(239, 68, 68, 0.15)'; corTimerTxt = '#ef4444'; corTimerBorder = 'rgba(239, 68, 68, 0.3)';
+                                    } else if (tRestante.dias === 0 && tRestante.horas < 24) {
+                                        corTimerBg = 'rgba(239, 68, 68, 0.1)'; corTimerTxt = '#f87171'; corTimerBorder = 'rgba(239, 68, 68, 0.3)';
+                                    } else {
+                                        corTimerBg = 'rgba(245, 158, 11, 0.1)'; corTimerTxt = '#fbbf24'; corTimerBorder = 'rgba(245, 158, 11, 0.3)';
                                     }
                                 }
                                 
                                 return (
                                     <Grid item xs={12} sm={5} md={4} key={rodada.id}>
-                                        <Card style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'between', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: eCampeao ? '2px solid #fbbf24' : 'none', backgroundColor: '#1e293b', color: 'white' }}>
-                                            <CardContent style={{ textAlign: 'center', flexGrow: 1, padding: '25px' }}>
+                                        <Card style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', border: eCampeao ? '2px solid #fbbf24' : 'none', backgroundColor: '#1e293b', color: 'white' }}>
+                                            <CardContent style={{ textAlign: 'center', padding: '25px', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
                                                 <Box mb={2} display="flex" justifyContent="center">
                                                     {eCampeao ? <Stars style={{ fontSize: 50, color: '#fbbf24' }} /> : eCopa ? <Public style={{ fontSize: 50, color: '#3b82f6' }} /> : <SportsSoccer style={{ fontSize: 50, color: '#10b981' }} />}
                                                 </Box>
-                                                <Typography variant="h5" fontWeight="900" style={{ color: '#ffffff', marginTop: '10px', lineHeight: 1.2 }}>{rodada.nome}</Typography>
-                                                <Typography variant="h4" fontWeight="900" color="#10b981" my={2}>{Number(rodada.preco).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</Typography>
+                                                
+                                                {/* minHeight previne quebra de layout entre os cards */}
+                                                <Typography variant="h6" fontWeight="900" style={{ color: '#ffffff', marginTop: '10px', lineHeight: 1.2, minHeight: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    {rodada.nome}
+                                                </Typography>
+                                                
+                                                <Typography variant="h4" fontWeight="900" color="#10b981" my={2}>
+                                                    {Number(rodada.preco).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                                </Typography>
 
-                                                {/* COUNTDOWN NO QUADRADO DO LOBBY */}
-                                                {tRestante ? (
-                                                    <Box style={{ backgroundColor: tBg, border: tBorder, padding: '10px', borderRadius: '8px', marginTop: '15px' }}>
-                                                        <Typography variant="caption" style={{ color: tColor, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontWeight: 'bold' }}>
-                                                            <Timer fontSize="small" /> 
-                                                            {tRestante.expirado 
-                                                                ? "ENCERRADO" 
-                                                                : `Restam: ${tRestante.dias > 0 ? `${tRestante.dias}d ` : ''}${tRestante.horas}h e ${tRestante.minutos} min`}
-                                                        </Typography>
-                                                    </Box>
-                                                ) : (
-                                                    <Box style={{ height: '42px', marginTop: '15px' }} /> // Espaçador para não quebrar a altura se a data não existir
-                                                )}
-
+                                                <Box mt="auto">
+                                                    {tRestante ? (
+                                                        <Box style={{ backgroundColor: corTimerBg, border: `1px solid ${corTimerBorder}`, padding: '8px', borderRadius: '8px' }}>
+                                                            <Typography variant="caption" style={{ color: corTimerTxt, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontWeight: 'bold' }}>
+                                                                <Timer fontSize="small" /> 
+                                                                {tRestante.expirado ? "ENCERRADO" : `Restam: ${tRestante.dias > 0 ? `${tRestante.dias}d ` : ''}${tRestante.horas}h ${tRestante.minutos}m`}
+                                                            </Typography>
+                                                        </Box>
+                                                    ) : (
+                                                        <Box style={{ height: '36px' }} />
+                                                    )}
+                                                </Box>
                                             </CardContent>
                                             <CardActions style={{ padding: '20px', paddingTop: 0 }}>
                                                 <AppButton 
