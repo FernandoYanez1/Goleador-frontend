@@ -27,7 +27,6 @@ export default function Admin() {
     const [exibirDialogCartelas, setExibirDialogCartelas] = useState(false);
     const [exibirDialogTeams, setExibirDialogTeams] = useState(false);
 
-    // NOVO: Estados para o Modal de Visualizar Palpites
     const [exibirDialogPalpites, setExibirDialogPalpites] = useState(false);
     const [palpitesDaCartela, setPalpitesDaCartela] = useState<any[]>([]);
     const [cartelaVisualizando, setCartelaVisualizando] = useState<any>(null);
@@ -43,6 +42,7 @@ export default function Admin() {
     });
 
     const [campeaoEscolhido, setCampeaoEscolhido] = useState<any>(null);
+    const [dataFechamentoAuto, setDataFechamentoAuto] = useState<Date | null>(null);
 
     const carregarDadosIniciais = () => {
         Promise.all([
@@ -75,13 +75,28 @@ export default function Admin() {
                 .then(data => {
                     setJogos(data);
                     const resLocais: any = {};
+                    let primeiroJogo = Infinity;
+
                     data.forEach((j: any) => {
                         if (j.gols_casa !== null && j.gols_visitante !== null) {
                             resLocais[j.id] = { casa: j.gols_casa, visitante: j.gols_visitante };
                         }
+                        if (j.data_hora) {
+                            const tempoJogo = new Date(j.data_hora).getTime();
+                            if (tempoJogo < primeiroJogo) primeiroJogo = tempoJogo;
+                        }
                     });
                     setResultados(resLocais);
+
+                    // Calcula o fechamento automático (30 min antes do primeiro jogo)
+                    if (primeiroJogo !== Infinity) {
+                        setDataFechamentoAuto(new Date(primeiroJogo - 30 * 60000));
+                    } else {
+                        setDataFechamentoAuto(null);
+                    }
                 });
+        } else {
+            setDataFechamentoAuto(null);
         }
     }, [rodadaSelecionada, apiUrl]);
 
@@ -120,9 +135,7 @@ export default function Admin() {
                 rodada_id: rodadaSelecionada.id,
                 fixado: !rodadaSelecionada.exibir_no_ranking
             })
-        }).then(() => {
-            carregarDadosIniciais();
-        });
+        }).then(() => carregarDadosIniciais());
     };
 
     const handleCadastrarTeam = () => {
@@ -165,10 +178,7 @@ export default function Admin() {
         fetch(`${apiUrl}/admin/definir-campeao`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                rodada_id: rodadaSelecionada.id,
-                campeao: campeaoEscolhido.nome
-            })
+            body: JSON.stringify({ rodada_id: rodadaSelecionada.id, campeao: campeaoEscolhido.nome })
         }).then(res => res.json()).then(data => {
             alert(data.mensagem || "Campeão definido com sucesso!");
             setCampeaoEscolhido(null);
@@ -186,11 +196,7 @@ export default function Admin() {
             for (let t of [tCasa, tVisitante]) {
                 if (!timesAtuaisNoBanco.find(cadastrado => cadastrado.nome.toLowerCase() === t.nome.toLowerCase())) {
                     try {
-                        await fetch(`${apiUrl}/teams`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(t)
-                        });
+                        await fetch(`${apiUrl}/teams`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(t) });
                         cadastrados++;
                         timesAtuaisNoBanco.push(t); 
                     } catch (e) { console.error("Erro ao salvar time:", e); }
@@ -217,11 +223,7 @@ export default function Admin() {
         fetch(`${apiUrl}/finalizar-jogo`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                match_id: matchId, 
-                gols_casa: parseInt(resultado.casa, 10), 
-                gols_visitante: parseInt(resultado.visitante, 10) 
-            })
+            body: JSON.stringify({ match_id: matchId, gols_casa: parseInt(resultado.casa, 10), gols_visitante: parseInt(resultado.visitante, 10) })
         }).then(() => {
             alert("Resultado salvo! Pontos calculados.");
             setEditandoJogos(editandoJogos.filter(id => id !== matchId));
@@ -247,7 +249,6 @@ export default function Admin() {
         }
     };
 
-    // NOVO: Função para buscar e exibir os palpites de um bilhete
     const handleVerPalpites = async (cartela: any) => {
         setCartelaVisualizando(cartela);
         setCarregandoPalpites(true);
@@ -256,11 +257,7 @@ export default function Admin() {
         try {
             const res = await fetch(`${apiUrl}/auditoria`);
             const data = await res.json();
-            
-            const palpitesDesteBilhete = data.filter((p: any) => 
-                p.cartela_id === cartela.id || p.id_cartela === cartela.id
-            );
-            
+            const palpitesDesteBilhete = data.filter((p: any) => p.cartela_id === cartela.id || p.id_cartela === cartela.id);
             setPalpitesDaCartela(palpitesDesteBilhete);
         } catch (err) {
             alert("Erro ao buscar detalhes do bilhete.");
@@ -280,7 +277,6 @@ export default function Admin() {
     const cartelasDaRodada = cartelas.filter(c => c.rodada_nome === rodadaSelecionada?.nome);
     const cartelasAprovadas = cartelasDaRodada.filter(c => c.status_pagamento === 'aprovado');
     const cartelasPendentes = cartelasDaRodada.filter(c => c.status_pagamento === 'pendente');
-    
     const precoRodadaAtual = rodadaSelecionada ? Number(rodadaSelecionada.preco) : 20;
     const valorBruto = cartelasAprovadas.length * precoRodadaAtual;
 
@@ -297,7 +293,6 @@ export default function Admin() {
         <div style={{ padding: isMobile ? '15px' : '30px', minHeight: '100vh', backgroundColor: '#f4f6f9', color: '#333' }}>
             <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
                 
-                {/* CABEÇALHO RESPONSIVO */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'center', flexDirection: isMobile ? 'column' : 'row', gap: '15px', marginBottom: '30px', backgroundColor: 'white', padding: isMobile ? '15px' : '20px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
                     <Button label="🚪 Sair do Admin" onClick={() => history.push('/public')} className="p-button-text p-button-secondary" style={{ width: isMobile ? '100%' : 'auto' }} />
                     <h1 style={{ margin: 0, fontSize: isMobile ? '20px' : '22px', textAlign: 'center' }}>🛡️ Painel Admin</h1>
@@ -308,7 +303,6 @@ export default function Admin() {
                     </div>
                 </div>
 
-                {/* DASHBOARD FINANCEIRO RESPONSIVO */}
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '30px' }}>
                     <div style={{ backgroundColor: '#eff6ff', border: '1px solid #3b82f6', padding: '20px', borderRadius: '12px', textAlign: 'center' }}>
                         <div style={{ color: '#1e40af', fontWeight: 'bold', fontSize: '14px', marginBottom: '5px' }}>🛡️ SEU LUCRO (10%)</div>
@@ -327,7 +321,6 @@ export default function Admin() {
                     </div>
                 </div>
 
-                {/* BLOCO 1: GESTÃO DE RODADAS */}
                 <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', marginBottom: '30px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', borderTop: verArquivadas ? '4px solid #475569' : 'none' }}>
                     <h3 style={{ margin: '0 0 15px 0' }}>{verArquivadas ? "🗄️ Arquivo de Rodadas Antigas" : "Gestão de Rodadas e Eventos"}</h3>
                     
@@ -340,9 +333,7 @@ export default function Admin() {
                                 </span>
                             )}
                             {rodadaSelecionada?.exibir_no_ranking && (
-                                <span style={{ backgroundColor: '#e0f2fe', color: '#0369a1', padding: '5px 10px', borderRadius: '5px', fontSize: '12px', fontWeight: 'bold' }}>
-                                    ⭐ RANKING FIXADO
-                                </span>
+                                <span style={{ backgroundColor: '#e0f2fe', color: '#0369a1', padding: '5px 10px', borderRadius: '5px', fontSize: '12px', fontWeight: 'bold' }}>⭐ RANKING FIXADO</span>
                             )}
                         </div>
 
@@ -388,12 +379,20 @@ export default function Admin() {
                     )}
                 </div>
 
-                {/* BLOCO 2: GESTÃO DE JOGOS */}
+                {/* ALERTA DE BLOQUEIO AUTOMÁTICO */}
+                {rodadaSelecionada?.tipo === 'placares' && dataFechamentoAuto && (
+                    <div style={{ backgroundColor: '#fffbeb', border: '1px solid #f59e0b', padding: '15px', borderRadius: '12px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ fontSize: '24px' }}>⏱️</div>
+                        <div>
+                            <div style={{ color: '#b45309', fontWeight: 'bold', fontSize: '14px' }}>Bloqueio Automático Ativo</div>
+                            <div style={{ color: '#d97706', fontSize: '13px' }}>As apostas dos usuários serão bloqueadas automaticamente no site no dia <strong>{dataFechamentoAuto.toLocaleString('pt-BR')}</strong> (30 min antes do primeiro jogo cadastrado).</div>
+                        </div>
+                    </div>
+                )}
+
                 {rodadaSelecionada && (
                     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '400px 1fr', gap: '20px', alignItems: 'flex-start' }}>
-                        
-                        {/* COLUNA ESQUERDA: CADASTRAR JOGO OU DEFINIR CAMPEÃO */}
-                        <div style={{ backgroundColor: 'white', padding: '25px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
+                        <div style={{ backgroundColor: 'white', padding: '25px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', opacity: rodadaSelecionada.status === 'arquivada' ? 0.5 : 1, pointerEvents: rodadaSelecionada.status === 'arquivada' ? 'none' : 'auto' }}>
                             {rodadaSelecionada.tipo === 'placares' ? (
                                 <>
                                     <h3 style={{ marginTop: 0 }}>⚽ Adicionar Jogo</h3>
@@ -417,7 +416,6 @@ export default function Admin() {
                             )}
                         </div>
 
-                        {/* COLUNA DIREITA: LISTA DE JOGOS */}
                         {rodadaSelecionada.tipo === 'placares' && (
                             <div>
                                 {jogos.length > 0 && (
@@ -478,7 +476,7 @@ export default function Admin() {
                 )}
             </div>
 
-            {/* MODAL DE CADASTRAR TIMES */}
+            {/* MODAIS ADICIONAIS */}
             <Dialog header="🚩 Cadastrar Time/Seleção" visible={exibirDialogTeams} style={{ width: isMobile ? '95vw' : '400px' }} onHide={() => setExibirDialogTeams(false)}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingTop: '10px' }}>
                     <InputText placeholder="Nome do Time/País" value={novoTeam.nome} onChange={(e) => setNovoTeam({...novoTeam, nome: e.target.value})} />
@@ -488,7 +486,6 @@ export default function Admin() {
                 </div>
             </Dialog>
 
-            {/* MODAL DE BILHETES EMITIDOS */}
             <Dialog header="🎟️ Bilhetes Emitidos" visible={exibirDialogCartelas} style={{ width: isMobile ? '98vw' : '80vw' }} onHide={() => setExibirDialogCartelas(false)}>
                 <DataTable value={cartelasDaRodada} paginator rows={10} responsiveLayout="scroll" scrollable emptyMessage="Nenhum bilhete encontrado.">
                     <Column field="numero_bilhete" header="Nº" body={(r) => <b>#{r.numero_bilhete || r.id}</b>} />
@@ -496,47 +493,17 @@ export default function Admin() {
                     <Column field="rodada_nome" header="Rodada" />
                     <Column field="status_pagamento" header="Status" body={statusBadgeTemplate} />
                     <Column header="Ações" body={(r) => (
-    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-        
-        {/* Botão de Ver Palpites */}
-        <Button 
-            label="🎯" 
-            tooltip="Ver Palpites" 
-            tooltipOptions={{ position: 'top' }}
-            severity="info" 
-            onClick={() => handleVerPalpites(r)} 
-            style={{ padding: '0', width: '35px', height: '35px', fontSize: '16px' }} 
-        />
-        
-        {/* Botão de Aprovar / Tornar Pendente */}
-        <Button 
-            label={r.status_pagamento === 'aprovado' ? "↩️ Pendente" : "✅ Aprovar"} 
-            severity={r.status_pagamento === 'aprovado' ? "warning" : "success"}
-            onClick={() => handleTogglePagamento(r.id, r.status_pagamento)}
-            style={{ padding: '5px 10px', fontSize: '12px', height: '35px', fontWeight: 'bold' }}
-        />
-        
-        {/* Botão de Excluir */}
-        <Button 
-            label="🗑️" 
-            tooltip="Excluir Bilhete"
-            severity="danger" 
-            onClick={() => handleDeletarCartela(r.id)} 
-            style={{ padding: '0', width: '35px', height: '35px', fontSize: '16px' }} 
-        />
-        
-    </div>
-)} />
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            <Button label="👁️" tooltip="Ver Palpites" tooltipOptions={{ position: 'top' }} severity="info" onClick={() => handleVerPalpites(r)} style={{ padding: '0', width: '35px', height: '35px', fontSize: '16px' }} />
+                            <Button label={r.status_pagamento === 'aprovado' ? "↩️" : "✅"} tooltip={r.status_pagamento === 'aprovado' ? "Tornar Pendente" : "Aprovar"} severity={r.status_pagamento === 'aprovado' ? "warning" : "success"} onClick={() => handleTogglePagamento(r.id, r.status_pagamento)} style={{ padding: '0', width: '35px', height: '35px', fontSize: '16px', fontWeight: 'bold' }} />
+                            <Button label="🗑️" tooltip="Excluir Bilhete" severity="danger" onClick={() => handleDeletarCartela(r.id)} style={{ padding: '0', width: '35px', height: '35px', fontSize: '16px' }} />
+                        </div>
+                    )} />
                 </DataTable>
             </Dialog>
 
-            {/* NOVO: MODAL DE VISUALIZAR PALPITES DA PESSOA */}
-            <Dialog 
-                header={`🔍 Palpites do Bilhete #${cartelaVisualizando?.numero_bilhete || cartelaVisualizando?.id}`} 
-                visible={exibirDialogPalpites} 
-                style={{ width: isMobile ? '95vw' : '450px' }} 
-                onHide={() => setExibirDialogPalpites(false)}
-            >
+            {/* MODAL DE VISUALIZAR PALPITES DA PESSOA */}
+            <Dialog header={`🔍 Palpites do Bilhete #${cartelaVisualizando?.numero_bilhete || cartelaVisualizando?.id}`} visible={exibirDialogPalpites} style={{ width: isMobile ? '95vw' : '450px' }} onHide={() => setExibirDialogPalpites(false)}>
                 {carregandoPalpites ? (
                     <div style={{ textAlign: 'center', padding: '20px' }}><i className="pi pi-spin pi-spinner" style={{ fontSize: '2rem' }}></i></div>
                 ) : palpitesDaCartela.length === 0 ? (
@@ -546,24 +513,30 @@ export default function Admin() {
                         <div style={{ marginBottom: '10px', fontSize: '14px', color: '#1e293b' }}>
                             Apostador(a): <strong>{cartelaVisualizando?.usuario_nome}</strong>
                         </div>
-                        {palpitesDaCartela.map((p, i) => (
-                            <div key={i} style={{ backgroundColor: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                                {p.palpite_texto ? (
-                                    <div style={{ textAlign: 'center' }}>
-                                        <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 'bold', marginBottom: '5px' }}>APOSTA NO CAMPEÃO</div>
-                                        <div style={{ fontSize: '20px', fontWeight: '900', color: '#1e293b' }}>{p.palpite_texto}</div>
-                                    </div>
-                                ) : (
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <div style={{ fontWeight: 'bold', fontSize: '13px', width: '40%', textAlign: 'right' }}>{p.time_casa}</div>
-                                        <div style={{ backgroundColor: 'white', padding: '6px 12px', borderRadius: '6px', border: '2px solid #cbd5e1', fontWeight: '900', fontSize: '16px', color: '#0f172a' }}>
-                                            {p.palpite_casa} <span style={{ color: '#94a3b8', margin: '0 4px' }}>x</span> {p.palpite_visitante}
+                        {palpitesDaCartela.map((p, i) => {
+                            const timeApostado = teams.find(t => t.nome === p.palpite_texto);
+                            const bandeira = timeApostado?.bandeira || timeApostado?.logo_url || "/media/escudos-times/default.png";
+                            
+                            return (
+                                <div key={i} style={{ backgroundColor: '#f8fafc', padding: '15px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                    {p.palpite_texto ? (
+                                        <div style={{ textAlign: 'center' }}>
+                                            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 'bold', marginBottom: '5px' }}>APOSTA NO CAMPEÃO</div>
+                                            <img src={bandeira} alt={p.palpite_texto} style={{ width: '40px', height: '28px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #cbd5e1', marginBottom: '5px' }} />
+                                            <div style={{ fontSize: '20px', fontWeight: '900', color: '#1e293b' }}>{p.palpite_texto}</div>
                                         </div>
-                                        <div style={{ fontWeight: 'bold', fontSize: '13px', width: '40%', textAlign: 'left' }}>{p.time_visitante}</div>
-                                    </div>
-                                )}
-                            </div>
-                        ))}
+                                    ) : (
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <div style={{ fontWeight: 'bold', fontSize: '13px', width: '40%', textAlign: 'right' }}>{p.time_casa}</div>
+                                            <div style={{ backgroundColor: 'white', padding: '6px 12px', borderRadius: '6px', border: '2px solid #cbd5e1', fontWeight: '900', fontSize: '16px', color: '#0f172a' }}>
+                                                {p.palpite_casa} <span style={{ color: '#94a3b8', margin: '0 4px' }}>x</span> {p.palpite_visitante}
+                                            </div>
+                                            <div style={{ fontWeight: 'bold', fontSize: '13px', width: '40%', textAlign: 'left' }}>{p.time_visitante}</div>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
             </Dialog>
