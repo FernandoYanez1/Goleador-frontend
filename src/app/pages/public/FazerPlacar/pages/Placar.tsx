@@ -23,10 +23,10 @@ export default function Placar() {
     const [modalPixAberto, setModalPixAberto] = useState(false);
     const [pixData, setPixData] = useState<any>(null);
 
-    const [tempoRestante, setTempoRestante] = useState({ dias: 0, horas: 0, minutos: 0, segundos: 0, expirado: false });
-    const [dataAlvoGlobal, setDataAlvoGlobal] = useState<number | null>(null);
+    // NOVO: Estado que guarda os cronômetros de TODAS as rodadas simultaneamente
+    const [timers, setTimers] = useState<Record<number, { alvo: number | null, restante: any }>>({});
 
-    // CSS Injetado para ocultar as "setinhas" de input number
+    // CSS Injetado para ocultar as "setinhas" de input number e ajustar responsivo
     useEffect(() => {
         const style = document.createElement("style");
         style.innerHTML = `
@@ -40,6 +40,7 @@ export default function Placar() {
         return () => { document.head.removeChild(style); };
     }, []);
 
+    // 1. CARREGAR DADOS E CALCULAR DATA ALVO DE CADA RODADA
     useEffect(() => {
         const salvo = localStorage.getItem('usuarioLogado');
         if (!salvo) { history.push('/public/login'); return; }
@@ -48,11 +49,35 @@ export default function Placar() {
         Promise.all([
             fetch(`${apiUrl}/rodadas`).then(res => res.json()),
             fetch(`${apiUrl}/teams`).then(res => res.json())
-        ]).then(([rodadasData, teamsData]) => {
+        ]).then(async ([rodadasData, teamsData]) => {
             const abertas = rodadasData.filter((r: any) => r.status === 'aberta');
             setRodadas(abertas);
             setTeams(teamsData);
             
+            // Define o Alvo (Data Final) para cada rodada
+            const initialTimers: any = {};
+            
+            await Promise.all(abertas.map(async (r: any) => {
+                if (r.tipo === 'campeao') {
+                    // Data fixa da Copa do Mundo (Mude se precisar)
+                    initialTimers[r.id] = { alvo: new Date('2026-06-11T15:00:00').getTime(), restante: null };
+                } else if (r.tipo === 'placares') {
+                    try {
+                        const res = await fetch(`${apiUrl}/jogos?rodada_id=${r.id}`);
+                        const data = await res.json();
+                        if (data.length > 0) {
+                            const validDates = data.map((j: any) => new Date(j.data_hora).getTime()).filter((n: any) => !isNaN(n));
+                            if (validDates.length > 0) {
+                                const primeiroJogo = Math.min(...validDates);
+                                initialTimers[r.id] = { alvo: primeiroJogo - (30 * 60000), restante: null }; // 30 min antes do primeiro jogo
+                            }
+                        }
+                    } catch (e) { console.error(e); }
+                }
+            }));
+            
+            setTimers(initialTimers);
+
             if (abertas.length === 1) selecionarModoJogo(abertas[0]);
             else setLoading(false);
         }).catch(err => {
@@ -61,30 +86,38 @@ export default function Placar() {
         });
     }, [history, apiUrl]);
 
-    // Timer Inteligente: Observa a Data Alvo
+    // 2. ATUALIZAR TODOS OS CRONÔMETROS POR SEGUNDO
     useEffect(() => {
-        if (!dataAlvoGlobal) return;
-
         const intervalo = setInterval(() => {
             const agora = new Date().getTime();
-            const diferenca = dataAlvoGlobal - agora;
-
-            if (diferenca <= 0) {
-                setTempoRestante({ dias: 0, horas: 0, minutos: 0, segundos: 0, expirado: true });
-                clearInterval(intervalo);
-            } else {
-                setTempoRestante({ 
-                    dias: Math.floor(diferenca / (1000 * 60 * 60 * 24)), 
-                    horas: Math.floor((diferenca % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)), 
-                    minutos: Math.floor((diferenca % (1000 * 60 * 60)) / (1000 * 60)), 
-                    segundos: Math.floor((diferenca % (1000 * 60)) / 1000), 
-                    expirado: false 
+            
+            setTimers(prevTimers => {
+                const updated = { ...prevTimers };
+                Object.keys(updated).forEach(key => {
+                    const id = Number(key);
+                    const alvo = updated[id].alvo;
+                    
+                    if (alvo) {
+                        const diferenca = alvo - agora;
+                        if (diferenca <= 0) {
+                            updated[id].restante = { dias: 0, horas: 0, minutos: 0, segundos: 0, expirado: true };
+                        } else {
+                            updated[id].restante = { 
+                                dias: Math.floor(diferenca / (1000 * 60 * 60 * 24)), 
+                                horas: Math.floor((diferenca % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)), 
+                                minutos: Math.floor((diferenca % (1000 * 60 * 60)) / (1000 * 60)), 
+                                segundos: Math.floor((diferenca % (1000 * 60)) / 1000), 
+                                expirado: false 
+                            };
+                        }
+                    }
                 });
-            }
+                return updated;
+            });
         }, 1000);
 
         return () => clearInterval(intervalo);
-    }, [dataAlvoGlobal]);
+    }, []);
 
     const selecionarModoJogo = (rodada: any) => {
         setRodadaAtiva(rodada);
@@ -94,21 +127,8 @@ export default function Placar() {
                 .then(res => res.json())
                 .then(data => {
                     setJogos(data);
-                    
-                    // Lógica de Bloqueio Automático (30 min antes do primeiro jogo)
-                    if (data.length > 0) {
-                        const datasValidas = data.map((j: any) => new Date(j.data_hora).getTime()).filter((n: any) => !isNaN(n));
-                        if (datasValidas.length > 0) {
-                            const primeiroJogo = Math.min(...datasValidas);
-                            setDataAlvoGlobal(primeiroJogo - (30 * 60000)); // Menos 30 mins
-                        }
-                    }
                     setLoading(false);
                 });
-        } else if (rodada.tipo === 'campeao') {
-            // Data fixa para a Copa do Mundo
-            setDataAlvoGlobal(new Date('2026-06-11T15:00:00').getTime());
-            setLoading(false);
         }
     };
 
@@ -118,7 +138,8 @@ export default function Placar() {
     };
 
     const submeterApostaPlacares = async () => {
-        if (tempoRestante.expirado) return alert("O tempo limite para apostar nesta rodada expirou!");
+        const timerRodada = timers[rodadaAtiva.id]?.restante;
+        if (timerRodada?.expirado) return alert("O tempo limite para apostar nesta rodada expirou!");
 
         for (let jogo of jogos) {
             const p = palpitesPlacares[jogo.id];
@@ -146,8 +167,9 @@ export default function Placar() {
     };
 
     const submeterApostaCampeao = async () => {
+        const timerRodada = timers[rodadaAtiva.id]?.restante;
         if (!selecaoEscolhida) return alert("Escolha uma seleção para ser campeã!");
-        if (tempoRestante.expirado) return alert("As apostas para Campeão da Copa já foram encerradas!");
+        if (timerRodada?.expirado) return alert("As apostas para Campeão da Copa já foram encerradas!");
 
         setEnviandoAposta(true);
         try {
@@ -168,7 +190,6 @@ export default function Placar() {
     const handleVoltar = () => {
         if (rodadas.length > 1) {
             setRodadaAtiva(null);
-            setDataAlvoGlobal(null);
         } else { history.push('/public'); }
     };
 
@@ -208,6 +229,25 @@ export default function Placar() {
                             {rodadas.map((rodada) => {
                                 const eCampeao = rodada.tipo === 'campeao';
                                 const eCopa = rodada.nome.toLowerCase().includes('copa');
+                                const tRestante = timers[rodada.id]?.restante;
+                                
+                                // Lógica de cores do Timer no Card
+                                let tBg = 'rgba(255, 255, 255, 0.05)';
+                                let tColor = '#94a3b8';
+                                let tBorder = '1px solid rgba(255, 255, 255, 0.1)';
+
+                                if (tRestante) {
+                                    if (tRestante.expirado) {
+                                        // Encerrado (Cinza Escuro / Vermelho)
+                                        tBg = 'rgba(239, 68, 68, 0.15)'; tColor = '#ef4444'; tBorder = '1px solid rgba(239, 68, 68, 0.4)';
+                                    } else if (tRestante.dias === 0) {
+                                        // Menos de 24h (Vermelho de Urgência)
+                                        tBg = 'rgba(239, 68, 68, 0.15)'; tColor = '#ef4444'; tBorder = '1px solid rgba(239, 68, 68, 0.4)';
+                                    } else if (tRestante.dias > 0) {
+                                        // 1 dia ou mais (Amarelado de Atenção)
+                                        tBg = 'rgba(245, 158, 11, 0.15)'; tColor = '#fbbf24'; tBorder = '1px solid rgba(245, 158, 11, 0.4)';
+                                    }
+                                }
                                 
                                 return (
                                     <Grid item xs={12} sm={5} md={4} key={rodada.id}>
@@ -218,10 +258,26 @@ export default function Placar() {
                                                 </Box>
                                                 <Typography variant="h5" fontWeight="900" style={{ color: '#ffffff', marginTop: '10px', lineHeight: 1.2 }}>{rodada.nome}</Typography>
                                                 <Typography variant="h4" fontWeight="900" color="#10b981" my={2}>{Number(rodada.preco).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</Typography>
+
+                                                {/* COUNTDOWN NO QUADRADO DO LOBBY */}
+                                                {tRestante ? (
+                                                    <Box style={{ backgroundColor: tBg, border: tBorder, padding: '10px', borderRadius: '8px', marginTop: '15px' }}>
+                                                        <Typography variant="caption" style={{ color: tColor, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontWeight: 'bold' }}>
+                                                            <Timer fontSize="small" /> 
+                                                            {tRestante.expirado 
+                                                                ? "ENCERRADO" 
+                                                                : `Restam: ${tRestante.dias > 0 ? `${tRestante.dias}d ` : ''}${tRestante.horas}h e ${tRestante.minutos} min`}
+                                                        </Typography>
+                                                    </Box>
+                                                ) : (
+                                                    <Box style={{ height: '42px', marginTop: '15px' }} /> // Espaçador para não quebrar a altura se a data não existir
+                                                )}
+
                                             </CardContent>
                                             <CardActions style={{ padding: '20px', paddingTop: 0 }}>
                                                 <AppButton 
-                                                    label="Escolher Bilhete" 
+                                                    label={tRestante?.expirado ? "Inscrições Fechadas" : "Escolher Bilhete"} 
+                                                    disabled={tRestante?.expirado}
                                                     onClick={() => selecionarModoJogo(rodada)} 
                                                     style={{ width: '100%', border: 'none', backgroundColor: eCampeao ? '#fbbf24' : '#3b82f6', color: eCampeao ? '#1e293b' : '#ffffff', fontWeight: 'bold', fontSize: '15px', padding: '12px' }} 
                                                 />
@@ -247,15 +303,15 @@ export default function Placar() {
                             </Box>
                         </Box>
 
-                        {/* NOVO: TIMER GLOBAL DOS PLACARES */}
-                        {dataAlvoGlobal && (
-                            <Box mb={4} p={3} style={{ backgroundColor: tempoRestante.expirado ? '#fef2f2' : '#0f172a', color: tempoRestante.expirado ? '#ef4444' : '#ffffff', borderRadius: '12px', border: tempoRestante.expirado ? '2px solid #ef4444' : '1px solid #334155', textAlign: 'center' }}>
-                                <Typography variant="caption" style={{ color: tempoRestante.expirado ? '#ef4444' : '#38bdf8', fontWeight: 'bold', letterSpacing: '1px' }}>
-                                    {tempoRestante.expirado ? "TEMPO ESGOTADO" : "AS APOSTAS SE ENCERRAM EM:"}
+                        {/* TIMER GLOBAL DA RODADA DE PLACARES ATIVA */}
+                        {timers[rodadaAtiva.id]?.restante && (
+                            <Box mb={4} p={3} style={{ backgroundColor: timers[rodadaAtiva.id].restante.expirado ? '#fef2f2' : '#0f172a', color: timers[rodadaAtiva.id].restante.expirado ? '#ef4444' : '#ffffff', borderRadius: '12px', border: timers[rodadaAtiva.id].restante.expirado ? '2px solid #ef4444' : '1px solid #334155', textAlign: 'center' }}>
+                                <Typography variant="caption" style={{ color: timers[rodadaAtiva.id].restante.expirado ? '#ef4444' : '#38bdf8', fontWeight: 'bold', letterSpacing: '1px' }}>
+                                    {timers[rodadaAtiva.id].restante.expirado ? "TEMPO ESGOTADO" : "AS APOSTAS SE ENCERRAM EM:"}
                                 </Typography>
-                                {!tempoRestante.expirado ? (
+                                {!timers[rodadaAtiva.id].restante.expirado ? (
                                     <Box display="flex" justifyContent="center" gap={3} mt={1}>
-                                        {[{l:'DIAS', v:tempoRestante.dias}, {l:'HRS', v:tempoRestante.horas}, {l:'MIN', v:tempoRestante.minutos}, {l:'SEG', v:tempoRestante.segundos}].map(i => (
+                                        {[{l:'DIAS', v:timers[rodadaAtiva.id].restante.dias}, {l:'HRS', v:timers[rodadaAtiva.id].restante.horas}, {l:'MIN', v:timers[rodadaAtiva.id].restante.minutos}, {l:'SEG', v:timers[rodadaAtiva.id].restante.segundos}].map(i => (
                                             <Box key={i.l}>
                                                 <Typography variant="h4" fontWeight="900" color="#38bdf8">{i.v.toString().padStart(2, '0')}</Typography>
                                                 <Typography variant="caption" color="#94a3b8">{i.l}</Typography>
@@ -268,7 +324,7 @@ export default function Placar() {
                             </Box>
                         )}
 
-                        <div style={{ opacity: tempoRestante.expirado ? 0.6 : 1, pointerEvents: tempoRestante.expirado ? 'none' : 'auto' }}>
+                        <div style={{ opacity: timers[rodadaAtiva.id]?.restante?.expirado ? 0.6 : 1, pointerEvents: timers[rodadaAtiva.id]?.restante?.expirado ? 'none' : 'auto' }}>
                             {jogos.map((jogo) => (
                                 <Box key={jogo.id} mb={3} p={2} style={{ border: '1px solid #e2e8f0', borderRadius: '12px', background: 'linear-gradient(180deg,#ffffff,#f8fafc)', boxShadow: '0 4px 10px rgba(15,23,42,0.04)', transition: '0.2s ease' }}>
                                     <Typography style={{ textAlign: "center", color: "#94a3b8", fontSize: "11px", fontWeight: "bold", marginBottom: "15px", letterSpacing: "0.5px" }}>
@@ -302,10 +358,10 @@ export default function Placar() {
 
                             <Box mt={4}>
                                 <AppButton 
-                                    label={tempoRestante.expirado ? "Apostas Encerradas" : (enviandoAposta ? "Gerando Pix..." : `Finalizar e Pagar (R$ ${Number(rodadaAtiva.preco).toFixed(2).replace('.',',')})`)} 
-                                    disabled={enviandoAposta || tempoRestante.expirado}
+                                    label={timers[rodadaAtiva.id]?.restante?.expirado ? "Apostas Encerradas" : (enviandoAposta ? "Gerando Pix..." : `Finalizar e Pagar (R$ ${Number(rodadaAtiva.preco).toFixed(2).replace('.',',')})`)} 
+                                    disabled={enviandoAposta || timers[rodadaAtiva.id]?.restante?.expirado}
                                     onClick={submeterApostaPlacares} 
-                                    style={{ width: '100%', padding: '14px', fontSize: '18px', border: 'none', background: tempoRestante.expirado ? '#94a3b8' : 'linear-gradient(135deg,#10b981,#059669)', borderRadius: '14px', fontWeight: '900', boxShadow: '0 10px 20px rgba(16,185,129,0.3)', color: 'white' }} 
+                                    style={{ width: '100%', padding: '14px', fontSize: '18px', border: 'none', background: timers[rodadaAtiva.id]?.restante?.expirado ? '#94a3b8' : 'linear-gradient(135deg,#10b981,#059669)', borderRadius: '14px', fontWeight: '900', boxShadow: '0 10px 20px rgba(16,185,129,0.3)', color: 'white' }} 
                                 />
                             </Box>
                         </div>
@@ -320,22 +376,25 @@ export default function Placar() {
                             <Button variant="text" color="secondary" onClick={handleVoltar}>Voltar</Button>
                         </Box>
 
-                        <Box mb={4} p={3} style={{ backgroundColor: tempoRestante.expirado ? '#fef2f2' : '#0f172a', color: tempoRestante.expirado ? '#ef4444' : '#ffffff', borderRadius: '12px', border: tempoRestante.expirado ? '2px solid #ef4444' : '1px solid #334155' }}>
-                            <Typography variant="caption" style={{ color: tempoRestante.expirado ? '#ef4444' : '#fbbf24', fontWeight: 'bold', letterSpacing: '1px' }}>
-                                {tempoRestante.expirado ? "TEMPO ESGOTADO" : "TEMPO PARA O INÍCIO"}
-                            </Typography>
-                            {!tempoRestante.expirado ? (
-                                <Box display="flex" justifyContent="center" gap={3} mt={2}>
-                                    {[{l:'DIAS', v:tempoRestante.dias}, {l:'HRS', v:tempoRestante.horas}, {l:'MIN', v:tempoRestante.minutos}].map(i => (
-                                        <Box key={i.l}><Typography variant="h4" fontWeight="900" color="#fbbf24">{i.v.toString().padStart(2, '0')}</Typography><Typography variant="caption" color="#94a3b8">{i.l}</Typography></Box>
-                                    ))}
-                                </Box>
-                            ) : (
-                                <Typography variant="body1" mt={1} fontWeight="bold">As apostas para Campeão foram encerradas.</Typography>
-                            )}
-                        </Box>
+                        {/* TIMER GLOBAL CAMPEÃO ATIVO */}
+                        {timers[rodadaAtiva.id]?.restante && (
+                            <Box mb={4} p={3} style={{ backgroundColor: timers[rodadaAtiva.id].restante.expirado ? '#fef2f2' : '#0f172a', color: timers[rodadaAtiva.id].restante.expirado ? '#ef4444' : '#ffffff', borderRadius: '12px', border: timers[rodadaAtiva.id].restante.expirado ? '2px solid #ef4444' : '1px solid #334155' }}>
+                                <Typography variant="caption" style={{ color: timers[rodadaAtiva.id].restante.expirado ? '#ef4444' : '#fbbf24', fontWeight: 'bold', letterSpacing: '1px' }}>
+                                    {timers[rodadaAtiva.id].restante.expirado ? "TEMPO ESGOTADO" : "TEMPO PARA O INÍCIO"}
+                                </Typography>
+                                {!timers[rodadaAtiva.id].restante.expirado ? (
+                                    <Box display="flex" justifyContent="center" gap={3} mt={2}>
+                                        {[{l:'DIAS', v:timers[rodadaAtiva.id].restante.dias}, {l:'HRS', v:timers[rodadaAtiva.id].restante.horas}, {l:'MIN', v:timers[rodadaAtiva.id].restante.minutos}].map(i => (
+                                            <Box key={i.l}><Typography variant="h4" fontWeight="900" color="#fbbf24">{i.v.toString().padStart(2, '0')}</Typography><Typography variant="caption" color="#94a3b8">{i.l}</Typography></Box>
+                                        ))}
+                                    </Box>
+                                ) : (
+                                    <Typography variant="body1" mt={1} fontWeight="bold">As apostas para Campeão foram encerradas.</Typography>
+                                )}
+                            </Box>
+                        )}
 
-                        <div style={{ opacity: tempoRestante.expirado ? 0.6 : 1, pointerEvents: tempoRestante.expirado ? 'none' : 'auto' }}>
+                        <div style={{ opacity: timers[rodadaAtiva.id]?.restante?.expirado ? 0.6 : 1, pointerEvents: timers[rodadaAtiva.id]?.restante?.expirado ? 'none' : 'auto' }}>
                             <Typography variant="h6" fontWeight="bold" mt={3} mb={2} color="#b45309" style={{ backgroundColor: '#fffbeb', padding: '5px', borderRadius: '8px' }}>⭐ SELEÇÕES FAVORITAS</Typography>
                             <Grid container spacing={1} justifyContent="center" mb={4}>
                                 {favoritos.map((team: any) => (
@@ -363,7 +422,7 @@ export default function Placar() {
                             <Box mt={4}>
                                 <AppButton 
                                     label={enviandoAposta ? "Gerando Pix..." : `Confirmar Aposta (R$ ${Number(rodadaAtiva.preco).toFixed(2).replace('.',',')})`} 
-                                    disabled={enviandoAposta || tempoRestante.expirado}
+                                    disabled={enviandoAposta || timers[rodadaAtiva.id]?.restante?.expirado}
                                     onClick={submeterApostaCampeao} 
                                     style={{ width: '100%', padding: '14px', fontSize: '18px', border: 'none', background: 'linear-gradient(135deg,#10b981,#059669)', borderRadius: '16px', fontWeight: '900', boxShadow: '0 10px 25px rgba(16,185,129,0.3)', color: 'white' }} 
                                 />
