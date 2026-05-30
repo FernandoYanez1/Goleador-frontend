@@ -31,8 +31,6 @@ export default function Placar() {
             input[type=number]::-webkit-inner-spin-button, 
             input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
             input[type=number] { -moz-appearance: textfield; }
-            .team-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px; display: inline-block; }
-            @media (max-width: 400px) { .team-name { max-width: 60px; } }
         `;
         document.head.appendChild(style);
         return () => { document.head.removeChild(style); };
@@ -55,7 +53,6 @@ export default function Placar() {
             
             await Promise.all(abertas.map(async (r: any) => {
                 if (r.tipo === 'campeao') {
-                    // TODO: Altere a data alvo da Copa ou de outros eventos de tiro curto aqui
                     initialTimers[r.id] = { alvo: new Date('2026-06-11T15:00:00').getTime(), restante: null };
                 } else if (r.tipo === 'placares') {
                     try {
@@ -225,7 +222,6 @@ export default function Placar() {
                                 const eCopa = rodada.nome.toLowerCase().includes('copa');
                                 const tRestante = timers[rodada.id]?.restante;
                                 
-                                // Lógica de Urgência no Card
                                 let corTimerBg = 'rgba(255, 255, 255, 0.05)';
                                 let corTimerTxt = '#cbd5e1';
                                 let corTimerBorder = 'rgba(255, 255, 255, 0.1)';
@@ -248,7 +244,6 @@ export default function Placar() {
                                                     {eCampeao ? <Stars style={{ fontSize: 50, color: '#fbbf24' }} /> : eCopa ? <Public style={{ fontSize: 50, color: '#3b82f6' }} /> : <SportsSoccer style={{ fontSize: 50, color: '#10b981' }} />}
                                                 </Box>
                                                 
-                                                {/* minHeight previne quebra de layout entre os cards */}
                                                 <Typography variant="h6" fontWeight="900" style={{ color: '#ffffff', marginTop: '10px', lineHeight: 1.2, minHeight: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                     {rodada.nome}
                                                 </Typography>
@@ -326,29 +321,35 @@ export default function Placar() {
                                     <Typography style={{ textAlign: "center", color: "#94a3b8", fontSize: "11px", fontWeight: "bold", marginBottom: "15px", letterSpacing: "0.5px" }}>
                                         {formatarDataJogo(jogo.data_hora)}
                                     </Typography>
-                                    <Grid container alignItems="center" justifyContent="center" wrap="nowrap" spacing={1}>
-                                        <Grid item xs={4} style={{ display: 'flex', flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'flex-start', gap: '8px' }}>
-                                            <Box display="flex" flexDirection="column" alignItems="center">
-                                                <img src={jogo.logo_casa || "/media/escudos-times/default.png"} alt="casa" style={{ width: 35, height: 35, objectFit: 'contain' }} />
-                                                <Typography fontWeight="900" fontSize="14px" color="#1e293b" mt={0.5}>{jogo.sigla_casa}</Typography>
-                                            </Box>
-                                            <Typography className="team-name" variant="caption" color="#64748b" fontWeight="bold" textAlign="right" style={{ lineHeight: 1.1 }}>{jogo.time_casa}</Typography>
-                                        </Grid>
-                                        
-                                        <Grid item xs={4} display="flex" justifyContent="center" alignItems="center" gap={1}>
-                                            <input type="text" inputMode="numeric" pattern="[0-9]*" value={palpitesPlacares[jogo.id]?.casa ?? ''} onChange={(e) => handlePlacarChange(jogo.id, 'casa', e.target.value)} style={{ width: '45px', height: '45px', textAlign: 'center', fontSize: '20px', fontWeight: '900', borderRadius: '10px', border: '2px solid #cbd5e1', backgroundColor: '#fff', color: '#1e293b', outline: 'none', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)' }} />
-                                            <Typography color="#cbd5e1" fontWeight="900" fontSize="14px">X</Typography>
-                                            <input type="text" inputMode="numeric" pattern="[0-9]*" value={palpitesPlacares[jogo.id]?.visitante ?? ''} onChange={(e) => handlePlacarChange(jogo.id, 'visitante', e.target.value)} style={{ width: '45px', height: '45px', textAlign: 'center', fontSize: '20px', fontWeight: '900', borderRadius: '10px', border: '2px solid #cbd5e1', backgroundColor: '#fff', color: '#1e293b', outline: 'none', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)' }} />
-                                        </Grid>
+                                    
+                                    <Box display="flex" flexDirection="column" gap={1}>
+                                        {/* LINHA SUPERIOR: Sigla, Flag, Input, X, Input, Flag, Sigla */}
+                                        <Box display="flex" justifyContent="center" alignItems="center" gap={1} flexWrap="nowrap">
+                                            {/* Casa */}
+                                            <Typography fontWeight="900" fontSize="14px" color="#1e293b">{jogo.sigla_casa}</Typography>
+                                            <img src={jogo.logo_casa || "/media/escudos-times/default.png"} alt="casa" style={{ width: '30px', height: '20px', objectFit: 'cover', borderRadius: '2px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }} />
+                                            <input type="text" inputMode="numeric" pattern="[0-9]*" value={palpitesPlacares[jogo.id]?.casa ?? ''} onChange={(e) => handlePlacarChange(jogo.id, 'casa', e.target.value)} style={{ width: '40px', height: '40px', textAlign: 'center', fontSize: '18px', fontWeight: '900', borderRadius: '8px', border: '2px solid #cbd5e1', backgroundColor: '#fff', color: '#1e293b', outline: 'none', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)' }} />
+                                            
+                                            {/* Divisor X */}
+                                            <Typography color="#cbd5e1" fontWeight="900" fontSize="14px" mx={0.5}>X</Typography>
+                                            
+                                            {/* Visitante */}
+                                            <input type="text" inputMode="numeric" pattern="[0-9]*" value={palpitesPlacares[jogo.id]?.visitante ?? ''} onChange={(e) => handlePlacarChange(jogo.id, 'visitante', e.target.value)} style={{ width: '40px', height: '40px', textAlign: 'center', fontSize: '18px', fontWeight: '900', borderRadius: '8px', border: '2px solid #cbd5e1', backgroundColor: '#fff', color: '#1e293b', outline: 'none', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)' }} />
+                                            <img src={jogo.logo_visitante || "/media/escudos-times/default.png"} alt="visitante" style={{ width: '30px', height: '20px', objectFit: 'cover', borderRadius: '2px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }} />
+                                            <Typography fontWeight="900" fontSize="14px" color="#1e293b">{jogo.sigla_visitante}</Typography>
+                                        </Box>
 
-                                        <Grid item xs={4} style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: '8px' }}>
-                                            <Box display="flex" flexDirection="column" alignItems="center">
-                                                <img src={jogo.logo_visitante || "/media/escudos-times/default.png"} alt="visitante" style={{ width: 35, height: 35, objectFit: 'contain' }} />
-                                                <Typography fontWeight="900" fontSize="14px" color="#1e293b" mt={0.5}>{jogo.sigla_visitante}</Typography>
-                                            </Box>
-                                            <Typography className="team-name" variant="caption" color="#64748b" fontWeight="bold" textAlign="left" style={{ lineHeight: 1.1 }}>{jogo.time_visitante}</Typography>
-                                        </Grid>
-                                    </Grid>
+                                        {/* LINHA INFERIOR: Nomes Completos */}
+                                        <Box display="flex" justifyContent="space-between" px={2}>
+                                            <Typography variant="caption" color="#64748b" fontWeight="bold" textAlign="left" style={{ width: '45%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                {jogo.time_casa}
+                                            </Typography>
+                                            <Typography variant="caption" color="#64748b" fontWeight="bold" textAlign="right" style={{ width: '45%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                {jogo.time_visitante}
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+
                                 </Box>
                             ))}
 
