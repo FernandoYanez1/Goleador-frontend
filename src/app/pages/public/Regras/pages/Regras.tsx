@@ -26,11 +26,11 @@ export default function Regras() {
     ];
 
     const pontuacaoData = [
-        { tipo: "Placar Exato", desc: "Acertou perfeitamente os gols do time da casa e do visitante.", pontos: 15, cor: "#8b5cf6" }, // Roxo
-        { tipo: "Resultado + Gols", desc: "Acertou quem venceu E a quantidade de gols de pelo menos um dos times.", pontos: 10, cor: "#10b981" }, // Verde
-        { tipo: "Apenas Resultado", desc: "Acertou quem venceu ou se foi empate, mas errou completamente o placar.", pontos: 8, cor: "#0ea5e9" }, // Azul
-        { tipo: "Soma Exata de Gols", desc: "Errou quem venceu, mas a soma total de gols bateu com a realidade.", pontos: 3, cor: "#f97316" }, // Laranja
-        { tipo: "Nenhum Acerto", desc: "Errou o resultado e a quantidade de gols.", pontos: 0, cor: "#64748b" }, // Cinza
+        { tipo: "Placar Exato", desc: "Acertou perfeitamente os gols do time da casa e do visitante.", pontos: 15, cor: "#8b5cf6" },
+        { tipo: "Resultado + Gols", desc: "Acertou quem venceu E a quantidade de gols de pelo menos um dos times.", pontos: 10, cor: "#10b981" },
+        { tipo: "Apenas Resultado", desc: "Acertou quem venceu ou se foi empate, mas errou completamente o placar.", pontos: 8, cor: "#0ea5e9" },
+        { tipo: "Soma Exata de Gols", desc: "Errou quem venceu, mas a soma total de gols bateu com a realidade.", pontos: 3, cor: "#f97316" },
+        { tipo: "Nenhum Acerto", desc: "Errou o resultado e a quantidade de gols.", pontos: 0, cor: "#64748b" },
     ];
 
     const exemplos = [
@@ -87,7 +87,7 @@ export default function Regras() {
 
                         <Grid container spacing={3}>
                             {/* Card Campeão */}
-                            <Grid item xs={12} md={5}>
+                            <Grid item xs={12} md={4}>
                                 <Box p={3} style={{ backgroundColor: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.3)', borderRadius: '12px', height: '100%', display: 'flex', flexDirection: 'column' }}>
                                     <Typography variant="h6" fontWeight="bold" color="#fbbf24" mb={2}>
                                         ⭐ Campeão Final
@@ -102,28 +102,43 @@ export default function Regras() {
                             </Grid>
 
                             {/* Card Placares */}
-                            <Grid item xs={12} md={7}>
+                            <Grid item xs={12} md={8}>
                                 <Box p={3} style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '12px', height: '100%', display: 'flex', flexDirection: 'column' }}>
                                     <Typography variant="h6" fontWeight="bold" color="#38bdf8" mb={2}>
                                         ⚽ 6 Rodadas de Placares
                                     </Typography>
-                                    <Typography variant="body2" color="#e2e8f0" mb={2}>
-                                        As apostas nos jogos acontecerão em etapas para você ter múltiplas chances de ganhar:
+                                    <Typography variant="body2" color="#e2e8f0" mb={3}>
+                                        As apostas nos confrontos acontecerão em etapas. Cada fase do torneio é uma nova chance de faturar:
                                     </Typography>
                                     
-                                    <Grid container spacing={1} mb={3} style={{ flexGrow: 1 }}>
-                                        {['1ª Rodada (15 jogos)', '2ª Rodada (15 jogos)', '3ª Rodada (15 jogos)', '16 Avos de Final (16 jogos)', 'Oitavas de Final (8 jogos)', 'Reta Final: Quartas, Semis e Final (7 jogos)'].map((r, i) => (
-                                            <Grid item xs={12} sm={6} key={i}>
-                                                <Box display="flex" alignItems="center" gap={1}>
-                                                    <div style={{ minWidth: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#38bdf8' }}></div>
-                                                    <Typography variant="body2" fontWeight="bold" color="#f8fafc">{r}</Typography>
+                                    <Grid container spacing={2} mb={3} style={{ flexGrow: 1 }}>
+                                        {/* Lado Esquerdo - Fase de Grupos */}
+                                        <Grid item xs={12} sm={6}>
+                                            <Box p={2} style={{ backgroundColor: 'rgba(15, 23, 42, 0.4)', borderRadius: '8px', border: '1px solid rgba(56, 189, 248, 0.2)', height: '100%' }}>
+                                                <Typography variant="caption" fontWeight="bold" color="#94a3b8" display="block" mb={1.5} style={{ letterSpacing: '1px' }}>FASE DE GRUPOS</Typography>
+                                                <Box display="flex" flexDirection="column" gap={1.5}>
+                                                    <Box display="flex" alignItems="center" gap={1}><div style={{ minWidth: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#38bdf8' }}></div><Typography variant="body2" fontWeight="bold" color="#f8fafc">1ª Rodada (15 jogos)</Typography></Box>
+                                                    <Box display="flex" alignItems="center" gap={1}><div style={{ minWidth: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#38bdf8' }}></div><Typography variant="body2" fontWeight="bold" color="#f8fafc">2ª Rodada (15 jogos)</Typography></Box>
+                                                    <Box display="flex" alignItems="center" gap={1}><div style={{ minWidth: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#38bdf8' }}></div><Typography variant="body2" fontWeight="bold" color="#f8fafc">3ª Rodada (15 jogos)</Typography></Box>
                                                 </Box>
-                                            </Grid>
-                                        ))}
+                                            </Box>
+                                        </Grid>
+
+                                        {/* Lado Direito - Mata-mata */}
+                                        <Grid item xs={12} sm={6}>
+                                            <Box p={2} style={{ backgroundColor: 'rgba(15, 23, 42, 0.4)', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.2)', height: '100%' }}>
+                                                <Typography variant="caption" fontWeight="bold" color="#94a3b8" display="block" mb={1.5} style={{ letterSpacing: '1px' }}>MATA-MATA</Typography>
+                                                <Box display="flex" flexDirection="column" gap={1.5}>
+                                                    <Box display="flex" alignItems="center" gap={1}><div style={{ minWidth: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981' }}></div><Typography variant="body2" fontWeight="bold" color="#f8fafc">16 Avos de Final (16 jogos)</Typography></Box>
+                                                    <Box display="flex" alignItems="center" gap={1}><div style={{ minWidth: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981' }}></div><Typography variant="body2" fontWeight="bold" color="#f8fafc">Oitavas de Final (8 jogos)</Typography></Box>
+                                                    <Box display="flex" alignItems="center" gap={1}><div style={{ minWidth: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981' }}></div><Typography variant="body2" fontWeight="bold" color="#f8fafc" style={{ lineHeight: 1.2 }}>Fase Final<br/><span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 'normal' }}>(Quartas, Semis e Final - 7 jogos)</span></Typography></Box>
+                                                </Box>
+                                            </Box>
+                                        </Grid>
                                     </Grid>
 
-                                    <Typography variant="h6" fontWeight="900" color="#10b981">
-                                        Valor: R$ 40,00 <span style={{fontSize: '14px', color: '#cbd5e1', fontWeight: 'normal'}}>por rodada</span>
+                                    <Typography variant="h5" fontWeight="900" color="#10b981">
+                                        Valor: R$ 20,00 <span style={{fontSize: '14px', color: '#cbd5e1', fontWeight: 'normal'}}>por rodada</span>
                                     </Typography>
                                 </Box>
                             </Grid>
