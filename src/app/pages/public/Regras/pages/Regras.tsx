@@ -2,7 +2,7 @@ import React from "react";
 import { useHistory } from "react-router-dom";
 import { 
     Container, Typography, Paper, Grid, Card, CardContent, 
-    Accordion, AccordionSummary, AccordionDetails, Divider, Chip 
+    Accordion, AccordionSummary, AccordionDetails, Divider, Chip, Box
 } from "@mui/material";
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import GavelIcon from '@mui/icons-material/Gavel';
@@ -15,11 +15,11 @@ export default function Regras() {
 
     const regrasGerais = [
         { icon: "🔞", titulo: "Idade Mínima", texto: "A participação é permitida apenas para maiores de 18 anos." },
-        { icon: "🛡️", titulo: "Privacidade e Segurança (LGPD)", texto: "Seus dados estão seguros! O Nome fica público para o ranking. O CPF é usado exclusivamente via integração segura com o Mercado Pago para a geração do PIX. O Celular é sigiloso, visível apenas para o Admin te contatar em caso de prêmio. Sua senha é 100% criptografada em nosso banco de dados." },
+        { icon: "🛡️", titulo: "Privacidade e Segurança (LGPD)", texto: "Seus dados estão seguros! O Nome fica público para o ranking. O CPF é usado exclusivamente via integração segura com o Mercado Pago para a geração do PIX. O Celular é sigiloso, visível apenas para o Admin te contatar em caso de prêmio. Sua senha é 100% criptografada." },
         { icon: "🛠️", titulo: "Taxa de Administração (10%)", texto: "De todo o valor arrecadado, 10% ficam retidos como taxa de administração. Esse percentual cobre os custos da taxa do Mercado Pago, infraestrutura do site e o financiamento de premiações físicas extras em rodadas especiais." },
-        { icon: "💰", titulo: "Valor e Pagamento", texto: "O valor da inscrição varia conforme a rodada ou torneio escolhido. Seus palpites só serão validados e contabilizados no prêmio após a confirmação automática do pagamento via PIX. Só serão aceitos os pagamentos até 30 minutos antes do início do primeiro jogo da rodada." },
         { icon: "🏆", titulo: "Premiação - Confrontos (90%)", texto: "Nas rodadas de Placares, os 90% do valor arrecadado formam o prêmio líquido do pódio, dividido em: 60% para o 1º lugar, 30% para o 2º e 10% para o 3º." },
         { icon: "🏅", titulo: "Premiação - Campeão Final", texto: "Na aposta de longo prazo (Campeão da Competição), a premiação vai para quem acertar a seleção vencedora. Se mais de um participante acertar, o pote total é dividido igualmente entre eles. Não há 2º ou 3º lugar." },
+        { icon: "💰", titulo: "Valor e Pagamento", texto: "O valor da inscrição varia conforme a rodada ou torneio escolhido. Seus palpites só serão validados e contabilizados no prêmio após a confirmação automática do pagamento via PIX. Só serão aceitos os pagamentos até 30 minutos antes do início do primeiro jogo da rodada." },
         { icon: "⏳", titulo: "Encerramento das Apostas", texto: "Nas rodadas de Placares, o sistema bloqueia novas apostas 30 minutos antes do 1º jogo. Na aposta de Campeão, o mercado fecha em uma data específica no site. Após o bloqueio, as apostas ficam visíveis, liberando o 'Modo Secador'." },
         { icon: "🤝", titulo: "Regra de Desempate", texto: "Caso participantes terminem empatados em uma mesma posição de pontuação, o valor do prêmio financeiro daquela posição (e da seguinte, se necessário) será somado e dividido igualmente entre todos os empatados." },
         { icon: "🚫", titulo: "Jogos Cancelados", texto: "Se um jogo for cancelado ou adiado oficialmente, ele será anulado no sistema e não renderá pontos para nenhum participante." },
@@ -71,9 +71,65 @@ export default function Regras() {
                         Regras do Bolão
                     </Typography>
                     <Typography variant="subtitle1" style={{ color: "#94a3b8", marginTop: "10px" }}>
-                        Tudo o que você precisa saber para participar e faturar a rodada.
+                        Tudo o que você precisa saber para participar e faturar.
                     </Typography>
                 </div>
+
+                {/* SESSÃO DESTAQUE: COPA DO MUNDO */}
+                <Box mb={6}>
+                    <Paper style={{ padding: '30px', borderRadius: '16px', background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color: 'white', border: '2px solid #fbbf24', boxShadow: '0 10px 25px rgba(251, 191, 36, 0.15)' }}>
+                        <Typography variant="h4" fontWeight="900" color="#fbbf24" textAlign="center" mb={1}>
+                            🏆 Especial Copa do Mundo 2026
+                        </Typography>
+                        <Typography variant="body1" textAlign="center" color="#cbd5e1" mb={4}>
+                            O nosso bolão para a Copa será dividido em <strong>7 rodadas independentes</strong>. Você escolhe de quais quer participar!
+                        </Typography>
+
+                        <Grid container spacing={3}>
+                            {/* Card Campeão */}
+                            <Grid item xs={12} md={5}>
+                                <Box p={3} style={{ backgroundColor: 'rgba(251, 191, 36, 0.1)', border: '1px solid rgba(251, 191, 36, 0.3)', borderRadius: '12px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                                    <Typography variant="h6" fontWeight="bold" color="#fbbf24" mb={2}>
+                                        ⭐ Campeão Final
+                                    </Typography>
+                                    <Typography variant="body2" color="#e2e8f0" mb={3} style={{ flexGrow: 1 }}>
+                                        Aposta de tiro curto! Escolha qual seleção vai levantar a taça no final. Prêmio de 100% do pote líquido dividido entre os acertadores.
+                                    </Typography>
+                                    <Typography variant="h5" fontWeight="900" color="#10b981">
+                                        Valor: R$ 50,00
+                                    </Typography>
+                                </Box>
+                            </Grid>
+
+                            {/* Card Placares */}
+                            <Grid item xs={12} md={7}>
+                                <Box p={3} style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '12px', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                                    <Typography variant="h6" fontWeight="bold" color="#38bdf8" mb={2}>
+                                        ⚽ 6 Rodadas de Placares
+                                    </Typography>
+                                    <Typography variant="body2" color="#e2e8f0" mb={2}>
+                                        As apostas nos jogos acontecerão em etapas para você ter múltiplas chances de ganhar:
+                                    </Typography>
+                                    
+                                    <Grid container spacing={1} mb={3} style={{ flexGrow: 1 }}>
+                                        {['1ª Rodada (15 jogos)', '2ª Rodada (15 jogos)', '3ª Rodada (15 jogos)', '16 Avos de Final (16 jogos)', 'Oitavas de Final (8 jogos)', 'Reta Final: Quartas, Semis e Final (7 jogos)'].map((r, i) => (
+                                            <Grid item xs={12} sm={6} key={i}>
+                                                <Box display="flex" alignItems="center" gap={1}>
+                                                    <div style={{ minWidth: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#38bdf8' }}></div>
+                                                    <Typography variant="body2" fontWeight="bold" color="#f8fafc">{r}</Typography>
+                                                </Box>
+                                            </Grid>
+                                        ))}
+                                    </Grid>
+
+                                    <Typography variant="h6" fontWeight="900" color="#10b981">
+                                        Valor: R$ 40,00 <span style={{fontSize: '14px', color: '#cbd5e1', fontWeight: 'normal'}}>por rodada</span>
+                                    </Typography>
+                                </Box>
+                            </Grid>
+                        </Grid>
+                    </Paper>
+                </Box>
 
                 {/* SESSÃO 1: REGRAS GERAIS */}
                 <Typography variant="h5" style={{ fontWeight: "bold", color: "#1e293b", marginBottom: "20px", display: "flex", alignItems: "center", gap: "10px" }}>
@@ -98,7 +154,7 @@ export default function Regras() {
 
                 {/* SESSÃO 2: PONTUAÇÃO */}
                 <Typography variant="h5" style={{ fontWeight: "bold", color: "#1e293b", marginBottom: "20px", display: "flex", alignItems: "center", gap: "10px" }}>
-                    <EmojiEventsIcon style={{ color: "#fbbf24" }} /> Sistema de Pontuação
+                    <EmojiEventsIcon style={{ color: "#fbbf24" }} /> Sistema de Pontuação (Confrontos)
                 </Typography>
                 <Paper style={{ borderRadius: "12px", overflow: "hidden", marginBottom: "40px", boxShadow: "0 4px 10px rgba(0,0,0,0.05)" }}>
                     {pontuacaoData.map((item, index) => (
