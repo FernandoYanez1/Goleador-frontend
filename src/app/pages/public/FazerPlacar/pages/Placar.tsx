@@ -192,7 +192,7 @@ export default function Placar() {
     };
 
     const selecoesCopa = teams.filter(t => t.id >= 19 && t.id <= 66);
-    const idsFavoritos = [27, 51, 55, 47, 63, 59, 35];
+    const idsFavoritos = [27, 51, 55, 47, 63, 59, 35, 39, 43];
     const favoritos = idsFavoritos.map(id => selecoesCopa.find(t => t.id === id)).filter(Boolean);
     const outrasSelecoes = selecoesCopa.filter(t => !idsFavoritos.includes(t.id));
 
