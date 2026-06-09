@@ -53,7 +53,7 @@ export default function Placar() {
             
             await Promise.all(abertas.map(async (r: any) => {
                 if (r.tipo === 'campeao') {
-                    initialTimers[r.id] = { alvo: new Date('2026-06-11T15:00:00').getTime(), restante: null };
+                    initialTimers[r.id] = { alvo: new Date('2026-06-11T15:30:00').getTime(), restante: null };
                 } else if (r.tipo === 'placares') {
                     try {
                         const res = await fetch(`${apiUrl}/jogos?rodada_id=${r.id}`);
