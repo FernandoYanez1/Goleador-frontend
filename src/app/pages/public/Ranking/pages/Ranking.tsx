@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { Container, Typography, Paper, List, ListItem, ListItemText, Divider, CircularProgress, Box, Dialog, DialogTitle, DialogContent, Tooltip, IconButton, Fab } from "@mui/material";
+import { Container, Typography, Paper, List, ListItem, Divider, CircularProgress, Box, Dialog, DialogTitle, DialogContent, Tooltip } from "@mui/material";
 import AppButton from "../../../../../vendors/components/Button";
 import { useHistory } from "react-router-dom";
-import { EmojiEvents, PictureAsPdf, MilitaryTech, Visibility, Lock, WhatsApp, Close, Checkroom } from "@mui/icons-material";
+import { EmojiEvents, PictureAsPdf, MilitaryTech, Visibility, Lock } from "@mui/icons-material";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -25,14 +25,11 @@ const Ranking = () => {
     const [modalAberto, setModalAberto] = useState(false);
     const [cartelaSelecionada, setCartelaSelecionada] = useState<any>(null);
     const [palpitesSecador, setPalpitesSecador] = useState<any[]>([]);
-
-    const [mostrarBannerWpp, setMostrarBannerWpp] = useState(() => localStorage.getItem("bannerWppOculto") !== "true");
-    const [mostrarBannerPremio, setMostrarBannerPremio] = useState(() => localStorage.getItem("bannerPremioOculto") !== "true");
-
-    const fecharBannerPremio = () => {
-        setMostrarBannerPremio(false);
-        localStorage.setItem("bannerPremioOculto", "true");
-    };
+    
+    // Novos Estados para o Secador Dropdown e Otimização
+    const [jogosRodada, setJogosRodada] = useState<any[]>([]);
+    const [jogoSelecionadoId, setJogoSelecionadoId] = useState<string | number>('');
+    const [palpitesCache, setPalpitesCache] = useState<Record<string, any[]>>({});
 
     const VALOR_INSCRICAO = 20;
 
@@ -101,6 +98,7 @@ const Ranking = () => {
         setRodadaAtual(rodada);
         setApostasBloqueadas(rodada.status === 'pausada' || rodada.status === 'encerrada' || rodada.status === 'finalizada');
         setLoading(true);
+        setJogoSelecionadoId(''); // Reset no dropdown ao mudar a rodada
 
         try {
             const [rankRes, jogosRes] = await Promise.all([
@@ -121,6 +119,27 @@ const Ranking = () => {
             if (Array.isArray(jogosData)) {
                 const jogosFinalizados = jogosData.filter((j: any) => j.gols_casa !== null && j.gols_visitante !== null).length;
                 setStatusJogos({ finalizados: jogosFinalizados, total: jogosData.length });
+                setJogosRodada(jogosData);
+
+                // LOGICA: Encontrar o jogo atual ou mais próximo (Janela de 140 minutos)
+                if (jogosData.length > 0 && rodada.tipo !== 'campeao') {
+                    const agora = new Date();
+                    const jogosOrdenados = [...jogosData].sort((a, b) => new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime());
+                    
+                    let proxJogoId = '';
+                    for (let j of jogosOrdenados) {
+                        if (!j.data_hora) continue;
+                        const gameDate = new Date(j.data_hora);
+                        const gameEnd = new Date(gameDate.getTime() + 140 * 60000); // Adiciona 140 minutos
+                        if (agora <= gameEnd) {
+                            proxJogoId = j.id;
+                            break;
+                        }
+                    }
+                    // Se todos já passaram, seleciona o último da lista
+                    if (!proxJogoId) proxJogoId = jogosOrdenados[jogosOrdenados.length - 1].id;
+                    setJogoSelecionadoId(proxJogoId);
+                }
             }
         } catch (err) {
             console.error(err);
@@ -132,10 +151,9 @@ const Ranking = () => {
     const renderPalpiteCampeao = (cartela_id: number) => {
         if (rodadaAtual?.tipo !== 'campeao') return null;
 
-        const palpite = auditoriaCompleta.find((a: any) => a.cartela_id === cartela_id);
+        const palpite = auditoriaCompleta.find((a: any) => a.cartela_id === cartela_id || a.id_cartela === cartela_id);
         if (!palpite || !palpite.palpite_texto) return null;
 
-        // Regra Especial de Ocultação: Se estiver liberado para aposta, NINGUÉM pode ver a seleção alheia
         if (!apostasBloqueadas) {
             return (
                 <Box display="flex" alignItems="center" gap={1} mt={0.5}>
@@ -145,7 +163,6 @@ const Ranking = () => {
             );
         }
 
-        // Se bloqueou (apostas fechadas) ou já encerrou, revela o palpite
         const team = teams.find((t: any) => t.nome === palpite.palpite_texto);
         return (
             <Box display="flex" alignItems="center" gap={1} mt={0.5} style={{ backgroundColor: '#f1f5f9', padding: '4px 8px', borderRadius: '6px', width: 'fit-content' }}>
@@ -155,13 +172,44 @@ const Ranking = () => {
         );
     };
 
+    const renderPalpiteDropdown = (cartela_id: number) => {
+        if (!apostasBloqueadas || isCampeao || !jogoSelecionadoId) return null;
+        const jogo = jogosRodada.find(j => String(j.id) === String(jogoSelecionadoId));
+        if (!jogo) return null;
+
+        const palpite = auditoriaCompleta.find((a: any) =>
+            (a.cartela_id === cartela_id || a.id_cartela === cartela_id) &&
+            a.time_casa === jogo.time_casa &&
+            a.time_visitante === jogo.time_visitante
+        );
+
+        if (!palpite) return (
+            <Box display="flex" alignItems="center" gap={1} mt={0.5}>
+                <Typography variant="caption" color="#cbd5e1" fontWeight="bold">Sem palpite ❌</Typography>
+            </Box>
+        );
+
+        return (
+            <Box display="flex" alignItems="center" gap={1} mt={0.5} style={{ backgroundColor: '#f8fafc', padding: '4px 10px', borderRadius: '8px', border: '1px solid #e2e8f0', width: 'fit-content' }}>
+                <Typography variant="caption" fontWeight="900" color="#334155">{palpite.palpite_casa}</Typography>
+                <Typography variant="caption" color="#94a3b8" fontWeight="bold">X</Typography>
+                <Typography variant="caption" fontWeight="900" color="#334155">{palpite.palpite_visitante}</Typography>
+            </Box>
+        );
+    };
+
+    const verificarSeEVoce = (participant: any) => {
+        if (!usuarioLogado) return false;
+        return String(participant.usuario_id) === String(usuarioLogado.id) || String(participant.cartela_id) === String(usuarioLogado.cartela_id);
+    };
+
+    // --- CÁLCULOS DO RANKING E PÓDIO ---
     const totalCartelasCompradas = aprovados.length;
     const valorArrecadadoTotal = totalCartelasCompradas * (rodadaAtual?.preco || VALOR_INSCRICAO);
     const valorPremioTotal = valorArrecadadoTotal * 0.90;
 
     const isCampeao = rodadaAtual?.tipo === 'campeao';
     
-    // Regra Pódio: Se for placares (jogos > 0). Se for campeão (só mostra se alguém tiver pontuado > 0)
     const mostrarPodio = isCampeao 
         ? aprovados.some(p => p.pontuacao_total > 0) 
         : statusJogos.finalizados > 0;
@@ -186,13 +234,28 @@ const Ranking = () => {
         restoRanking = [...aprovados]; 
     }
 
-    // Aposta de Campeão não tem 1º, 2º e 3º. Quem acerta o campeão, ganha (ou divide) o pote TOTAL dos 90%!
     const premio1PorPessoa = isCampeao 
         ? valorPremioTotal / (ganhadores1.length || 1) 
         : (valorPremioTotal * 0.60) / (ganhadores1.length || 1);
     
     const premio2PorPessoa = (valorPremioTotal * 0.30) / (ganhadores2.length || 1);
     const premio3PorPessoa = (valorPremioTotal * 0.10) / (ganhadores3.length || 1);
+
+    // --- CÁLCULO PARA A STICKY BAR ("VOCÊ") ---
+    let minhaPosicao = -1;
+    let meusPontos = 0;
+    let diferencaPraCima = 0;
+
+    if (usuarioLogado) {
+        const indexRanking = aprovados.findIndex(p => String(p.usuario_id) === String(usuarioLogado.id) || String(p.cartela_id) === String(usuarioLogado.cartela_id));
+        if (indexRanking !== -1) {
+            minhaPosicao = indexRanking + 1;
+            meusPontos = aprovados[indexRanking].pontuacao_total;
+            if (indexRanking > 0) {
+                diferencaPraCima = aprovados[indexRanking - 1].pontuacao_total - meusPontos;
+            }
+        }
+    }
 
     let textoStatusRodada = "Aguardando Resultados ⏳";
     let corStatusRodada = "#64748b"; 
@@ -205,14 +268,27 @@ const Ranking = () => {
         else if (statusJogos.finalizados > 0) { textoStatusRodada = `🔄 PARCIAL (${statusJogos.finalizados}/${statusJogos.total} jogos)`; corStatusRodada = "#3b82f6"; }
     }
 
+    // --- ABRIR SECADOR OTIMIZADO (CACHE) ---
     const abrirSecador = async (itemRanking: any) => {
         if (!apostasBloqueadas) { alert("🔒 O Modo Secador só é liberado quando o Admin pausar as apostas da rodada!"); return; }
         setCartelaSelecionada(itemRanking);
+
+        const idCache = String(itemRanking.cartela_id);
+        if (palpitesCache[idCache]) {
+            setPalpitesSecador(palpitesCache[idCache]);
+            setModalAberto(true);
+            return;
+        }
+
         try {
             const res = await fetch(`${apiUrl}/meus-palpites/${itemRanking.usuario_id}`);
             const dados = await res.json();
             const bilheteEspecifico = dados.find((c: any) => c.cartela_id === itemRanking.cartela_id);
-            setPalpitesSecador(bilheteEspecifico ? bilheteEspecifico.palpites : []);
+            const palpites = bilheteEspecifico ? bilheteEspecifico.palpites : [];
+            
+            // Salva no cache
+            setPalpitesCache(prev => ({ ...prev, [idCache]: palpites }));
+            setPalpitesSecador(palpites);
             setModalAberto(true);
         } catch (error) { alert("Erro ao buscar os palpites deste bilhete."); }
     };
@@ -277,7 +353,7 @@ const Ranking = () => {
     if (loading) return <Container maxWidth="md" style={{ textAlign: "center", marginTop: "100px" }}><CircularProgress style={{ color: "#fbbf24" }} /><Typography style={{ color: "#1e293b", marginTop: "20px", fontWeight: "bold" }}>Calculando Ranking Oficial...</Typography></Container>;
 
     return (
-        <div style={{ backgroundColor: "#e2e8f0", minHeight: "100vh", padding: "40px 0", position: "relative" }}>
+        <div style={{ backgroundColor: "#e2e8f0", minHeight: "100vh", padding: "40px 0", paddingBottom: "100px", position: "relative" }}>
             <Container maxWidth="md">
                 
                 {rodadasRanking.length > 1 && (
@@ -320,6 +396,28 @@ const Ranking = () => {
                     </Box>
                 </Paper>
 
+                {/* PAINEL DO DROPDOWN DO SECADOR (SÓ APARECE SE BLOQUEADO E NÃO FOR CAMPEAO) */}
+                {apostasBloqueadas && !isCampeao && jogosRodada.length > 0 && (
+                    <Box mb={3} p={2.5} borderRadius="16px" bgcolor="white" boxShadow="0 4px 15px rgba(0,0,0,0.05)" border="1px solid #e2e8f0">
+                        <Typography variant="subtitle2" color="#64748b" fontWeight="900" mb={1} display="flex" alignItems="center" gap="8px">
+                            <Visibility fontSize="small" color="primary" /> 
+                            MODO SECADOR: O que a galera apostou nesse jogo?
+                        </Typography>
+                        <select
+                            value={jogoSelecionadoId}
+                            onChange={(e) => setJogoSelecionadoId(e.target.value)}
+                            style={{ width: '100%', padding: '12px 15px', borderRadius: '8px', border: '2px solid #cbd5e1', fontWeight: 'bold', fontSize: '15px', outline: 'none', backgroundColor: '#f8fafc', color: '#1e293b' }}
+                        >
+                            <option value="">-- Selecione uma partida para ver no ranking --</option>
+                            {jogosRodada.map(j => (
+                                <option key={j.id} value={j.id}>
+                                    {j.time_casa} x {j.time_visitante} (Dia {new Date(j.data_hora).toLocaleString('pt-BR', {day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'})})
+                                </option>
+                            ))}
+                        </select>
+                    </Box>
+                )}
+
                 <Box mb={5}>
                     {mostrarPodio && ganhadores1.length > 0 && (
                         <Paper style={{ padding: "20px", borderRadius: "12px", backgroundColor: "#fffbeb", borderLeft: "6px solid #fbbf24", marginBottom: "15px" }}>
@@ -328,9 +426,12 @@ const Ranking = () => {
                                 <div key={g.cartela_id} onClick={() => abrirSecador(g)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", borderBottom: "1px dashed #fcd34d", paddingBottom: "10px", cursor: "pointer" }}>
                                     <div>
                                         <Typography variant="h6" style={{ fontWeight: "900", color: "#1e293b", display: "flex", alignItems: "center", gap: "8px" }}>
-                                            {g.nome || g.usuario_nome} <span style={{ fontSize: '12px', backgroundColor: '#fde68a', color: '#92400e', padding: '2px 8px', borderRadius: '8px' }}>#{g.numero_bilhete || g.cartela_id}</span>
+                                            {g.nome || g.usuario_nome} 
+                                            <span style={{ fontSize: '12px', backgroundColor: '#fde68a', color: '#92400e', padding: '2px 8px', borderRadius: '8px' }}>#{g.numero_bilhete || g.cartela_id}</span>
+                                            {verificarSeEVoce(g) && <span style={{ fontSize: '10px', backgroundColor: '#3b82f6', color: 'white', padding: '3px 8px', borderRadius: '12px', letterSpacing: '1px' }}>VOCÊ</span>}
                                         </Typography>
                                         {renderPalpiteCampeao(g.cartela_id)}
+                                        {renderPalpiteDropdown(g.cartela_id)}
                                     </div>
                                     <div style={{ textAlign: "right" }}>
                                         <Typography style={{ fontWeight: "900", color: "#d97706" }}>{g.pontuacao_total} pts</Typography>
@@ -348,9 +449,12 @@ const Ranking = () => {
                                 <div key={g.cartela_id} onClick={() => abrirSecador(g)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", borderBottom: "1px dashed #cbd5e1", paddingBottom: "10px", cursor: "pointer" }}>
                                     <div>
                                         <Typography variant="h6" style={{ fontWeight: "bold", color: "#1e293b", display: "flex", alignItems: "center", gap: "8px" }}>
-                                            {g.nome || g.usuario_nome} <span style={{ fontSize: '12px', backgroundColor: '#e2e8f0', color: '#475569', padding: '2px 8px', borderRadius: '8px' }}>#{g.numero_bilhete || g.cartela_id}</span>
+                                            {g.nome || g.usuario_nome} 
+                                            <span style={{ fontSize: '12px', backgroundColor: '#e2e8f0', color: '#475569', padding: '2px 8px', borderRadius: '8px' }}>#{g.numero_bilhete || g.cartela_id}</span>
+                                            {verificarSeEVoce(g) && <span style={{ fontSize: '10px', backgroundColor: '#3b82f6', color: 'white', padding: '3px 8px', borderRadius: '12px', letterSpacing: '1px' }}>VOCÊ</span>}
                                         </Typography>
                                         {renderPalpiteCampeao(g.cartela_id)}
+                                        {renderPalpiteDropdown(g.cartela_id)}
                                     </div>
                                     <div style={{ textAlign: "right" }}>
                                         <Typography style={{ fontWeight: "900", color: "#64748b" }}>{g.pontuacao_total} pts</Typography>
@@ -368,9 +472,12 @@ const Ranking = () => {
                                 <div key={g.cartela_id} onClick={() => abrirSecador(g)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", borderBottom: "1px dashed #fed7aa", paddingBottom: "10px", cursor: "pointer" }}>
                                     <div>
                                         <Typography variant="h6" style={{ fontWeight: "bold", color: "#1e293b", display: "flex", alignItems: "center", gap: "8px" }}>
-                                            {g.nome || g.usuario_nome} <span style={{ fontSize: '12px', backgroundColor: '#ffedd5', color: '#9a3412', padding: '2px 8px', borderRadius: '8px' }}>#{g.numero_bilhete || g.cartela_id}</span>
+                                            {g.nome || g.usuario_nome} 
+                                            <span style={{ fontSize: '12px', backgroundColor: '#ffedd5', color: '#9a3412', padding: '2px 8px', borderRadius: '8px' }}>#{g.numero_bilhete || g.cartela_id}</span>
+                                            {verificarSeEVoce(g) && <span style={{ fontSize: '10px', backgroundColor: '#3b82f6', color: 'white', padding: '3px 8px', borderRadius: '12px', letterSpacing: '1px' }}>VOCÊ</span>}
                                         </Typography>
                                         {renderPalpiteCampeao(g.cartela_id)}
+                                        {renderPalpiteDropdown(g.cartela_id)}
                                     </div>
                                     <div style={{ textAlign: "right" }}>
                                         <Typography style={{ fontWeight: "900", color: "#9a3412" }}>{g.pontuacao_total} pts</Typography>
@@ -387,15 +494,17 @@ const Ranking = () => {
                         <List>
                             {restoRanking.map((participant, index) => (
                                 <React.Fragment key={index}>
-                                    <ListItem onClick={() => abrirSecador(participant)} style={{ padding: "15px", cursor: "pointer" }}>
+                                    <ListItem onClick={() => abrirSecador(participant)} style={{ padding: "15px", cursor: "pointer", backgroundColor: verificarSeEVoce(participant) ? '#eff6ff' : 'transparent' }}>
                                         <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
                                             <Typography style={{ fontWeight: "900", color: "#94a3b8", width: "40px" }}>{mostrarPodio && !isCampeao ? `#${index + 4}` : "-"}</Typography>
                                             <div style={{ flex: 1 }}>
                                                 <Typography style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: "bold", color: "#334155" }}>
                                                     {participant.nome || participant.usuario_nome} 
                                                     <span style={{ fontSize: '11px', backgroundColor: '#f1f5f9', color: '#64748b', padding: '2px 8px', borderRadius: '8px' }}>#{participant.numero_bilhete || participant.cartela_id}</span>
+                                                    {verificarSeEVoce(participant) && <span style={{ fontSize: '10px', backgroundColor: '#3b82f6', color: 'white', padding: '3px 8px', borderRadius: '12px', letterSpacing: '1px' }}>VOCÊ</span>}
                                                 </Typography>
                                                 {renderPalpiteCampeao(participant.cartela_id)}
+                                                {renderPalpiteDropdown(participant.cartela_id)}
                                             </div>
                                             <Typography style={{ fontWeight: "900", color: "#1e293b" }}>{participant.pontuacao_total} pts</Typography>
                                         </div>
@@ -412,6 +521,7 @@ const Ranking = () => {
                     <AppButton style={{ width: "200px", padding: "12px", backgroundColor: "#64748b", border: "none" }} label="Voltar à Home" onClick={() => history.push("/public")} />
                 </Box>
 
+                {/* MODAL DETALHADO DO SECADOR (Sem alterações drásticas, mantém a listagem bonita) */}
                 <Dialog open={modalAberto} onClose={() => setModalAberto(false)} fullWidth maxWidth="sm" PaperProps={{ style: { borderRadius: "16px", backgroundColor: "#f8fafc" } }}>
                     <DialogTitle style={{ backgroundColor: "#1e293b", color: "white", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px" }}>
                         <span style={{ fontWeight: "bold", color: "white" }}>🔍 Secador: Bilhete #{cartelaSelecionada?.numero_bilhete || cartelaSelecionada?.cartela_id}</span>
@@ -462,7 +572,50 @@ const Ranking = () => {
                         )}
                     </DialogContent>
                 </Dialog>
+
             </Container>
+
+            {/* STICKY BAR: BARRA INFERIOR DE DESTAQUE ("SUA APOSTA") */}
+            {minhaPosicao !== -1 && (
+                <Box sx={{
+                    position: 'fixed',
+                    bottom: 0,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: '100%',
+                    maxWidth: '900px', // Limita o tamanho no PC
+                    bgcolor: '#1e293b',
+                    color: 'white',
+                    p: 2,
+                    borderTopLeftRadius: 16,
+                    borderTopRightRadius: 16,
+                    boxShadow: '0 -4px 15px rgba(0,0,0,0.4)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    zIndex: 1000,
+                    borderTop: '3px solid #3b82f6' // Borda azul para dar destaque
+                }}>
+                    <Box>
+                        <Typography variant="caption" color="#cbd5e1" fontWeight="bold">SUA POSIÇÃO</Typography>
+                        <Typography variant="h6" color="#fcd34d" fontWeight="900" sx={{ lineHeight: 1 }}>{minhaPosicao}º Lugar</Typography>
+                    </Box>
+                    <Box textAlign="right">
+                        <Typography variant="h6" fontWeight="900" sx={{ lineHeight: 1 }}>{meusPontos} pts</Typography>
+                        {minhaPosicao > 1 && diferencaPraCima > 0 && (
+                            <Typography variant="caption" color="#94a3b8" fontWeight="bold">
+                                Faltam {diferencaPraCima} pts pro {minhaPosicao - 1}º
+                            </Typography>
+                        )}
+                        {minhaPosicao === 1 && (
+                            <Typography variant="caption" color="#10b981" fontWeight="bold">
+                                Você é o líder! 🏆
+                            </Typography>
+                        )}
+                    </Box>
+                </Box>
+            )}
+
         </div>
     );
 };
