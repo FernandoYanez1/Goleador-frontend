@@ -120,7 +120,7 @@ const Ranking = () => {
                 setStatusJogos({ finalizados: jogosFinalizados, total: jogosData.length });
                 setJogosRodada(jogosData);
 
-                // NOVA LOGICA DO SECADOR (Apenas seleciona se o jogo estiver rolando - janela de 120min)
+                // LÓGICA DO SECADOR (120min de janela)
                 if (jogosData.length > 0 && rodada.tipo !== 'campeao') {
                     const agora = new Date().getTime();
                     let jogoRolandoId = '';
@@ -135,7 +135,7 @@ const Ranking = () => {
                             break;
                         }
                     }
-                    setJogoSelecionadoId(jogoRolandoId); // Fica vazio se nenhum jogo bater a regra
+                    setJogoSelecionadoId(jogoRolandoId); // Fica vazio se nenhum jogo estiver rolando
                 }
             }
         } catch (err) {
@@ -188,9 +188,9 @@ const Ranking = () => {
 
         return (
             <Box display="flex" alignItems="center" gap={1} mt={0.5} style={{ backgroundColor: '#f8fafc', padding: '4px 10px', borderRadius: '8px', border: '1px solid #e2e8f0', width: 'fit-content' }}>
-                <Typography variant="caption" fontWeight="900" color="#334155">{palpite.palpite_casa}</Typography>
-                <Typography variant="caption" color="#94a3b8" fontWeight="bold">X</Typography>
-                <Typography variant="caption" fontWeight="900" color="#334155">{palpite.palpite_visitante}</Typography>
+                <Typography variant="caption" fontWeight="900" color="#334155" fontSize="13px">{palpite.palpite_casa}</Typography>
+                <Typography variant="caption" color="#94a3b8" fontWeight="bold" fontSize="11px">X</Typography>
+                <Typography variant="caption" fontWeight="900" color="#334155" fontSize="13px">{palpite.palpite_visitante}</Typography>
             </Box>
         );
     };
@@ -403,14 +403,15 @@ const Ranking = () => {
                     </Box>
                 </Paper>
 
+                {/* PAINEL DO DROPDOWN DO SECADOR COM LAYOUT CENTRALIZADO E MAIOR */}
                 {apostasBloqueadas && !isCampeao && jogosRodada.length > 0 && (
                     <Box mb={3} p={2.5} borderRadius="16px" bgcolor="white" boxShadow="0 4px 15px rgba(0,0,0,0.05)" border="1px solid #e2e8f0">
-                        <Typography variant="subtitle2" color="#64748b" fontWeight="900" mb={1} display="flex" alignItems="center" gap="8px">
+                        <Typography variant="subtitle2" color="#64748b" fontWeight="900" mb={1.5} display="flex" alignItems="center" gap="8px">
                             <Visibility fontSize="small" color="primary" /> 
                             MODO SECADOR: O que a galera apostou nesse jogo?
                         </Typography>
                         
-                        <FormControl fullWidth size="small">
+                        <FormControl fullWidth size="medium">
                             <Select
                                 value={jogoSelecionadoId}
                                 onChange={(e) => setJogoSelecionadoId(e.target.value)}
@@ -419,13 +420,29 @@ const Ranking = () => {
                                     bgcolor: '#f8fafc',
                                     borderRadius: '8px',
                                     '& .MuiOutlinedInput-notchedOutline': { borderColor: '#cbd5e1', borderWidth: '2px' },
-                                    fontWeight: 'bold',
-                                    color: '#1e293b'
+                                    color: '#1e293b',
+                                    // Força o conteúdo renderizado a ficar no centro
+                                    '& .MuiSelect-select': {
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                        paddingY: '12px',
+                                    }
+                                }}
+                                MenuProps={{
+                                    PaperProps: {
+                                        sx: {
+                                            borderRadius: '12px',
+                                            boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
+                                            mt: 1
+                                        }
+                                    }
                                 }}
                             >
-                                <MenuItem value="">
-                                    <em>Nenhum jogo selecionado...</em>
+                                <MenuItem value="" sx={{ justifyContent: 'center', py: 2 }}>
+                                    <em style={{ color: '#94a3b8', fontWeight: 'bold' }}>Nenhum jogo selecionado...</em>
                                 </MenuItem>
+                                
                                 {jogosRodada.map(j => {
                                     const timeCasa = teams.find(t => t.nome === j.time_casa);
                                     const timeVisitante = teams.find(t => t.nome === j.time_visitante);
@@ -435,13 +452,13 @@ const Ranking = () => {
                                     const siglaVisitante = timeVisitante?.sigla || j.time_visitante.substring(0, 3).toUpperCase();
 
                                     return (
-                                        <MenuItem key={j.id} value={j.id}>
-                                            <Box display="flex" alignItems="center" gap={1.5}>
-                                                <img src={logoCasa} style={{ width: 22, height: 16, objectFit: 'cover', borderRadius: '2px', border: '1px solid #e2e8f0' }} alt="Casa" />
-                                                <Typography fontWeight="bold" fontSize="14px" color="#334155">{siglaCasa}</Typography>
-                                                <Typography color="#94a3b8" fontSize="12px" fontWeight="900">X</Typography>
-                                                <Typography fontWeight="bold" fontSize="14px" color="#334155">{siglaVisitante}</Typography>
-                                                <img src={logoVisitante} style={{ width: 22, height: 16, objectFit: 'cover', borderRadius: '2px', border: '1px solid #e2e8f0' }} alt="Visitante" />
+                                        <MenuItem key={j.id} value={j.id} sx={{ justifyContent: 'center', py: 1.5 }}>
+                                            <Box display="flex" alignItems="center" justifyContent="center" gap={2} width="100%">
+                                                <img src={logoCasa} style={{ width: 28, height: 20, objectFit: 'cover', borderRadius: '4px', border: '1px solid #cbd5e1' }} alt="Casa" />
+                                                <Typography fontWeight="900" fontSize="16px" color="#334155" sx={{ minWidth: '45px', textAlign: 'right' }}>{siglaCasa}</Typography>
+                                                <Typography color="#94a3b8" fontSize="14px" fontWeight="900">X</Typography>
+                                                <Typography fontWeight="900" fontSize="16px" color="#334155" sx={{ minWidth: '45px', textAlign: 'left' }}>{siglaVisitante}</Typography>
+                                                <img src={logoVisitante} style={{ width: 28, height: 20, objectFit: 'cover', borderRadius: '4px', border: '1px solid #cbd5e1' }} alt="Visitante" />
                                             </Box>
                                         </MenuItem>
                                     )
@@ -624,10 +641,10 @@ const Ranking = () => {
 
             </Container>
 
-            {/* STICKY BAR CORRIGIDA (Cores forçadas e Responsiva) */}
+            {/* STICKY BAR CORRIGIDA */}
             {exibirBarra && (
                 <Box sx={{
-                    display: { xs: 'flex', md: 'none' }, // Oculta no Computador, Mostra no Celular (xs e sm)
+                    display: { xs: 'flex', md: 'none' }, 
                     position: 'fixed',
                     bottom: 0,
                     left: 0,
