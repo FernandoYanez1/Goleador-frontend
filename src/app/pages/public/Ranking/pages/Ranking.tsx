@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Container, Typography, Paper, List, ListItem, Divider, CircularProgress, Box, Dialog, DialogTitle, DialogContent, Tooltip } from "@mui/material";
+import { Container, Typography, Paper, List, ListItem, Divider, CircularProgress, Box, Dialog, DialogTitle, DialogContent, Tooltip, Select, MenuItem, FormControl } from "@mui/material";
 import AppButton from "../../../../../vendors/components/Button";
 import { useHistory } from "react-router-dom";
 import { EmojiEvents, PictureAsPdf, MilitaryTech, Visibility, Lock } from "@mui/icons-material";
@@ -26,7 +26,6 @@ const Ranking = () => {
     const [cartelaSelecionada, setCartelaSelecionada] = useState<any>(null);
     const [palpitesSecador, setPalpitesSecador] = useState<any[]>([]);
     
-    // Novos Estados para o Secador Dropdown e Otimização
     const [jogosRodada, setJogosRodada] = useState<any[]>([]);
     const [jogoSelecionadoId, setJogoSelecionadoId] = useState<string | number>('');
     const [palpitesCache, setPalpitesCache] = useState<Record<string, any[]>>({});
@@ -98,7 +97,7 @@ const Ranking = () => {
         setRodadaAtual(rodada);
         setApostasBloqueadas(rodada.status === 'pausada' || rodada.status === 'encerrada' || rodada.status === 'finalizada');
         setLoading(true);
-        setJogoSelecionadoId(''); // Reset no dropdown ao mudar a rodada
+        setJogoSelecionadoId('');
 
         try {
             const [rankRes, jogosRes] = await Promise.all([
@@ -121,24 +120,22 @@ const Ranking = () => {
                 setStatusJogos({ finalizados: jogosFinalizados, total: jogosData.length });
                 setJogosRodada(jogosData);
 
-                // LOGICA: Encontrar o jogo atual ou mais próximo (Janela de 140 minutos)
+                // NOVA LOGICA DO SECADOR (Apenas seleciona se o jogo estiver rolando - janela de 120min)
                 if (jogosData.length > 0 && rodada.tipo !== 'campeao') {
-                    const agora = new Date();
-                    const jogosOrdenados = [...jogosData].sort((a, b) => new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime());
+                    const agora = new Date().getTime();
+                    let jogoRolandoId = '';
                     
-                    let proxJogoId = '';
-                    for (let j of jogosOrdenados) {
+                    for (let j of jogosData) {
                         if (!j.data_hora) continue;
-                        const gameDate = new Date(j.data_hora);
-                        const gameEnd = new Date(gameDate.getTime() + 140 * 60000); // Adiciona 140 minutos
-                        if (agora <= gameEnd) {
-                            proxJogoId = j.id;
+                        const start = new Date(j.data_hora).getTime();
+                        const end = start + 120 * 60000; // 120 minutos após o inicio
+                        
+                        if (agora >= start && agora <= end) {
+                            jogoRolandoId = j.id;
                             break;
                         }
                     }
-                    // Se todos já passaram, seleciona o último da lista
-                    if (!proxJogoId) proxJogoId = jogosOrdenados[jogosOrdenados.length - 1].id;
-                    setJogoSelecionadoId(proxJogoId);
+                    setJogoSelecionadoId(jogoRolandoId); // Fica vazio se nenhum jogo bater a regra
                 }
             }
         } catch (err) {
@@ -203,7 +200,6 @@ const Ranking = () => {
         return String(participant.usuario_id) === String(usuarioLogado.id) || String(participant.cartela_id) === String(usuarioLogado.cartela_id);
     };
 
-    // --- CÁLCULOS DO RANKING E PÓDIO ---
     const totalCartelasCompradas = aprovados.length;
     const valorArrecadadoTotal = totalCartelasCompradas * (rodadaAtual?.preco || VALOR_INSCRICAO);
     const valorPremioTotal = valorArrecadadoTotal * 0.90;
@@ -241,18 +237,31 @@ const Ranking = () => {
     const premio2PorPessoa = (valorPremioTotal * 0.30) / (ganhadores2.length || 1);
     const premio3PorPessoa = (valorPremioTotal * 0.10) / (ganhadores3.length || 1);
 
-    // --- CÁLCULO PARA A STICKY BAR ("VOCÊ") ---
-    let minhaPosicao = -1;
+    let minhaPosicaoTexto = "";
     let meusPontos = 0;
     let diferencaPraCima = 0;
+    let exibirBarra = false;
 
     if (usuarioLogado) {
-        const indexRanking = aprovados.findIndex(p => String(p.usuario_id) === String(usuarioLogado.id) || String(p.cartela_id) === String(usuarioLogado.cartela_id));
+        const indexRanking = aprovados.findIndex(p => verificarSeEVoce(p));
         if (indexRanking !== -1) {
-            minhaPosicao = indexRanking + 1;
-            meusPontos = aprovados[indexRanking].pontuacao_total;
-            if (indexRanking > 0) {
-                diferencaPraCima = aprovados[indexRanking - 1].pontuacao_total - meusPontos;
+            exibirBarra = true;
+            meusPontos = Number(aprovados[indexRanking].pontuacao_total);
+            
+            if (meusPontos === score1) {
+                minhaPosicaoTexto = "1º Lugar" + (ganhadores1.length > 1 ? " (Empatado)" : "");
+            } else if (meusPontos === score2) {
+                minhaPosicaoTexto = "2º Lugar" + (ganhadores2.length > 1 ? " (Empatado)" : "");
+            } else if (meusPontos === score3) {
+                minhaPosicaoTexto = "3º Lugar" + (ganhadores3.length > 1 ? " (Empatado)" : "");
+            } else {
+                const pos = pontuacoesUnicas.indexOf(meusPontos) + 1;
+                minhaPosicaoTexto = `${pos}º Lugar`;
+            }
+
+            const indexAcima = pontuacoesUnicas.indexOf(meusPontos) - 1;
+            if (indexAcima >= 0) {
+                diferencaPraCima = pontuacoesUnicas[indexAcima] - meusPontos;
             }
         }
     }
@@ -268,7 +277,6 @@ const Ranking = () => {
         else if (statusJogos.finalizados > 0) { textoStatusRodada = `🔄 PARCIAL (${statusJogos.finalizados}/${statusJogos.total} jogos)`; corStatusRodada = "#3b82f6"; }
     }
 
-    // --- ABRIR SECADOR OTIMIZADO (CACHE) ---
     const abrirSecador = async (itemRanking: any) => {
         if (!apostasBloqueadas) { alert("🔒 O Modo Secador só é liberado quando o Admin pausar as apostas da rodada!"); return; }
         setCartelaSelecionada(itemRanking);
@@ -286,7 +294,6 @@ const Ranking = () => {
             const bilheteEspecifico = dados.find((c: any) => c.cartela_id === itemRanking.cartela_id);
             const palpites = bilheteEspecifico ? bilheteEspecifico.palpites : [];
             
-            // Salva no cache
             setPalpitesCache(prev => ({ ...prev, [idCache]: palpites }));
             setPalpitesSecador(palpites);
             setModalAberto(true);
@@ -396,25 +403,51 @@ const Ranking = () => {
                     </Box>
                 </Paper>
 
-                {/* PAINEL DO DROPDOWN DO SECADOR (SÓ APARECE SE BLOQUEADO E NÃO FOR CAMPEAO) */}
                 {apostasBloqueadas && !isCampeao && jogosRodada.length > 0 && (
                     <Box mb={3} p={2.5} borderRadius="16px" bgcolor="white" boxShadow="0 4px 15px rgba(0,0,0,0.05)" border="1px solid #e2e8f0">
                         <Typography variant="subtitle2" color="#64748b" fontWeight="900" mb={1} display="flex" alignItems="center" gap="8px">
                             <Visibility fontSize="small" color="primary" /> 
                             MODO SECADOR: O que a galera apostou nesse jogo?
                         </Typography>
-                        <select
-                            value={jogoSelecionadoId}
-                            onChange={(e) => setJogoSelecionadoId(e.target.value)}
-                            style={{ width: '100%', padding: '12px 15px', borderRadius: '8px', border: '2px solid #cbd5e1', fontWeight: 'bold', fontSize: '15px', outline: 'none', backgroundColor: '#f8fafc', color: '#1e293b' }}
-                        >
-                            <option value="">-- Selecione uma partida para ver no ranking --</option>
-                            {jogosRodada.map(j => (
-                                <option key={j.id} value={j.id}>
-                                    {j.time_casa} x {j.time_visitante} (Dia {new Date(j.data_hora).toLocaleString('pt-BR', {day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'})})
-                                </option>
-                            ))}
-                        </select>
+                        
+                        <FormControl fullWidth size="small">
+                            <Select
+                                value={jogoSelecionadoId}
+                                onChange={(e) => setJogoSelecionadoId(e.target.value)}
+                                displayEmpty
+                                sx={{
+                                    bgcolor: '#f8fafc',
+                                    borderRadius: '8px',
+                                    '& .MuiOutlinedInput-notchedOutline': { borderColor: '#cbd5e1', borderWidth: '2px' },
+                                    fontWeight: 'bold',
+                                    color: '#1e293b'
+                                }}
+                            >
+                                <MenuItem value="">
+                                    <em>Nenhum jogo selecionado...</em>
+                                </MenuItem>
+                                {jogosRodada.map(j => {
+                                    const timeCasa = teams.find(t => t.nome === j.time_casa);
+                                    const timeVisitante = teams.find(t => t.nome === j.time_visitante);
+                                    const logoCasa = timeCasa?.bandeira || timeCasa?.logo_url || '/media/escudos-times/default.png';
+                                    const logoVisitante = timeVisitante?.bandeira || timeVisitante?.logo_url || '/media/escudos-times/default.png';
+                                    const siglaCasa = timeCasa?.sigla || j.time_casa.substring(0, 3).toUpperCase();
+                                    const siglaVisitante = timeVisitante?.sigla || j.time_visitante.substring(0, 3).toUpperCase();
+
+                                    return (
+                                        <MenuItem key={j.id} value={j.id}>
+                                            <Box display="flex" alignItems="center" gap={1.5}>
+                                                <img src={logoCasa} style={{ width: 22, height: 16, objectFit: 'cover', borderRadius: '2px', border: '1px solid #e2e8f0' }} alt="Casa" />
+                                                <Typography fontWeight="bold" fontSize="14px" color="#334155">{siglaCasa}</Typography>
+                                                <Typography color="#94a3b8" fontSize="12px" fontWeight="900">X</Typography>
+                                                <Typography fontWeight="bold" fontSize="14px" color="#334155">{siglaVisitante}</Typography>
+                                                <img src={logoVisitante} style={{ width: 22, height: 16, objectFit: 'cover', borderRadius: '2px', border: '1px solid #e2e8f0' }} alt="Visitante" />
+                                            </Box>
+                                        </MenuItem>
+                                    )
+                                })}
+                            </Select>
+                        </FormControl>
                     </Box>
                 )}
 
@@ -424,16 +457,18 @@ const Ranking = () => {
                             <Typography variant="subtitle2" style={{ color: "#b45309", fontWeight: "bold", marginBottom: "10px", display: "flex", alignItems: "center", gap: "5px" }}><EmojiEvents style={{ color: "#fbbf24" }} /> {isCampeao ? "Ganhadores do Pote Total" : "1º Lugar (60%)"} </Typography>
                             {ganhadores1.map(g => (
                                 <div key={g.cartela_id} onClick={() => abrirSecador(g)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", borderBottom: "1px dashed #fcd34d", paddingBottom: "10px", cursor: "pointer" }}>
-                                    <div>
-                                        <Typography variant="h6" style={{ fontWeight: "900", color: "#1e293b", display: "flex", alignItems: "center", gap: "8px" }}>
-                                            {g.nome || g.usuario_nome} 
-                                            <span style={{ fontSize: '12px', backgroundColor: '#fde68a', color: '#92400e', padding: '2px 8px', borderRadius: '8px' }}>#{g.numero_bilhete || g.cartela_id}</span>
-                                            {verificarSeEVoce(g) && <span style={{ fontSize: '10px', backgroundColor: '#3b82f6', color: 'white', padding: '3px 8px', borderRadius: '12px', letterSpacing: '1px' }}>VOCÊ</span>}
+                                    <div style={{ flex: 1, paddingRight: '10px' }}>
+                                        <Box display="flex" gap={1} mb={0.5} flexWrap="wrap">
+                                            <span style={{ fontSize: '11px', backgroundColor: '#fde68a', color: '#92400e', padding: '2px 8px', borderRadius: '8px', fontWeight: 'bold' }}>#{g.numero_bilhete || g.cartela_id}</span>
+                                            {verificarSeEVoce(g) && <span style={{ fontSize: '10px', backgroundColor: '#3b82f6', color: 'white', padding: '2px 8px', borderRadius: '12px', letterSpacing: '1px', fontWeight: 'bold' }}>VOCÊ</span>}
+                                        </Box>
+                                        <Typography variant="h6" style={{ fontWeight: "900", color: "#1e293b", lineHeight: 1.2, wordBreak: 'break-word' }}>
+                                            {g.nome || g.usuario_nome}
                                         </Typography>
                                         {renderPalpiteCampeao(g.cartela_id)}
                                         {renderPalpiteDropdown(g.cartela_id)}
                                     </div>
-                                    <div style={{ textAlign: "right" }}>
+                                    <div style={{ textAlign: "right", minWidth: "70px" }}>
                                         <Typography style={{ fontWeight: "900", color: "#d97706" }}>{g.pontuacao_total} pts</Typography>
                                         <Typography variant="caption" style={{ color: "#047857", fontWeight: "bold", backgroundColor: "#d1fae5", padding: "4px 8px", borderRadius: "4px" }}>{premio1PorPessoa.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</Typography>
                                     </div>
@@ -447,16 +482,18 @@ const Ranking = () => {
                             <Typography variant="subtitle2" style={{ color: "#475569", fontWeight: "bold", marginBottom: "10px", display: "flex", alignItems: "center", gap: "5px" }}><MilitaryTech style={{ color: "#94a3b8" }} /> 2º Lugar (30%)</Typography>
                             {ganhadores2.map(g => (
                                 <div key={g.cartela_id} onClick={() => abrirSecador(g)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", borderBottom: "1px dashed #cbd5e1", paddingBottom: "10px", cursor: "pointer" }}>
-                                    <div>
-                                        <Typography variant="h6" style={{ fontWeight: "bold", color: "#1e293b", display: "flex", alignItems: "center", gap: "8px" }}>
-                                            {g.nome || g.usuario_nome} 
-                                            <span style={{ fontSize: '12px', backgroundColor: '#e2e8f0', color: '#475569', padding: '2px 8px', borderRadius: '8px' }}>#{g.numero_bilhete || g.cartela_id}</span>
-                                            {verificarSeEVoce(g) && <span style={{ fontSize: '10px', backgroundColor: '#3b82f6', color: 'white', padding: '3px 8px', borderRadius: '12px', letterSpacing: '1px' }}>VOCÊ</span>}
+                                    <div style={{ flex: 1, paddingRight: '10px' }}>
+                                        <Box display="flex" gap={1} mb={0.5} flexWrap="wrap">
+                                            <span style={{ fontSize: '11px', backgroundColor: '#e2e8f0', color: '#475569', padding: '2px 8px', borderRadius: '8px', fontWeight: 'bold' }}>#{g.numero_bilhete || g.cartela_id}</span>
+                                            {verificarSeEVoce(g) && <span style={{ fontSize: '10px', backgroundColor: '#3b82f6', color: 'white', padding: '2px 8px', borderRadius: '12px', letterSpacing: '1px', fontWeight: 'bold' }}>VOCÊ</span>}
+                                        </Box>
+                                        <Typography variant="h6" style={{ fontWeight: "bold", color: "#1e293b", lineHeight: 1.2, wordBreak: 'break-word' }}>
+                                            {g.nome || g.usuario_nome}
                                         </Typography>
                                         {renderPalpiteCampeao(g.cartela_id)}
                                         {renderPalpiteDropdown(g.cartela_id)}
                                     </div>
-                                    <div style={{ textAlign: "right" }}>
+                                    <div style={{ textAlign: "right", minWidth: "70px" }}>
                                         <Typography style={{ fontWeight: "900", color: "#64748b" }}>{g.pontuacao_total} pts</Typography>
                                         <Typography variant="caption" style={{ color: "#047857", fontWeight: "bold", backgroundColor: "#d1fae5", padding: "4px 8px", borderRadius: "4px" }}>{premio2PorPessoa.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</Typography>
                                     </div>
@@ -470,16 +507,18 @@ const Ranking = () => {
                             <Typography variant="subtitle2" style={{ color: "#9a3412", fontWeight: "bold", marginBottom: "10px", display: "flex", alignItems: "center", gap: "5px" }}><MilitaryTech style={{ color: "#b45309" }} /> 3º Lugar (10%)</Typography>
                             {ganhadores3.map(g => (
                                 <div key={g.cartela_id} onClick={() => abrirSecador(g)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", borderBottom: "1px dashed #fed7aa", paddingBottom: "10px", cursor: "pointer" }}>
-                                    <div>
-                                        <Typography variant="h6" style={{ fontWeight: "bold", color: "#1e293b", display: "flex", alignItems: "center", gap: "8px" }}>
-                                            {g.nome || g.usuario_nome} 
-                                            <span style={{ fontSize: '12px', backgroundColor: '#ffedd5', color: '#9a3412', padding: '2px 8px', borderRadius: '8px' }}>#{g.numero_bilhete || g.cartela_id}</span>
-                                            {verificarSeEVoce(g) && <span style={{ fontSize: '10px', backgroundColor: '#3b82f6', color: 'white', padding: '3px 8px', borderRadius: '12px', letterSpacing: '1px' }}>VOCÊ</span>}
+                                    <div style={{ flex: 1, paddingRight: '10px' }}>
+                                        <Box display="flex" gap={1} mb={0.5} flexWrap="wrap">
+                                            <span style={{ fontSize: '11px', backgroundColor: '#ffedd5', color: '#9a3412', padding: '2px 8px', borderRadius: '8px', fontWeight: 'bold' }}>#{g.numero_bilhete || g.cartela_id}</span>
+                                            {verificarSeEVoce(g) && <span style={{ fontSize: '10px', backgroundColor: '#3b82f6', color: 'white', padding: '2px 8px', borderRadius: '12px', letterSpacing: '1px', fontWeight: 'bold' }}>VOCÊ</span>}
+                                        </Box>
+                                        <Typography variant="h6" style={{ fontWeight: "bold", color: "#1e293b", lineHeight: 1.2, wordBreak: 'break-word' }}>
+                                            {g.nome || g.usuario_nome}
                                         </Typography>
                                         {renderPalpiteCampeao(g.cartela_id)}
                                         {renderPalpiteDropdown(g.cartela_id)}
                                     </div>
-                                    <div style={{ textAlign: "right" }}>
+                                    <div style={{ textAlign: "right", minWidth: "70px" }}>
                                         <Typography style={{ fontWeight: "900", color: "#9a3412" }}>{g.pontuacao_total} pts</Typography>
                                         <Typography variant="caption" style={{ color: "#047857", fontWeight: "bold", backgroundColor: "#d1fae5", padding: "4px 8px", borderRadius: "4px" }}>{premio3PorPessoa.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</Typography>
                                     </div>
@@ -492,26 +531,36 @@ const Ranking = () => {
                 {restoRanking.length > 0 && (
                     <Paper elevation={2} style={{ padding: "10px", borderRadius: "16px", backgroundColor: "white" }}>
                         <List>
-                            {restoRanking.map((participant, index) => (
-                                <React.Fragment key={index}>
-                                    <ListItem onClick={() => abrirSecador(participant)} style={{ padding: "15px", cursor: "pointer", backgroundColor: verificarSeEVoce(participant) ? '#eff6ff' : 'transparent' }}>
-                                        <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
-                                            <Typography style={{ fontWeight: "900", color: "#94a3b8", width: "40px" }}>{mostrarPodio && !isCampeao ? `#${index + 4}` : "-"}</Typography>
-                                            <div style={{ flex: 1 }}>
-                                                <Typography style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: "bold", color: "#334155" }}>
-                                                    {participant.nome || participant.usuario_nome} 
-                                                    <span style={{ fontSize: '11px', backgroundColor: '#f1f5f9', color: '#64748b', padding: '2px 8px', borderRadius: '8px' }}>#{participant.numero_bilhete || participant.cartela_id}</span>
-                                                    {verificarSeEVoce(participant) && <span style={{ fontSize: '10px', backgroundColor: '#3b82f6', color: 'white', padding: '3px 8px', borderRadius: '12px', letterSpacing: '1px' }}>VOCÊ</span>}
-                                                </Typography>
-                                                {renderPalpiteCampeao(participant.cartela_id)}
-                                                {renderPalpiteDropdown(participant.cartela_id)}
+                            {restoRanking.map((participant, index) => {
+                                const pos = pontuacoesUnicas.indexOf(Number(participant.pontuacao_total)) + 1;
+                                
+                                return (
+                                    <React.Fragment key={index}>
+                                        <ListItem onClick={() => abrirSecador(participant)} style={{ padding: "15px", cursor: "pointer", backgroundColor: verificarSeEVoce(participant) ? '#eff6ff' : 'transparent' }}>
+                                            <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
+                                                <Typography style={{ fontWeight: "900", color: "#94a3b8", width: "40px" }}>{mostrarPodio && !isCampeao ? `#${pos}` : "-"}</Typography>
+                                                
+                                                <div style={{ flex: 1, paddingRight: '10px' }}>
+                                                    <Box display="flex" gap={1} mb={0.5} flexWrap="wrap">
+                                                        <span style={{ fontSize: '10px', backgroundColor: '#f1f5f9', color: '#64748b', padding: '2px 8px', borderRadius: '8px', fontWeight: 'bold' }}>#{participant.numero_bilhete || participant.cartela_id}</span>
+                                                        {verificarSeEVoce(participant) && <span style={{ fontSize: '9px', backgroundColor: '#3b82f6', color: 'white', padding: '2px 8px', borderRadius: '12px', letterSpacing: '1px', fontWeight: 'bold' }}>VOCÊ</span>}
+                                                    </Box>
+                                                    <Typography style={{ fontWeight: "bold", color: "#334155", lineHeight: 1.2, wordBreak: 'break-word' }}>
+                                                        {participant.nome || participant.usuario_nome}
+                                                    </Typography>
+                                                    {renderPalpiteCampeao(participant.cartela_id)}
+                                                    {renderPalpiteDropdown(participant.cartela_id)}
+                                                </div>
+                                                
+                                                <div style={{ textAlign: "right", minWidth: "50px" }}>
+                                                    <Typography style={{ fontWeight: "900", color: "#1e293b" }}>{participant.pontuacao_total} pts</Typography>
+                                                </div>
                                             </div>
-                                            <Typography style={{ fontWeight: "900", color: "#1e293b" }}>{participant.pontuacao_total} pts</Typography>
-                                        </div>
-                                    </ListItem>
-                                    {index < restoRanking.length - 1 && <Divider />}
-                                </React.Fragment>
-                            ))}
+                                        </ListItem>
+                                        {index < restoRanking.length - 1 && <Divider />}
+                                    </React.Fragment>
+                                );
+                            })}
                         </List>
                     </Paper>
                 )}
@@ -521,7 +570,7 @@ const Ranking = () => {
                     <AppButton style={{ width: "200px", padding: "12px", backgroundColor: "#64748b", border: "none" }} label="Voltar à Home" onClick={() => history.push("/public")} />
                 </Box>
 
-                {/* MODAL DETALHADO DO SECADOR (Sem alterações drásticas, mantém a listagem bonita) */}
+                {/* MODAL DO SECADOR */}
                 <Dialog open={modalAberto} onClose={() => setModalAberto(false)} fullWidth maxWidth="sm" PaperProps={{ style: { borderRadius: "16px", backgroundColor: "#f8fafc" } }}>
                     <DialogTitle style={{ backgroundColor: "#1e293b", color: "white", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px" }}>
                         <span style={{ fontWeight: "bold", color: "white" }}>🔍 Secador: Bilhete #{cartelaSelecionada?.numero_bilhete || cartelaSelecionada?.cartela_id}</span>
@@ -575,41 +624,38 @@ const Ranking = () => {
 
             </Container>
 
-            {/* STICKY BAR: BARRA INFERIOR DE DESTAQUE ("SUA APOSTA") */}
-            {minhaPosicao !== -1 && (
+            {/* STICKY BAR CORRIGIDA (Cores forçadas e Responsiva) */}
+            {exibirBarra && (
                 <Box sx={{
+                    display: { xs: 'flex', md: 'none' }, // Oculta no Computador, Mostra no Celular (xs e sm)
                     position: 'fixed',
                     bottom: 0,
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    width: '100%',
-                    maxWidth: '900px', // Limita o tamanho no PC
+                    left: 0,
+                    right: 0,
                     bgcolor: '#1e293b',
-                    color: 'white',
                     p: 2,
                     borderTopLeftRadius: 16,
                     borderTopRightRadius: 16,
                     boxShadow: '0 -4px 15px rgba(0,0,0,0.4)',
-                    display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     zIndex: 1000,
-                    borderTop: '3px solid #3b82f6' // Borda azul para dar destaque
+                    borderTop: '3px solid #3b82f6'
                 }}>
                     <Box>
-                        <Typography variant="caption" color="#cbd5e1" fontWeight="bold">SUA POSIÇÃO</Typography>
-                        <Typography variant="h6" color="#fcd34d" fontWeight="900" sx={{ lineHeight: 1 }}>{minhaPosicao}º Lugar</Typography>
+                        <Typography variant="caption" sx={{ color: "#cbd5e1", fontWeight: "bold" }}>SUA POSIÇÃO</Typography>
+                        <Typography variant="h6" sx={{ color: "#fcd34d", fontWeight: "900", lineHeight: 1 }}>{minhaPosicaoTexto}</Typography>
                     </Box>
                     <Box textAlign="right">
-                        <Typography variant="h6" fontWeight="900" sx={{ lineHeight: 1 }}>{meusPontos} pts</Typography>
-                        {minhaPosicao > 1 && diferencaPraCima > 0 && (
-                            <Typography variant="caption" color="#94a3b8" fontWeight="bold">
-                                Faltam {diferencaPraCima} pts pro {minhaPosicao - 1}º
+                        <Typography variant="h6" sx={{ color: "white", fontWeight: "900", lineHeight: 1 }}>{meusPontos} pts</Typography>
+                        {diferencaPraCima > 0 && (
+                            <Typography variant="caption" sx={{ color: "#94a3b8", fontWeight: "bold", display: 'block' }}>
+                                Faltam {diferencaPraCima} pts pra subir
                             </Typography>
                         )}
-                        {minhaPosicao === 1 && (
-                            <Typography variant="caption" color="#10b981" fontWeight="bold">
-                                Você é o líder! 🏆
+                        {meusPontos === score1 && (
+                            <Typography variant="caption" sx={{ color: "#10b981", fontWeight: "bold", display: 'block' }}>
+                                Você está no topo! 🏆
                             </Typography>
                         )}
                     </Box>
