@@ -89,11 +89,10 @@ export default function Brand() {
                 
             </div>
 
-            {/* CONTAINER DO BOTÃO FLUTUANTE EXPANSÍVEL (Usando Box do MUI para responsividade) */}
+            {/* CONTAINER DO BOTÃO FLUTUANTE EXPANSÍVEL */}
             <Box sx={{
                 position: 'fixed',
-                // Sobe para 90px no mobile para não sobrepor o menu novo, mantém 30px no PC
-                bottom: { xs: '90px', md: '30px' },
+                bottom: { xs: '90px', md: '30px' }, // Sobe no celular para não cobrir o menu
                 right: '30px',
                 display: 'flex',
                 flexDirection: 'column',
@@ -186,7 +185,7 @@ export default function Brand() {
                 </button>
             </Box>
 
-            {/* BOTTOM NAVIGATION (MENU INFERIOR MOBILE) */}
+            {/* BOTTOM NAVIGATION (MENU INFERIOR MOBILE) - CORES CORRIGIDAS */}
             <Box sx={{
                 display: { xs: 'flex', md: 'none' }, // Mostra apenas no Mobile
                 position: 'fixed',
@@ -196,30 +195,30 @@ export default function Brand() {
                 backgroundColor: '#1e293b',
                 borderTop: '1px solid #334155',
                 padding: '10px 0',
-                paddingBottom: 'max(10px, env(safe-area-inset-bottom))', // Respeita barras nativas de iPhones
+                paddingBottom: 'max(10px, env(safe-area-inset-bottom))', 
                 justifyContent: 'space-around',
                 alignItems: 'center',
                 zIndex: 999,
                 boxShadow: '0 -4px 10px rgba(0,0,0,0.3)'
             }}>
-                <Box onClick={() => history.push('/public/placar')} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#cbd5e1', cursor: 'pointer' }}>
+                <Box onClick={() => history.push('/public/placar')} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
                     <SportsSoccer sx={{ fontSize: 26, marginBottom: '2px', color: '#10b981' }} />
-                    <Typography sx={{ fontSize: '11px', fontWeight: 'bold' }}>Palpitar</Typography>
+                    <Typography sx={{ fontSize: '11px', fontWeight: 'bold', color: '#f8fafc' }}>Palpitar</Typography>
                 </Box>
 
-                <Box onClick={() => history.push('/public/palpites')} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#cbd5e1', cursor: 'pointer' }}>
-                    <Receipt sx={{ fontSize: 26, marginBottom: '2px' }} />
-                    <Typography sx={{ fontSize: '11px', fontWeight: 'bold' }}>Bilhetes</Typography>
+                <Box onClick={() => history.push('/public/palpites')} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
+                    <Receipt sx={{ fontSize: 26, marginBottom: '2px', color: '#cbd5e1' }} />
+                    <Typography sx={{ fontSize: '11px', fontWeight: 'bold', color: '#cbd5e1' }}>Bilhetes</Typography>
                 </Box>
 
-                <Box onClick={() => history.push('/public/ranking')} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#cbd5e1', cursor: 'pointer' }}>
+                <Box onClick={() => history.push('/public/ranking')} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
                     <EmojiEvents sx={{ fontSize: 26, marginBottom: '2px', color: '#fcd34d' }} />
-                    <Typography sx={{ fontSize: '11px', fontWeight: 'bold' }}>Ranking</Typography>
+                    <Typography sx={{ fontSize: '11px', fontWeight: 'bold', color: '#f8fafc' }}>Ranking</Typography>
                 </Box>
 
-                <Box onClick={() => history.push('/public/regras')} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#cbd5e1', cursor: 'pointer' }}>
-                    <Gavel sx={{ fontSize: 26, marginBottom: '2px' }} />
-                    <Typography sx={{ fontSize: '11px', fontWeight: 'bold' }}>Regras</Typography>
+                <Box onClick={() => history.push('/public/regras')} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
+                    <Gavel sx={{ fontSize: 26, marginBottom: '2px', color: '#cbd5e1' }} />
+                    <Typography sx={{ fontSize: '11px', fontWeight: 'bold', color: '#cbd5e1' }}>Regras</Typography>
                 </Box>
             </Box>
 
