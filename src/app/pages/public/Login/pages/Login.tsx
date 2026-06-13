@@ -51,31 +51,22 @@ export default function Login() {
         }
     };
 
-    const handleRecuperarSenha = async () => {
+    const handleRecuperarSenha = () => {
         if (!emailRecuperacao) {
-            toast.current?.show({ severity: 'warn', summary: 'Atenção', detail: 'Digite seu e-mail.', life: 3000 });
+            toast.current?.show({ severity: 'warn', summary: 'Atenção', detail: 'Digite seu e-mail antes de clicar.', life: 3000 });
             return;
         }
-        setLoadingRecuperar(true);
-        try {
-            const resposta = await fetch(`${apiUrl}/esqueci-senha`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: emailRecuperacao })
-            });
-            const dados = await resposta.json();
-            if (resposta.ok) {
-                toast.current?.show({ severity: 'success', summary: 'Sucesso', detail: dados.mensagem, life: 4000 });
-                setModalRecuperar(false);
-                setEmailRecuperacao('');
-            } else {
-                toast.current?.show({ severity: 'error', summary: 'Erro', detail: dados.erro, life: 3000 });
-            }
-        } catch (erro: any) {
-            toast.current?.show({ severity: 'error', summary: 'Erro', detail: 'Falha na conexão.', life: 3000 });
-        } finally {
-            setLoadingRecuperar(false);
-        }
+        
+        // Monta a mensagem automática com o e-mail que o cara digitou
+        const mensagem = `Fala, Admin! Esqueci minha senha no Goleador VIP. Meu e-mail de cadastro é: ${emailRecuperacao}`;
+        
+        // Abre o WhatsApp enviando a mensagem direto pro seu número
+        const urlWhatsApp = `https://wa.me/5561983209025?text=${encodeURIComponent(mensagem)}`;
+        window.open(urlWhatsApp, '_blank');
+        
+        // Fecha o modal e limpa o campo
+        setModalRecuperar(false);
+        setEmailRecuperacao('');
     };
 
     return (
@@ -127,7 +118,11 @@ export default function Login() {
 >
                 <p style={{ color: '#cbd5e1', marginBottom: '20px' }}>Digite seu e-mail de cadastro. Enviaremos um link para você redefinir sua senha.</p>
                 <InputText value={emailRecuperacao} onChange={(e) => setEmailRecuperacao(e.target.value)} placeholder="Seu e-mail" style={{ width: '100%', backgroundColor: '#0f172a', border: '1px solid #475569', color: '#ffffff', padding: '14px', marginBottom: '20px', borderRadius: '8px' }} />
-                <AppButton label={loadingRecuperar ? "Enviando..." : "Enviar Link"} onClick={handleRecuperarSenha} disabled={loadingRecuperar} style={{ width: '100%', backgroundColor: '#3b82f6', border: 'none', padding: '12px', color: 'white', fontWeight: 'bold', borderRadius: '8px' }} />
+                <AppButton 
+    label="Falar com o Suporte" 
+    onClick={handleRecuperarSenha} 
+    style={{ width: '100%', backgroundColor: '#25D366', border: 'none', padding: '12px', color: 'white', fontWeight: 'bold', borderRadius: '8px' }} 
+/>
             </Dialog>
         </div>
     );
