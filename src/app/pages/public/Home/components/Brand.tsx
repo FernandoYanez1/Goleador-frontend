@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { useHistory } from "react-router-dom";
 import AppButton from "../../../../../vendors/components/Button";
+// Importando o MUI e os Ícones para o menu inferior
+import { Box, Typography } from "@mui/material";
+import { SportsSoccer, Receipt, EmojiEvents, Gavel } from "@mui/icons-material";
 
 export default function Brand() {
     const history = useHistory();
     const [usuarioLogado, setUsuarioLogado] = useState<any>(null);
-    const [isMenuOpen, setIsMenuOpen] = useState(false); // Controle do menu flutuante
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-    // Assim que a tela carrega, verifica se tem alguém logado
     useEffect(() => {
         const salvo = localStorage.getItem("usuarioLogado");
         if (salvo) {
@@ -15,17 +17,9 @@ export default function Brand() {
         }
     }, []);
 
-    const handleCriarContaClick = () => {
-        history.push("/public/contato");
-    };
-
-    const handleFazerPalpiteClick = () => {
-        history.push("/public/placar");
-    };
-
-    const toggleMenu = () => {
-        setIsMenuOpen(!isMenuOpen);
-    };
+    const handleCriarContaClick = () => history.push("/public/contato");
+    const handleFazerPalpiteClick = () => history.push("/public/placar");
+    const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
     return (
         <>
@@ -37,10 +31,9 @@ export default function Brand() {
                 </div>
             </div>
 
-            <div className="public-brand-text-wrapper" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div className="public-brand-text-wrapper" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingBottom: '100px' }}>
                 
                 {usuarioLogado ? (
-                    // VISÃO DE QUEM ESTÁ LOGADO
                     <>
                         <h3 style={{ 
                             color: '#ffffff', 
@@ -74,7 +67,6 @@ export default function Brand() {
                         />
                     </>
                 ) : (
-                    // VISÃO DE QUEM NÃO ESTÁ LOGADO (Visitante)
                     <>
                         <AppButton
                             className="p-button-orange"
@@ -97,18 +89,18 @@ export default function Brand() {
                 
             </div>
 
-            {/* CONTAINER DO BOTÃO FLUTUANTE EXPANSÍVEL */}
-            <div style={{
+            {/* CONTAINER DO BOTÃO FLUTUANTE EXPANSÍVEL (Usando Box do MUI para responsividade) */}
+            <Box sx={{
                 position: 'fixed',
-                bottom: '30px',
+                // Sobe para 90px no mobile para não sobrepor o menu novo, mantém 30px no PC
+                bottom: { xs: '90px', md: '30px' },
                 right: '30px',
                 display: 'flex',
                 flexDirection: 'column',
-                alignItems: 'flex-end', // Alinha tudo à direita
+                alignItems: 'flex-end',
                 zIndex: 1000
             }}>
                 
-                {/* OPÇÕES DO MENU (Aparecem apenas se isMenuOpen for true) */}
                 {isMenuOpen && (
                     <div style={{
                         display: 'flex',
@@ -116,9 +108,8 @@ export default function Brand() {
                         gap: '10px',
                         marginBottom: '15px',
                         alignItems: 'flex-end',
-                        animation: 'fadeIn 0.3s ease-in-out' // Animação suave para aparecer
+                        animation: 'fadeIn 0.3s ease-in-out'
                     }}>
-                        {/* BOTÃO 1: GRUPO OFICIAL */}
                         <a 
                             href="https://chat.whatsapp.com/KzLHler3sA95Bh5EuKmEs2"
                             target="_blank"
@@ -141,7 +132,6 @@ export default function Brand() {
                             Entrar no Grupo Oficial
                         </a>
 
-                        {/* BOTÃO 2: TIRAR DÚVIDAS */}
                         <a 
                             href="https://wa.me/5561983209025?text=Olá!%20Gostaria%20de%20tirar%20uma%20dúvida%20sobre%20o%20bolão."
                             target="_blank"
@@ -166,11 +156,10 @@ export default function Brand() {
                     </div>
                 )}
 
-                {/* BOLA PRINCIPAL (Alterna entre WhatsApp e o 'X') */}
                 <button 
                     onClick={toggleMenu}
                     style={{
-                        backgroundColor: isMenuOpen ? '#ff4444' : '#25D366', // Fica vermelho quando aberto, verde quando fechado
+                        backgroundColor: isMenuOpen ? '#ff4444' : '#25D366',
                         color: '#FFF',
                         borderRadius: '50%',
                         width: '60px',
@@ -181,25 +170,59 @@ export default function Brand() {
                         boxShadow: '0 4px 15px rgba(0,0,0,0.4)',
                         border: 'none',
                         cursor: 'pointer',
-                        transition: 'background-color 0.3s' // Transição suave de cor
+                        transition: 'background-color 0.3s'
                     }}
                     aria-label="Abrir opções de contato"
                 >
                     {isMenuOpen ? (
-                        // ÍCONE DE FECHAR (X)
                         <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="currentColor" viewBox="0 0 16 16">
                             <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
                         </svg>
                     ) : (
-                        // ÍCONE DO WHATSAPP
                         <svg xmlns="http://www.w3.org/2000/svg" width="35" height="35" fill="currentColor" viewBox="0 0 16 16">
                             <path d="M13.601 2.326A7.85 7.85 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.9 7.9 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.9 7.9 0 0 0 13.6 2.326zM7.994 14.521a6.6 6.6 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.56 6.56 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592m3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.73.73 0 0 0-.529.247c-.182.198-.691.677-.691 1.654s.71 1.916.81 2.049c.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232"/>
                         </svg>
                     )}
                 </button>
+            </Box>
 
-            </div>
-            
+            {/* BOTTOM NAVIGATION (MENU INFERIOR MOBILE) */}
+            <Box sx={{
+                display: { xs: 'flex', md: 'none' }, // Mostra apenas no Mobile
+                position: 'fixed',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                backgroundColor: '#1e293b',
+                borderTop: '1px solid #334155',
+                padding: '10px 0',
+                paddingBottom: 'max(10px, env(safe-area-inset-bottom))', // Respeita barras nativas de iPhones
+                justifyContent: 'space-around',
+                alignItems: 'center',
+                zIndex: 999,
+                boxShadow: '0 -4px 10px rgba(0,0,0,0.3)'
+            }}>
+                <Box onClick={() => history.push('/public/placar')} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#cbd5e1', cursor: 'pointer' }}>
+                    <SportsSoccer sx={{ fontSize: 26, marginBottom: '2px', color: '#10b981' }} />
+                    <Typography sx={{ fontSize: '11px', fontWeight: 'bold' }}>Palpitar</Typography>
+                </Box>
+
+                <Box onClick={() => history.push('/public/palpites')} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#cbd5e1', cursor: 'pointer' }}>
+                    <Receipt sx={{ fontSize: 26, marginBottom: '2px' }} />
+                    <Typography sx={{ fontSize: '11px', fontWeight: 'bold' }}>Bilhetes</Typography>
+                </Box>
+
+                <Box onClick={() => history.push('/public/ranking')} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#cbd5e1', cursor: 'pointer' }}>
+                    <EmojiEvents sx={{ fontSize: 26, marginBottom: '2px', color: '#fcd34d' }} />
+                    <Typography sx={{ fontSize: '11px', fontWeight: 'bold' }}>Ranking</Typography>
+                </Box>
+
+                <Box onClick={() => history.push('/public/regras')} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#cbd5e1', cursor: 'pointer' }}>
+                    <Gavel sx={{ fontSize: 26, marginBottom: '2px' }} />
+                    <Typography sx={{ fontSize: '11px', fontWeight: 'bold' }}>Regras</Typography>
+                </Box>
+            </Box>
+
         </>
     );
 }

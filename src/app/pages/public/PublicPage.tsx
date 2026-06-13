@@ -7,6 +7,7 @@ import Perfil from "./Perfil/pages/Perfil";
 import Placar from "./FazerPlacar/pages/Placar";
 import MeusPalpites from "./MeusPalpites/pages/Palpites";
 import Admin from "./Admin/pages/Admin";
+import ResetarSenha from "./ResetarSenha/pages/ResetarSenha";
 
 export default function PublicPage() {
     return (
@@ -17,6 +18,7 @@ export default function PublicPage() {
                 <Route path="/public/perfil" component={Perfil} />
                 <Route path="/public/placar" component={Placar} />
                 <Route path="/public/meus-palpites" component={MeusPalpites} />
+                <Route path="/public/resetar-senha" component={ResetarSenha} />
                 <Route path="/public/admin" component={Admin} />
                 <Route path="/public" component={HomePage} /> 
             </Switch>
