@@ -117,9 +117,14 @@ export default function Login() {
                 </div>
             </Card>
 
-            <Dialog header="Recuperar Senha" visible={modalRecuperar} style={{ width: '90vw', maxWidth: '400px' }} onHide={() => setModalRecuperar(false)}
-                headerStyle={{ backgroundColor: '#1e293b', color: 'white', borderBottom: '1px solid #334155' }}
-                contentStyle={{ backgroundColor: '#1e293b', padding: '20px' }}>
+            <Dialog 
+    header={<span style={{ color: '#ffffff', fontWeight: 'bold' }}>Recuperar Senha</span>} 
+    visible={modalRecuperar} 
+    style={{ width: '90vw', maxWidth: '400px' }} 
+    onHide={() => setModalRecuperar(false)}
+    headerStyle={{ backgroundColor: '#1e293b', borderBottom: '1px solid #334155' }}
+    contentStyle={{ backgroundColor: '#1e293b', padding: '20px' }}
+>
                 <p style={{ color: '#cbd5e1', marginBottom: '20px' }}>Digite seu e-mail de cadastro. Enviaremos um link para você redefinir sua senha.</p>
                 <InputText value={emailRecuperacao} onChange={(e) => setEmailRecuperacao(e.target.value)} placeholder="Seu e-mail" style={{ width: '100%', backgroundColor: '#0f172a', border: '1px solid #475569', color: '#ffffff', padding: '14px', marginBottom: '20px', borderRadius: '8px' }} />
                 <AppButton label={loadingRecuperar ? "Enviando..." : "Enviar Link"} onClick={handleRecuperarSenha} disabled={loadingRecuperar} style={{ width: '100%', backgroundColor: '#3b82f6', border: 'none', padding: '12px', color: 'white', fontWeight: 'bold', borderRadius: '8px' }} />
