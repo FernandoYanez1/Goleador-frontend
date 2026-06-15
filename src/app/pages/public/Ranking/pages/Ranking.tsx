@@ -118,24 +118,35 @@ const Ranking = () => {
             if (Array.isArray(jogosData)) {
                 const jogosFinalizados = jogosData.filter((j: any) => j.gols_casa !== null && j.gols_visitante !== null).length;
                 setStatusJogos({ finalizados: jogosFinalizados, total: jogosData.length });
-                setJogosRodada(jogosData);
+                
+                // LÓGICA DE ORDENAÇÃO DO SECADOR: Finalizados para o final
+                const jogosOrdenadosParaSecador = [...jogosData].sort((a: any, b: any) => {
+                    const aFinalizado = a.gols_casa !== null && a.gols_visitante !== null;
+                    const bFinalizado = b.gols_casa !== null && b.gols_visitante !== null;
+                    
+                    if (aFinalizado && !bFinalizado) return 1;
+                    if (!aFinalizado && bFinalizado) return -1;
+                    return new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime();
+                });
 
-                // LÓGICA DO SECADOR (120min de janela)
-                if (jogosData.length > 0 && rodada.tipo !== 'campeao') {
+                setJogosRodada(jogosOrdenadosParaSecador);
+
+                if (jogosOrdenadosParaSecador.length > 0 && rodada.tipo !== 'campeao') {
                     const agora = new Date().getTime();
                     let jogoRolandoId = '';
                     
-                    for (let j of jogosData) {
-                        if (!j.data_hora) continue;
+                    for (let j of jogosOrdenadosParaSecador) {
+                        if (!j.data_hora || (j.gols_casa !== null && j.gols_visitante !== null)) continue;
+                        
                         const start = new Date(j.data_hora).getTime();
-                        const end = start + 120 * 60000; // 120 minutos após o inicio
+                        const end = start + 120 * 60000; 
                         
                         if (agora >= start && agora <= end) {
                             jogoRolandoId = j.id;
                             break;
                         }
                     }
-                    setJogoSelecionadoId(jogoRolandoId); // Fica vazio se nenhum jogo estiver rolando
+                    setJogoSelecionadoId(jogoRolandoId); 
                 }
             }
         } catch (err) {
@@ -403,7 +414,6 @@ const Ranking = () => {
                     </Box>
                 </Paper>
 
-                {/* PAINEL DO DROPDOWN DO SECADOR COM LAYOUT CENTRALIZADO E MAIOR */}
                 {apostasBloqueadas && !isCampeao && jogosRodada.length > 0 && (
                     <Box mb={3} p={2.5} borderRadius="16px" bgcolor="white" boxShadow="0 4px 15px rgba(0,0,0,0.05)" border="1px solid #e2e8f0">
                         <Typography variant="subtitle2" color="#64748b" fontWeight="900" mb={1.5} display="flex" alignItems="center" gap="8px">
@@ -421,23 +431,9 @@ const Ranking = () => {
                                     borderRadius: '8px',
                                     '& .MuiOutlinedInput-notchedOutline': { borderColor: '#cbd5e1', borderWidth: '2px' },
                                     color: '#1e293b',
-                                    // Força o conteúdo renderizado a ficar no centro
-                                    '& .MuiSelect-select': {
-                                        display: 'flex',
-                                        justifyContent: 'center',
-                                        alignItems: 'center',
-                                        paddingY: '12px',
-                                    }
+                                    '& .MuiSelect-select': { display: 'flex', justifyContent: 'center', alignItems: 'center', paddingY: '12px' }
                                 }}
-                                MenuProps={{
-                                    PaperProps: {
-                                        sx: {
-                                            borderRadius: '12px',
-                                            boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
-                                            mt: 1
-                                        }
-                                    }
-                                }}
+                                MenuProps={{ PaperProps: { sx: { borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', mt: 1 } } }}
                             >
                                 <MenuItem value="" sx={{ justifyContent: 'center', py: 2 }}>
                                     <em style={{ color: '#94a3b8', fontWeight: 'bold' }}>Nenhum jogo selecionado...</em>
@@ -450,15 +446,27 @@ const Ranking = () => {
                                     const logoVisitante = timeVisitante?.bandeira || timeVisitante?.logo_url || '/media/escudos-times/default.png';
                                     const siglaCasa = timeCasa?.sigla || j.time_casa.substring(0, 3).toUpperCase();
                                     const siglaVisitante = timeVisitante?.sigla || j.time_visitante.substring(0, 3).toUpperCase();
+                                    const finalizado = j.gols_casa !== null && j.gols_visitante !== null;
 
                                     return (
-                                        <MenuItem key={j.id} value={j.id} sx={{ justifyContent: 'center', py: 1.5 }}>
+                                        <MenuItem key={j.id} value={j.id} sx={{ justifyContent: 'center', py: 1.5, opacity: finalizado ? 0.6 : 1 }}>
                                             <Box display="flex" alignItems="center" justifyContent="center" gap={2} width="100%">
                                                 <img src={logoCasa} style={{ width: 28, height: 20, objectFit: 'cover', borderRadius: '4px', border: '1px solid #cbd5e1' }} alt="Casa" />
                                                 <Typography fontWeight="900" fontSize="16px" color="#334155" sx={{ minWidth: '45px', textAlign: 'right' }}>{siglaCasa}</Typography>
-                                                <Typography color="#94a3b8" fontSize="14px" fontWeight="900">X</Typography>
+                                                
+                                                {/* Se estiver finalizado, mostra o placar real no meio */}
+                                                {finalizado ? (
+                                                    <Typography color="#059669" fontSize="14px" fontWeight="900" bgcolor="#d1fae5" px={1} borderRadius="4px">
+                                                        {j.gols_casa} x {j.gols_visitante}
+                                                    </Typography>
+                                                ) : (
+                                                    <Typography color="#94a3b8" fontSize="14px" fontWeight="900">X</Typography>
+                                                )}
+                                                
                                                 <Typography fontWeight="900" fontSize="16px" color="#334155" sx={{ minWidth: '45px', textAlign: 'left' }}>{siglaVisitante}</Typography>
                                                 <img src={logoVisitante} style={{ width: 28, height: 20, objectFit: 'cover', borderRadius: '4px', border: '1px solid #cbd5e1' }} alt="Visitante" />
+                                                
+                                                {finalizado && <span style={{fontSize: '10px', fontWeight: 'bold', color: '#64748b', marginLeft: '5px'}}> (Finalizado)</span>}
                                             </Box>
                                         </MenuItem>
                                     )

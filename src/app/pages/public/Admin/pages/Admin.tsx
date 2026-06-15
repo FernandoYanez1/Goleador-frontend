@@ -15,7 +15,6 @@ export default function Admin() {
 
     const [rodadas, setRodadas] = useState<any[]>([]);
     const [teams, setTeams] = useState<any[]>([]);
-    const selecoesCopa = teams.filter((t) => t.id >= 19 && t.id <= 66);
     const [cartelas, setCartelas] = useState<any[]>([]);
     const [rodadaSelecionada, setRodadaSelecionada] = useState<any>(null);
     const [verArquivadas, setVerArquivadas] = useState(false);
@@ -73,11 +72,23 @@ export default function Admin() {
             fetch(`${apiUrl}/jogos?rodada_id=${rodadaSelecionada.id}`)
                 .then(res => res.json())
                 .then(data => {
-                    setJogos(data);
+                    // LÓGICA DE ORDENAÇÃO: Finalizados para o final
+                    const jogosOrdenados = data.sort((a: any, b: any) => {
+                        const aFinalizado = a.gols_casa !== null && a.gols_visitante !== null;
+                        const bFinalizado = b.gols_casa !== null && b.gols_visitante !== null;
+                        
+                        if (aFinalizado && !bFinalizado) return 1; // A vai pro final
+                        if (!aFinalizado && bFinalizado) return -1; // B vai pro final
+                        // Se os dois estiverem no mesmo status, ordena por data
+                        return new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime();
+                    });
+
+                    setJogos(jogosOrdenados);
+                    
                     const resLocais: any = {};
                     let primeiroJogo = Infinity;
 
-                    data.forEach((j: any) => {
+                    jogosOrdenados.forEach((j: any) => {
                         if (j.gols_casa !== null && j.gols_visitante !== null) {
                             resLocais[j.id] = { casa: j.gols_casa, visitante: j.gols_visitante };
                         }
@@ -88,7 +99,6 @@ export default function Admin() {
                     });
                     setResultados(resLocais);
 
-                    // Calcula o fechamento automático (30 min antes do primeiro jogo)
                     if (primeiroJogo !== Infinity) {
                         setDataFechamentoAuto(new Date(primeiroJogo - 30 * 60000));
                     } else {
@@ -167,7 +177,8 @@ export default function Admin() {
         }).then(() => {
             alert("Confronto cadastrado!");
             setNovoJogo({ time_casa_id: null, time_visitante_id: null, data_hora: '' });
-            fetch(`${apiUrl}/jogos?rodada_id=${rodadaSelecionada.id}`).then(res => res.json()).then(setJogos);
+            // Recarrega os jogos forçando um novo ciclo do useEffect
+            setRodadaSelecionada({...rodadaSelecionada}); 
         });
     };
 
@@ -210,7 +221,7 @@ export default function Admin() {
     const handleDeletarJogo = (id: number) => {
         if(window.confirm("Excluir a partida? Palpites vinculados a ela também sumirão.")) {
             fetch(`${apiUrl}/deletar-jogo/${id}`, { method: 'DELETE' })
-                .then(() => fetch(`${apiUrl}/jogos?rodada_id=${rodadaSelecionada?.id}`).then(res => res.json()).then(setJogos));
+                .then(() => setRodadaSelecionada({...rodadaSelecionada}));
         }
     };
 
@@ -227,7 +238,7 @@ export default function Admin() {
         }).then(() => {
             alert("Resultado salvo! Pontos calculados.");
             setEditandoJogos(editandoJogos.filter(id => id !== matchId));
-            fetch(`${apiUrl}/jogos?rodada_id=${rodadaSelecionada?.id}`).then(res => res.json()).then(setJogos);
+            setRodadaSelecionada({...rodadaSelecionada}); // Força recarregar os jogos com a nova ordem
         });
     };
 
@@ -379,7 +390,6 @@ export default function Admin() {
                     )}
                 </div>
 
-                {/* ALERTA DE BLOQUEIO AUTOMÁTICO */}
                 {rodadaSelecionada?.tipo === 'placares' && dataFechamentoAuto && (
                     <div style={{ backgroundColor: '#fffbeb', border: '1px solid #f59e0b', padding: '15px', borderRadius: '12px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div style={{ fontSize: '24px' }}>⏱️</div>
@@ -431,8 +441,20 @@ export default function Admin() {
                                     const mostrarFixo = temResultadoFinalizado && !estaEditando;
 
                                     return (
-                                        <div key={jogo.id} style={{ backgroundColor: 'white', marginBottom: '15px', borderRadius: '12px', padding: '15px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
-                                            <div style={{ textAlign: 'center', color: '#64748b', fontSize: '12px', fontWeight: 'bold', marginBottom: '10px' }}>📅 {formatarData(jogo.data_hora)}</div>
+                                        <div key={jogo.id} style={{ 
+                                            backgroundColor: 'white', 
+                                            marginBottom: '15px', 
+                                            borderRadius: '12px', 
+                                            padding: '15px', 
+                                            boxShadow: '0 4px 10px rgba(0,0,0,0.05)',
+                                            borderLeft: temResultadoFinalizado ? '5px solid #10b981' : '5px solid #cbd5e1', // Borda verde se finalizado
+                                            opacity: temResultadoFinalizado ? 0.8 : 1 // Deixa levemente transparente
+                                        }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                                <div style={{ color: '#64748b', fontSize: '12px', fontWeight: 'bold' }}>📅 {formatarData(jogo.data_hora)}</div>
+                                                {temResultadoFinalizado && <div style={{ backgroundColor: '#d1fae5', color: '#047857', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold' }}>✅ FINALIZADO</div>}
+                                            </div>
+
                                             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: isMobile ? '8px' : '15px', marginBottom: '15px', flexWrap: 'wrap' }}>
                                                 <div style={{ textAlign: 'center', width: '70px' }}>
                                                     <img src={jogo.logo_casa || "/media/escudos-times/default.png"} alt="logo" style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
@@ -476,7 +498,7 @@ export default function Admin() {
                 )}
             </div>
 
-            {/* MODAIS ADICIONAIS */}
+            {/* MODAIS ADICIONAIS... (Restante mantido) */}
             <Dialog header="🚩 Cadastrar Time/Seleção" visible={exibirDialogTeams} style={{ width: isMobile ? '95vw' : '400px' }} onHide={() => setExibirDialogTeams(false)}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingTop: '10px' }}>
                     <InputText placeholder="Nome do Time/País" value={novoTeam.nome} onChange={(e) => setNovoTeam({...novoTeam, nome: e.target.value})} />
@@ -502,7 +524,6 @@ export default function Admin() {
                 </DataTable>
             </Dialog>
 
-            {/* MODAL DE VISUALIZAR PALPITES DA PESSOA */}
             <Dialog header={`🔍 Palpites do Bilhete #${cartelaVisualizando?.numero_bilhete || cartelaVisualizando?.id}`} visible={exibirDialogPalpites} style={{ width: isMobile ? '95vw' : '450px' }} onHide={() => setExibirDialogPalpites(false)}>
                 {carregandoPalpites ? (
                     <div style={{ textAlign: 'center', padding: '20px' }}><i className="pi pi-spin pi-spinner" style={{ fontSize: '2rem' }}></i></div>

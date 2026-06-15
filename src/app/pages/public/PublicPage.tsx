@@ -8,6 +8,7 @@ import Placar from "./FazerPlacar/pages/Placar";
 import MeusPalpites from "./MeusPalpites/pages/Palpites";
 import Admin from "./Admin/pages/Admin";
 import ResetarSenha from "./ResetarSenha/pages/ResetarSenha";
+import GlobalMobileNav from "./Home/components/GlobalMobileNav";
 
 export default function PublicPage() {
     return (
@@ -22,6 +23,9 @@ export default function PublicPage() {
                 <Route path="/public/admin" component={Admin} />
                 <Route path="/public" component={HomePage} /> 
             </Switch>
+            
+            // 2. INJETANDO O MENU PARA APARECER EM TODAS AS TELAS
+            <GlobalMobileNav />
         </>
     );
 }
