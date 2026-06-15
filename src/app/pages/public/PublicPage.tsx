@@ -24,7 +24,6 @@ export default function PublicPage() {
                 <Route path="/public" component={HomePage} /> 
             </Switch>
             
-            // 2. INJETANDO O MENU PARA APARECER EM TODAS AS TELAS
             <GlobalMobileNav />
         </>
     );
