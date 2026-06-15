@@ -454,9 +454,9 @@ const Ranking = () => {
                                                 <img src={logoCasa} style={{ width: 28, height: 20, objectFit: 'cover', borderRadius: '4px', border: '1px solid #cbd5e1' }} alt="Casa" />
                                                 <Typography fontWeight="900" fontSize="16px" color="#334155" sx={{ minWidth: '45px', textAlign: 'right' }}>{siglaCasa}</Typography>
                                                 
-                                                {/* Se estiver finalizado, mostra o placar real no meio */}
+                                                {/* Placar Finalizado ou X */}
                                                 {finalizado ? (
-                                                    <Typography color="#059669" fontSize="14px" fontWeight="900" bgcolor="#d1fae5" px={1} borderRadius="4px">
+                                                    <Typography color="#059669" fontSize="14px" fontWeight="900" bgcolor="#d1fae5" px={1.5} py={0.5} borderRadius="6px">
                                                         {j.gols_casa} x {j.gols_visitante}
                                                     </Typography>
                                                 ) : (
@@ -465,8 +465,6 @@ const Ranking = () => {
                                                 
                                                 <Typography fontWeight="900" fontSize="16px" color="#334155" sx={{ minWidth: '45px', textAlign: 'left' }}>{siglaVisitante}</Typography>
                                                 <img src={logoVisitante} style={{ width: 28, height: 20, objectFit: 'cover', borderRadius: '4px', border: '1px solid #cbd5e1' }} alt="Visitante" />
-                                                
-                                                {finalizado && <span style={{fontSize: '10px', fontWeight: 'bold', color: '#64748b', marginLeft: '5px'}}> (Finalizado)</span>}
                                             </Box>
                                         </MenuItem>
                                     )
@@ -649,23 +647,22 @@ const Ranking = () => {
 
             </Container>
 
-            {/* STICKY BAR CORRIGIDA */}
+            {/* STICKY BAR: ILHA FLUTUANTE */}
             {exibirBarra && (
                 <Box sx={{
                     display: { xs: 'flex', md: 'none' }, 
                     position: 'fixed',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
+                    bottom: '75px', // Sobe para ficar acima do menu global
+                    left: '15px',   // Descola das laterais
+                    right: '15px',  // Descola das laterais
                     bgcolor: '#1e293b',
                     p: 2,
-                    borderTopLeftRadius: 16,
-                    borderTopRightRadius: 16,
-                    boxShadow: '0 -4px 15px rgba(0,0,0,0.4)',
+                    borderRadius: '16px', // Borda arredondada completa (estilo ilha flutuante)
+                    boxShadow: '0 -4px 20px rgba(0,0,0,0.5)',
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     zIndex: 1000,
-                    borderTop: '3px solid #3b82f6'
+                    border: '1px solid #334155'
                 }}>
                     <Box>
                         <Typography variant="caption" sx={{ color: "#cbd5e1", fontWeight: "bold" }}>SUA POSIÇÃO</Typography>
