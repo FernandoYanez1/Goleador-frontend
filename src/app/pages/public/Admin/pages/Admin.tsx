@@ -16,6 +16,7 @@ export default function Admin() {
     const [rodadas, setRodadas] = useState<any[]>([]);
     const [teams, setTeams] = useState<any[]>([]);
     const [cartelas, setCartelas] = useState<any[]>([]);
+    const [usuarios, setUsuarios] = useState<any[]>([]); // Nova lista de usuários
     const [rodadaSelecionada, setRodadaSelecionada] = useState<any>(null);
     const [verArquivadas, setVerArquivadas] = useState(false);
     
@@ -34,11 +35,12 @@ export default function Admin() {
     const [novaRodada, setNovaRodada] = useState({ nome: '', preco: 20, tipo: 'placares' });
     const [novoTeam, setNovoTeam] = useState({ nome: '', sigla: '', bandeira: '' });
     
-    const [novoJogo, setNovoJogo] = useState<any>({
-        time_casa_id: null,
-        time_visitante_id: null,
-        data_hora: ''
-    });
+    const [novoJogo, setNovoJogo] = useState<any>({ time_casa_id: null, time_visitante_id: null, data_hora: '' });
+
+    // ESTADOS DE NOTIFICAÇÃO
+    const [exibirDialogAvisos, setExibirDialogAvisos] = useState(false);
+    const [listaAvisos, setListaAvisos] = useState<any[]>([]);
+    const [novoAviso, setNovoAviso] = useState({ titulo: '', mensagem: '', usuario_alvo_id: 'todos' as string | number });
 
     const [campeaoEscolhido, setCampeaoEscolhido] = useState<any>(null);
     const [dataFechamentoAuto, setDataFechamentoAuto] = useState<Date | null>(null);
@@ -47,11 +49,16 @@ export default function Admin() {
         Promise.all([
             fetch(`${apiUrl}/admin/rodadas-todas`).then(res => res.json()),
             fetch(`${apiUrl}/teams`).then(res => res.json()),
-            fetch(`${apiUrl}/admin/cartelas`).then(res => res.json())
-        ]).then(([rodadasData, teamsData, cartelasData]) => {
+            fetch(`${apiUrl}/admin/cartelas`).then(res => res.json()),
+            fetch(`${apiUrl}/admin/usuarios`).then(res => res.json()).catch(() => []) // Evita erro se a rota falhar
+        ]).then(([rodadasData, teamsData, cartelasData, usuariosData]) => {
             setRodadas(rodadasData);
             setTeams(teamsData);
             setCartelas(cartelasData);
+            
+            // Prepara a lista de usuários para o Dropdown
+            const usersDropdown = [{ id: 'todos', nome: '📢 TODOS OS USUÁRIOS' }, ...usuariosData];
+            setUsuarios(usersDropdown);
             
             if (rodadasData.length > 0 && !rodadaSelecionada) {
                 const ativa = rodadasData.find((r: any) => r.exibir_no_ranking === true) || rodadasData.find((r: any) => r.status === 'aberta') || rodadasData[0];
@@ -63,23 +70,19 @@ export default function Admin() {
         });
     };
 
-    useEffect(() => { 
-        carregarDadosIniciais(); 
-    }, []);
+    useEffect(() => { carregarDadosIniciais(); }, []);
 
     useEffect(() => {
         if (rodadaSelecionada && rodadaSelecionada.tipo === 'placares') {
             fetch(`${apiUrl}/jogos?rodada_id=${rodadaSelecionada.id}`)
                 .then(res => res.json())
                 .then(data => {
-                    // LÓGICA DE ORDENAÇÃO: Finalizados para o final
                     const jogosOrdenados = data.sort((a: any, b: any) => {
                         const aFinalizado = a.gols_casa !== null && a.gols_visitante !== null;
                         const bFinalizado = b.gols_casa !== null && b.gols_visitante !== null;
                         
-                        if (aFinalizado && !bFinalizado) return 1; // A vai pro final
-                        if (!aFinalizado && bFinalizado) return -1; // B vai pro final
-                        // Se os dois estiverem no mesmo status, ordena por data
+                        if (aFinalizado && !bFinalizado) return 1; 
+                        if (!aFinalizado && bFinalizado) return -1; 
                         return new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime();
                     });
 
@@ -110,95 +113,76 @@ export default function Admin() {
         }
     }, [rodadaSelecionada, apiUrl]);
 
-    const handleCriarRodada = () => {
-        if (!novaRodada.nome) return alert("Dê um nome à rodada!");
-        fetch(`${apiUrl}/rodadas`, {
+    // LÓGICA DE AVISOS
+    const handleCriarAviso = () => {
+        if (!novoAviso.titulo || !novoAviso.mensagem) return alert("Preencha título e mensagem!");
+        fetch(`${apiUrl}/admin/notificacoes`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(novaRodada)
+            body: JSON.stringify(novoAviso)
         }).then(() => {
-            setNovaRodada({ nome: '', preco: 20, tipo: 'placares' });
-            carregarDadosIniciais();
-            alert("Rodada criada como RASCUNHO!");
+            setNovoAviso({ titulo: '', mensagem: '', usuario_alvo_id: 'todos' });
+            alert("Aviso disparado com sucesso!");
+            fetch(`${apiUrl}/admin/notificacoes`).then(res => res.json()).then(setListaAvisos);
         });
+    };
+
+    const handleToggleAviso = (id: number, statusAtual: boolean) => {
+        fetch(`${apiUrl}/admin/notificacoes/${id}/status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ativa: !statusAtual })
+        }).then(() => fetch(`${apiUrl}/admin/notificacoes`).then(res => res.json()).then(setListaAvisos));
+    };
+
+    const handleDeletarAviso = (id: number) => {
+        if (window.confirm("Isso apagará essa notificação para sempre. Deseja continuar?")) {
+            fetch(`${apiUrl}/admin/notificacoes/${id}`, { method: 'DELETE' })
+                .then(() => fetch(`${apiUrl}/admin/notificacoes`).then(res => res.json()).then(setListaAvisos));
+        }
+    };
+
+    // RESTANTE DAS FUNÇÕES
+    const handleCriarRodada = () => {
+        if (!novaRodada.nome) return alert("Dê um nome à rodada!");
+        fetch(`${apiUrl}/rodadas`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(novaRodada) })
+        .then(() => { setNovaRodada({ nome: '', preco: 20, tipo: 'placares' }); carregarDadosIniciais(); alert("Rodada criada como RASCUNHO!"); });
     };
 
     const alterarStatusRodada = (novoStatus: string) => {
         if (!rodadaSelecionada) return;
-        fetch(`${apiUrl}/rodadas/${rodadaSelecionada.id}/status`, { 
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: novoStatus })
-        }).then(() => {
-            alert(`Status da rodada atualizado para: ${novoStatus.toUpperCase()}`);
-            if (novoStatus === 'arquivada') setRodadaSelecionada(null);
-            carregarDadosIniciais();
-        });
+        fetch(`${apiUrl}/rodadas/${rodadaSelecionada.id}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: novoStatus }) })
+        .then(() => { alert(`Status da rodada atualizado para: ${novoStatus.toUpperCase()}`); if (novoStatus === 'arquivada') setRodadaSelecionada(null); carregarDadosIniciais(); });
     };
 
     const handleDefinirRodadaRanking = () => {
         if (!rodadaSelecionada) return;
-        fetch(`${apiUrl}/admin/definir-ranking`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                rodada_id: rodadaSelecionada.id,
-                fixado: !rodadaSelecionada.exibir_no_ranking
-            })
-        }).then(() => carregarDadosIniciais());
+        fetch(`${apiUrl}/admin/definir-ranking`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rodada_id: rodadaSelecionada.id, fixado: !rodadaSelecionada.exibir_no_ranking }) })
+        .then(() => carregarDadosIniciais());
     };
 
     const handleCadastrarTeam = () => {
         if (!novoTeam.nome || !novoTeam.sigla || !novoTeam.bandeira) return alert("Preencha todos os campos da seleção!");
-        fetch(`${apiUrl}/teams`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(novoTeam)
-        }).then(() => {
-            setNovoTeam({ nome: '', sigla: '', bandeira: '' });
-            fetch(`${apiUrl}/teams`).then(res => res.json()).then(setTeams);
-            alert("Seleção salva no banco!");
-        });
+        fetch(`${apiUrl}/teams`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(novoTeam) })
+        .then(() => { setNovoTeam({ nome: '', sigla: '', bandeira: '' }); fetch(`${apiUrl}/teams`).then(res => res.json()).then(setTeams); alert("Seleção salva no banco!"); });
     };
 
     const handleCadastrarJogo = () => {
         if (!rodadaSelecionada) return;
         if (!novoJogo.time_casa_id || !novoJogo.time_visitante_id) return alert("Selecione os dois times.");
-
-        fetch(`${apiUrl}/cadastrar-jogo`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                rodada_id: rodadaSelecionada.id,
-                time_casa_id: novoJogo.time_casa_id,
-                time_visitante_id: novoJogo.time_visitante_id,
-                data_hora: novoJogo.data_hora ? new Date(novoJogo.data_hora).toISOString() : null
-            })
-        }).then(() => {
-            alert("Confronto cadastrado!");
-            setNovoJogo({ time_casa_id: null, time_visitante_id: null, data_hora: '' });
-            // Recarrega os jogos forçando um novo ciclo do useEffect
-            setRodadaSelecionada({...rodadaSelecionada}); 
-        });
+        fetch(`${apiUrl}/cadastrar-jogo`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rodada_id: rodadaSelecionada.id, time_casa_id: novoJogo.time_casa_id, time_visitante_id: novoJogo.time_visitante_id, data_hora: novoJogo.data_hora ? new Date(novoJogo.data_hora).toISOString() : null }) })
+        .then(() => { alert("Confronto cadastrado!"); setNovoJogo({ time_casa_id: null, time_visitante_id: null, data_hora: '' }); setRodadaSelecionada({...rodadaSelecionada}); });
     };
 
     const handleDefinirCampeao = () => {
         if (!campeaoEscolhido) return alert("Selecione a seleção que venceu o campeonato!");
-        if (!window.confirm(`Você tem certeza que a seleção '${campeaoEscolhido.nome}' foi a campeã? Isso irá pontuar todos os bilhetes de quem acertou.`)) return;
-
-        fetch(`${apiUrl}/admin/definir-campeao`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ rodada_id: rodadaSelecionada.id, campeao: campeaoEscolhido.nome })
-        }).then(res => res.json()).then(data => {
-            alert(data.mensagem || "Campeão definido com sucesso!");
-            setCampeaoEscolhido(null);
-            carregarDadosIniciais();
-        });
+        if (!window.confirm(`Você tem certeza que a seleção '${campeaoEscolhido.nome}' foi a campeã?`)) return;
+        fetch(`${apiUrl}/admin/definir-campeao`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rodada_id: rodadaSelecionada.id, campeao: campeaoEscolhido.nome }) })
+        .then(res => res.json()).then(data => { alert(data.mensagem || "Campeão definido com sucesso!"); setCampeaoEscolhido(null); carregarDadosIniciais(); });
     };
 
     const extrairTimesParaBanco = async () => {
-        if (!window.confirm("Isso vai ler todos os times cadastrados nesta rodada e salvá-los no Banco de Dados de Seleções/Times. Deseja continuar?")) return;
+        if (!window.confirm("Isso vai ler todos os times cadastrados nesta rodada e salvá-los no Banco de Dados. Deseja continuar?")) return;
         let cadastrados = 0;
         const timesAtuaisNoBanco = [...teams]; 
         for (let jogo of jogos) {
@@ -220,43 +204,28 @@ export default function Admin() {
 
     const handleDeletarJogo = (id: number) => {
         if(window.confirm("Excluir a partida? Palpites vinculados a ela também sumirão.")) {
-            fetch(`${apiUrl}/deletar-jogo/${id}`, { method: 'DELETE' })
-                .then(() => setRodadaSelecionada({...rodadaSelecionada}));
+            fetch(`${apiUrl}/deletar-jogo/${id}`, { method: 'DELETE' }).then(() => setRodadaSelecionada({...rodadaSelecionada}));
         }
     };
 
     const handleSalvarResultado = (matchId: number) => {
         const resultado = resultados[matchId];
-        if (!resultado || resultado.casa === undefined || resultado.casa === "" || resultado.visitante === undefined || resultado.visitante === "") {
-            return alert("Preencha o placar corretamente!");
-        }
-
-        fetch(`${apiUrl}/finalizar-jogo`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ match_id: matchId, gols_casa: parseInt(resultado.casa, 10), gols_visitante: parseInt(resultado.visitante, 10) })
-        }).then(() => {
-            alert("Resultado salvo! Pontos calculados.");
-            setEditandoJogos(editandoJogos.filter(id => id !== matchId));
-            setRodadaSelecionada({...rodadaSelecionada}); // Força recarregar os jogos com a nova ordem
-        });
+        if (!resultado || resultado.casa === undefined || resultado.casa === "" || resultado.visitante === undefined || resultado.visitante === "") return alert("Preencha o placar corretamente!");
+        fetch(`${apiUrl}/finalizar-jogo`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ match_id: matchId, gols_casa: parseInt(resultado.casa, 10), gols_visitante: parseInt(resultado.visitante, 10) }) })
+        .then(() => { alert("Resultado salvo! Pontos calculados."); setEditandoJogos(editandoJogos.filter(id => id !== matchId)); setRodadaSelecionada({...rodadaSelecionada}); });
     };
 
     const habilitarEdicao = (jogoId: number) => setEditandoJogos([...editandoJogos, jogoId]);
 
     const handleTogglePagamento = (cartelaId: number, statusAtual: string) => {
         const novoStatus = statusAtual === 'aprovado' ? 'pendente' : 'aprovado';
-        fetch(`${apiUrl}/aprovar-pagamento/${cartelaId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: novoStatus }) 
-        }).then(() => fetch(`${apiUrl}/admin/cartelas`).then(res => res.json()).then(setCartelas));
+        fetch(`${apiUrl}/aprovar-pagamento/${cartelaId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: novoStatus }) })
+        .then(() => fetch(`${apiUrl}/admin/cartelas`).then(res => res.json()).then(setCartelas));
     };
 
     const handleDeletarCartela = (cartelaId: number) => {
         if (window.confirm(`Excluir permanentemente a Cartela #${cartelaId}?`)) {
-            fetch(`${apiUrl}/deletar-cartela/${cartelaId}`, { method: 'DELETE' })
-                .then(() => fetch(`${apiUrl}/admin/cartelas`).then(res => res.json()).then(setCartelas));
+            fetch(`${apiUrl}/deletar-cartela/${cartelaId}`, { method: 'DELETE' }).then(() => fetch(`${apiUrl}/admin/cartelas`).then(res => res.json()).then(setCartelas));
         }
     };
 
@@ -264,17 +233,12 @@ export default function Admin() {
         setCartelaVisualizando(cartela);
         setCarregandoPalpites(true);
         setExibirDialogPalpites(true);
-
         try {
             const res = await fetch(`${apiUrl}/auditoria`);
             const data = await res.json();
             const palpitesDesteBilhete = data.filter((p: any) => p.cartela_id === cartela.id || p.id_cartela === cartela.id);
             setPalpitesDaCartela(palpitesDesteBilhete);
-        } catch (err) {
-            alert("Erro ao buscar detalhes do bilhete.");
-        } finally {
-            setCarregandoPalpites(false);
-        }
+        } catch (err) { alert("Erro ao buscar detalhes do bilhete."); } finally { setCarregandoPalpites(false); }
     };
 
     const formatarData = (d: string) => {
@@ -293,27 +257,26 @@ export default function Admin() {
 
     const statusBadgeTemplate = (r: any) => {
         const isAprovado = r.status_pagamento === 'aprovado';
-        return (
-            <span style={{ backgroundColor: isAprovado ? '#dcfce7' : '#fef3c7', color: isAprovado ? '#166534' : '#92400e', padding: '4px 8px', borderRadius: '6px', fontWeight: 'bold', fontSize: '11px', letterSpacing: '0.5px' }}>
-                {r.status_pagamento.toUpperCase()}
-            </span>
-        );
+        return <span style={{ backgroundColor: isAprovado ? '#dcfce7' : '#fef3c7', color: isAprovado ? '#166534' : '#92400e', padding: '4px 8px', borderRadius: '6px', fontWeight: 'bold', fontSize: '11px', letterSpacing: '0.5px' }}>{r.status_pagamento.toUpperCase()}</span>;
     };
 
     return (
         <div style={{ padding: isMobile ? '15px' : '30px', minHeight: '100vh', backgroundColor: '#f4f6f9', color: '#333' }}>
             <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
                 
+                {/* CABEÇALHO ADMIN */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'center', flexDirection: isMobile ? 'column' : 'row', gap: '15px', marginBottom: '30px', backgroundColor: 'white', padding: isMobile ? '15px' : '20px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
                     <Button label="🚪 Sair do Admin" onClick={() => history.push('/public')} className="p-button-text p-button-secondary" style={{ width: isMobile ? '100%' : 'auto' }} />
                     <h1 style={{ margin: 0, fontSize: isMobile ? '20px' : '22px', textAlign: 'center' }}>🛡️ Painel Admin</h1>
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', width: isMobile ? '100%' : 'auto' }}>
+                        <Button label="📢 Avisos" onClick={() => { fetch(`${apiUrl}/admin/notificacoes`).then(res => res.json()).then(setListaAvisos); setExibirDialogAvisos(true); }} severity="warning" style={{ flex: 1 }} />
                         <Button label={verArquivadas ? "⬅️ Ativas" : "🗄️ Arquivadas"} severity={verArquivadas ? "success" : "secondary"} outlined onClick={() => { setVerArquivadas(!verArquivadas); setRodadaSelecionada(null); }} style={{ flex: 1 }} />
                         <Button label="🚩 Times" onClick={() => setExibirDialogTeams(true)} severity="info" style={{ flex: 1 }} />
                         <Button label="🎟️ Bilhetes" onClick={() => { fetch(`${apiUrl}/admin/cartelas`).then(res => res.json()).then(setCartelas); setExibirDialogCartelas(true); }} severity="help" style={{ flex: 1 }} />
                     </div>
                 </div>
 
+                {/* PAINEL DE RECEITA */}
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '30px' }}>
                     <div style={{ backgroundColor: '#eff6ff', border: '1px solid #3b82f6', padding: '20px', borderRadius: '12px', textAlign: 'center' }}>
                         <div style={{ color: '#1e40af', fontWeight: 'bold', fontSize: '14px', marginBottom: '5px' }}>🛡️ SEU LUCRO (10%)</div>
@@ -332,6 +295,7 @@ export default function Admin() {
                     </div>
                 </div>
 
+                {/* GESTÃO DE RODADAS */}
                 <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', marginBottom: '30px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', borderTop: verArquivadas ? '4px solid #475569' : 'none' }}>
                     <h3 style={{ margin: '0 0 15px 0' }}>{verArquivadas ? "🗄️ Arquivo de Rodadas Antigas" : "Gestão de Rodadas e Eventos"}</h3>
                     
@@ -400,6 +364,7 @@ export default function Admin() {
                     </div>
                 )}
 
+                {/* GESTÃO DOS JOGOS DA RODADA */}
                 {rodadaSelecionada && (
                     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '400px 1fr', gap: '20px', alignItems: 'flex-start' }}>
                         <div style={{ backgroundColor: 'white', padding: '25px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.05)', opacity: rodadaSelecionada.status === 'arquivada' ? 0.5 : 1, pointerEvents: rodadaSelecionada.status === 'arquivada' ? 'none' : 'auto' }}>
@@ -447,8 +412,8 @@ export default function Admin() {
                                             borderRadius: '12px', 
                                             padding: '15px', 
                                             boxShadow: '0 4px 10px rgba(0,0,0,0.05)',
-                                            borderLeft: temResultadoFinalizado ? '5px solid #10b981' : '5px solid #cbd5e1', // Borda verde se finalizado
-                                            opacity: temResultadoFinalizado ? 0.8 : 1 // Deixa levemente transparente
+                                            borderLeft: temResultadoFinalizado ? '5px solid #10b981' : '5px solid #cbd5e1',
+                                            opacity: temResultadoFinalizado ? 0.8 : 1
                                         }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                                                 <div style={{ color: '#64748b', fontSize: '12px', fontWeight: 'bold' }}>📅 {formatarData(jogo.data_hora)}</div>
@@ -498,7 +463,58 @@ export default function Admin() {
                 )}
             </div>
 
-            {/* MODAIS ADICIONAIS... (Restante mantido) */}
+            {/* MODAL GESTÃO DE AVISOS */}
+            <Dialog header="📢 Central de Avisos e Notificações" visible={exibirDialogAvisos} style={{ width: isMobile ? '95vw' : '700px' }} onHide={() => setExibirDialogAvisos(false)}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginBottom: '30px', backgroundColor: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                    <h4 style={{ margin: 0, color: '#334155' }}>✍️ Disparar Novo Aviso</h4>
+                    
+                    <Dropdown 
+                        value={novoAviso.usuario_alvo_id} 
+                        options={usuarios} 
+                        onChange={(e) => setNovoAviso({...novoAviso, usuario_alvo_id: e.value})} 
+                        optionLabel="nome" 
+                        optionValue="id" 
+                        placeholder="Para quem enviar?" 
+                        filter 
+                        style={{ width: '100%', fontWeight: 'bold' }} 
+                    />
+                    
+                    <InputText 
+                        placeholder="Título do Aviso (Ex: Rodada Liberada!)" 
+                        value={novoAviso.titulo} 
+                        onChange={(e) => setNovoAviso({...novoAviso, titulo: e.target.value})} 
+                        style={{ fontWeight: 'bold', width: '100%' }} 
+                    />
+                    
+                    <textarea 
+                        placeholder="Escreva a mensagem aqui..." 
+                        value={novoAviso.mensagem} 
+                        onChange={(e) => setNovoAviso({...novoAviso, mensagem: e.target.value})} 
+                        style={{ width: '100%', minHeight: '120px', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontFamily: 'inherit', resize: 'vertical' }}
+                    />
+                    
+                    <Button label="🚀 Disparar Pop-up" onClick={handleCriarAviso} severity="success" style={{ fontWeight: 'bold', padding: '12px' }} />
+                </div>
+
+                <h4 style={{ color: '#334155', marginBottom: '15px' }}>📋 Histórico de Avisos</h4>
+                <DataTable value={listaAvisos} responsiveLayout="scroll" emptyMessage="Nenhum aviso criado." rowHover>
+                    <Column field="titulo" header="Título" style={{ minWidth: '150px' }} />
+                    <Column header="Para" body={(r) => r.alvo_nome || 'Todos os Usuários'} style={{ minWidth: '120px' }} />
+                    <Column header="Status" body={(r) => (
+                        <span style={{ backgroundColor: r.ativa ? '#dcfce7' : '#fee2e2', color: r.ativa ? '#166534' : '#991b1b', padding: '4px 8px', borderRadius: '6px', fontWeight: 'bold', fontSize: '11px' }}>
+                            {r.ativa ? 'ATIVO' : 'DESATIVADO'}
+                        </span>
+                    )} />
+                    <Column header="Ações" body={(r) => (
+                        <div style={{ display: 'flex', gap: '5px' }}>
+                            <Button tooltip={r.ativa ? "Desativar Visibilidade" : "Reativar Aviso"} severity={r.ativa ? "warning" : "success"} size="small" outlined icon={r.ativa ? "pi pi-eye-slash" : "pi pi-eye"} onClick={() => handleToggleAviso(r.id, r.ativa)} style={{ width: '35px', height: '35px', padding: 0 }} />
+                            <Button tooltip="Excluir Definitivamente" severity="danger" size="small" icon="pi pi-trash" onClick={() => handleDeletarAviso(r.id)} style={{ width: '35px', height: '35px', padding: 0 }} />
+                        </div>
+                    )} />
+                </DataTable>
+            </Dialog>
+
+            {/* MODAL CADASTRAR TIMES */}
             <Dialog header="🚩 Cadastrar Time/Seleção" visible={exibirDialogTeams} style={{ width: isMobile ? '95vw' : '400px' }} onHide={() => setExibirDialogTeams(false)}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingTop: '10px' }}>
                     <InputText placeholder="Nome do Time/País" value={novoTeam.nome} onChange={(e) => setNovoTeam({...novoTeam, nome: e.target.value})} />
@@ -508,6 +524,7 @@ export default function Admin() {
                 </div>
             </Dialog>
 
+            {/* MODAL BILHETES EMITIDOS */}
             <Dialog header="🎟️ Bilhetes Emitidos" visible={exibirDialogCartelas} style={{ width: isMobile ? '98vw' : '80vw' }} onHide={() => setExibirDialogCartelas(false)}>
                 <DataTable value={cartelasDaRodada} paginator rows={10} responsiveLayout="scroll" scrollable emptyMessage="Nenhum bilhete encontrado.">
                     <Column field="numero_bilhete" header="Nº" body={(r) => <b>#{r.numero_bilhete || r.id}</b>} />
@@ -524,6 +541,7 @@ export default function Admin() {
                 </DataTable>
             </Dialog>
 
+            {/* MODAL VISUALIZAR PALPITES DA PESSOA */}
             <Dialog header={`🔍 Palpites do Bilhete #${cartelaVisualizando?.numero_bilhete || cartelaVisualizando?.id}`} visible={exibirDialogPalpites} style={{ width: isMobile ? '95vw' : '450px' }} onHide={() => setExibirDialogPalpites(false)}>
                 {carregandoPalpites ? (
                     <div style={{ textAlign: 'center', padding: '20px' }}><i className="pi pi-spin pi-spinner" style={{ fontSize: '2rem' }}></i></div>

@@ -9,6 +9,7 @@ import MeusPalpites from "./MeusPalpites/pages/Palpites";
 import Admin from "./Admin/pages/Admin";
 import ResetarSenha from "./ResetarSenha/pages/ResetarSenha";
 import GlobalMobileNav from "./Home/components/GlobalMobileNav";
+import GlobalAvisos from "./GlobalAvisos/pages/GlobalAvisos";
 
 export default function PublicPage() {
     return (
@@ -21,6 +22,7 @@ export default function PublicPage() {
                 <Route path="/public/meus-palpites" component={MeusPalpites} />
                 <Route path="/public/resetar-senha" component={ResetarSenha} />
                 <Route path="/public/admin" component={Admin} />
+                <Route path="/public/globalavisos" component={GlobalAvisos} />
                 <Route path="/public" component={HomePage} /> 
             </Switch>
             
