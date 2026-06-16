@@ -61,7 +61,7 @@ export default function GlobalAvisos() {
     return (
         <Dialog open={!!avisoAtual} fullWidth maxWidth="xs" PaperProps={{ style: { borderRadius: '16px' } }}>
             <DialogTitle style={{ backgroundColor: '#3b82f6', color: 'white', display: 'flex', alignItems: 'center', gap: '10px', fontWeight: 'bold' }}>
-                <Campaign fontSize="large" /> Aviso Importante
+                <Campaign fontSize="large" /> Aviso
             </DialogTitle>
             <DialogContent style={{ padding: '25px 20px', textAlign: 'center' }}>
                 <Typography variant="h6" fontWeight="bold" color="#1e293b" gutterBottom>
