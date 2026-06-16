@@ -117,9 +117,9 @@ export default function Regras() {
                                             <Box p={2} style={{ backgroundColor: 'rgba(15, 23, 42, 0.4)', borderRadius: '8px', border: '1px solid rgba(56, 189, 248, 0.2)', height: '100%' }}>
                                                 <Typography variant="caption" fontWeight="bold" color="#94a3b8" display="block" mb={1.5} style={{ letterSpacing: '1px' }}>FASE DE GRUPOS</Typography>
                                                 <Box display="flex" flexDirection="column" gap={1.5}>
-                                                    <Box display="flex" alignItems="center" gap={1}><div style={{ minWidth: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#38bdf8' }}></div><Typography variant="body2" fontWeight="bold" color="#f8fafc">1ª Rodada (15 jogos)</Typography></Box>
-                                                    <Box display="flex" alignItems="center" gap={1}><div style={{ minWidth: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#38bdf8' }}></div><Typography variant="body2" fontWeight="bold" color="#f8fafc">2ª Rodada (15 jogos)</Typography></Box>
-                                                    <Box display="flex" alignItems="center" gap={1}><div style={{ minWidth: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#38bdf8' }}></div><Typography variant="body2" fontWeight="bold" color="#f8fafc">3ª Rodada (15 jogos)</Typography></Box>
+                                                    <Box display="flex" alignItems="center" gap={1}><div style={{ minWidth: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#38bdf8' }}></div><Typography variant="body2" fontWeight="bold" color="#f8fafc">1ª Rodada</Typography></Box>
+                                                    <Box display="flex" alignItems="center" gap={1}><div style={{ minWidth: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#38bdf8' }}></div><Typography variant="body2" fontWeight="bold" color="#f8fafc">2ª Rodada</Typography></Box>
+                                                    <Box display="flex" alignItems="center" gap={1}><div style={{ minWidth: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#38bdf8' }}></div><Typography variant="body2" fontWeight="bold" color="#f8fafc">3ª Rodada</Typography></Box>
                                                 </Box>
                                             </Box>
                                         </Grid>
