@@ -22,11 +22,11 @@ export default function PublicPage() {
                 <Route path="/public/meus-palpites" component={MeusPalpites} />
                 <Route path="/public/resetar-senha" component={ResetarSenha} />
                 <Route path="/public/admin" component={Admin} />
-                <Route path="/public/globalavisos" component={GlobalAvisos} />
                 <Route path="/public" component={HomePage} /> 
             </Switch>
             
             <GlobalMobileNav />
+            <GlobalAvisos />
         </>
     );
 }
